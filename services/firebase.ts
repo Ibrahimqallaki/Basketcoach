@@ -6,28 +6,13 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import type { Auth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import type { Firestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import type { Analytics } from "firebase/analytics";
 
-// Helper to get environment variables safely across Vite/Node environments
+// Helper to get environment variables safely
 export const getEnvVar = (key: string) => {
-  try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-      // @ts-ignore
-      return import.meta.env[key];
-    }
-  } catch (e) {}
-
-  try {
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      // @ts-ignore
-      return process.env[key];
-    }
-  } catch (e) {}
-
-  return "";
+  // @ts-ignore
+  return import.meta.env[key] || (typeof process !== 'undefined' ? process.env[key] : "") || "";
 };
 
 const firebaseConfig = {
@@ -40,10 +25,10 @@ const firebaseConfig = {
   measurementId: getEnvVar('VITE_FIREBASE_MEASUREMENT_ID')
 };
 
-// Check if config is valid
-export const isFirebaseConfigured = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
+// Validering av konfiguration
+export const isFirebaseConfigured = !!firebaseConfig.apiKey && firebaseConfig.apiKey.length > 10;
 
-let app: FirebaseApp | undefined;
+let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let analytics: Analytics | undefined;
@@ -59,20 +44,27 @@ if (isFirebaseConfigured) {
     auth = getAuth(app);
     db = getFirestore(app);
     
-    // Initialize Analytics only if supported in the environment (browser)
-    if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
-      analytics = getAnalytics(app);
-    }
+    // Analytics initieras asynkront och säkert
+    isSupported().then(supported => {
+      if (supported && firebaseConfig.measurementId) {
+        analytics = getAnalytics(app);
+      }
+    });
     
-    console.log("Firebase initialized securely with Analytics.");
+    console.log("Firebase ansluten till projekt:", firebaseConfig.projectId);
   } catch (error) {
-    console.error("Firebase init error:", error);
-    auth = { currentUser: null, onAuthStateChanged: () => () => {}, signOut: async () => {} } as any;
+    console.error("Firebase initieringsfel:", error);
+    // Fallback för att förhindra krasch
+    auth = {} as any;
     db = {} as any;
   }
 } else {
-  console.log("Firebase not configured. App running in offline/demo mode.");
-  auth = { currentUser: null, onAuthStateChanged: () => () => {}, signOut: async () => {} } as any;
+  console.warn("Firebase är inte konfigurerat. Appen körs i gästläge.");
+  auth = { 
+    currentUser: null, 
+    onAuthStateChanged: (cb: any) => { cb(null); return () => {}; },
+    signOut: async () => {} 
+  } as any;
   db = {} as any;
 }
 
