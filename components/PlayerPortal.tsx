@@ -38,7 +38,8 @@ import {
   MessageCircle,
   Loader2,
   Maximize2,
-  Minimize2
+  Minimize2,
+  ChevronDown
 } from 'lucide-react';
 
 interface PlayerPortalProps {
@@ -80,7 +81,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
   const [loading, setLoading] = useState(true);
   const [myPlayer, setMyPlayer] = useState<Player>(player);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [videoExpanded, setVideoExpanded] = useState(false);
+  const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   
   // AI Coach State
   const [showAiChat, setShowAiChat] = useState(false);
@@ -112,7 +113,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
 
   useEffect(() => {
       setIsPlaying(false);
-      setVideoExpanded(false);
+      setIsVideoExpanded(false);
       setShowAiChat(false);
       setChatMessages([]);
       setChatInput("");
@@ -145,11 +146,11 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
       setIsAiLoading(true);
       try {
           const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-          const contextPrompt = `Du är "AI Coachen", en basketcoach för ungdomar. Övning: "${selectedExercise.title}". Fråga: "${chatInput}". Svara kortfattat på svenska.`;
+          const contextPrompt = `Du är AI Coachen. Övning: "${selectedExercise.title}". Teknik: "${selectedExercise.overview.action}". Ge ett kort, peppande tips (max 2 meningar) på svenska till spelaren som frågar: "${chatInput}"`;
           const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: contextPrompt });
           setChatMessages(prev => [...prev, { role: 'model', text: response.text || "Försök igen!" }]);
       } catch (err) {
-          setChatMessages(prev => [...prev, { role: 'model', text: "Nätverksproblem." }]);
+          setChatMessages(prev => [...prev, { role: 'model', text: "Kunde inte ansluta till coachen." }]);
       } finally { setIsAiLoading(false); }
   };
 
@@ -182,10 +183,10 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
        <header className={`relative pt-12 pb-24 px-6 overflow-hidden ${isPreview ? 'mt-4' : ''}`}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-[#020617] to-[#020617] z-0"></div>
           <div className="relative z-10 max-w-sm mx-auto">
-             <div className="relative bg-gradient-to-br from-slate-800 to-slate-950 rounded-[2rem] border-4 border-slate-800 shadow-2xl overflow-hidden group">
-                <div className="flex justify-between items-start p-6 relative z-10">
+             <div className="relative bg-gradient-to-br from-slate-800 to-slate-950 rounded-[2rem] border-4 border-slate-800 shadow-2xl overflow-hidden">
+                <div className="flex justify-between items-start p-6">
                     <div className="flex flex-col items-center">
-                        <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-orange-400 to-orange-600 leading-none tracking-tighter">{gamification.ovr}</div>
+                        <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-orange-400 to-orange-600 leading-none">{gamification.ovr}</div>
                         <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">OVR</div>
                     </div>
                     <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center border border-slate-700 shadow-inner">
@@ -202,10 +203,10 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
 
        <main className="max-w-lg mx-auto px-4 -mt-12 relative z-20 space-y-6">
           <div className="flex p-1.5 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 shadow-xl overflow-x-auto gap-1">
-             <button onClick={() => setActiveTab('career')} className={`flex-1 min-w-[70px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'career' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>Karriär</button>
-             <button onClick={() => setActiveTab('training')} className={`flex-1 min-w-[70px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'training' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>Träning</button>
-             <button onClick={() => setActiveTab('fuel')} className={`flex-1 min-w-[70px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'fuel' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>Kost</button>
-             <button onClick={() => setActiveTab('matches')} className={`flex-1 min-w-[70px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'matches' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>Match</button>
+             <button onClick={() => setActiveTab('career')} className={`flex-1 min-w-[70px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'career' ? 'bg-slate-800 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}>Karriär</button>
+             <button onClick={() => setActiveTab('training')} className={`flex-1 min-w-[70px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'training' ? 'bg-slate-800 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}>Träning</button>
+             <button onClick={() => setActiveTab('fuel')} className={`flex-1 min-w-[70px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'fuel' ? 'bg-slate-800 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}>Kost</button>
+             <button onClick={() => setActiveTab('matches')} className={`flex-1 min-w-[70px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'matches' ? 'bg-slate-800 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}>Match</button>
           </div>
 
           {activeTab === 'training' && (
@@ -213,7 +214,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                 <div className="space-y-3">
                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 flex items-center gap-2"><Dumbbell size={14} /> Coachuppdrag</h3>
                    {(myPlayer.homework || []).map(hw => (
-                      <div key={hw.id} onClick={() => toggleHomework(hw.id)} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all cursor-pointer group ${hw.completed ? 'bg-blue-900/10 border-blue-500/30' : 'bg-slate-900 border-slate-800'}`}>
+                      <div key={hw.id} onClick={() => toggleHomework(hw.id)} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all cursor-pointer group ${hw.completed ? 'bg-blue-900/10 border-blue-500/30' : 'bg-slate-900 border-slate-800 hover:border-blue-500/50'}`}>
                          <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${hw.completed ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-700 text-transparent'}`}><CheckCircle2 size={16} fill={hw.completed ? "currentColor" : "none"} /></div>
                          <div className="flex-1"><h4 className={`text-xs font-black uppercase ${hw.completed ? 'text-blue-400 line-through' : 'text-white'}`}>{hw.title}</h4></div>
                       </div>
@@ -238,93 +239,130 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                 </div>
              </div>
           )}
-          {/* Tabs for Career, Fuel and Matches remain same logic as previously implemented... */}
+          {/* Fler flikar hanteras enligt tidigare spec... */}
        </main>
 
        {/* EXERCISE DETAIL MODAL */}
        {selectedExercise && (
            <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col animate-in slide-in-from-bottom duration-300">
-               <button onClick={() => setSelectedExercise(null)} className="absolute top-4 right-4 p-2 bg-slate-800/80 rounded-full text-white z-[110] shadow-lg"><X size={24} /></button>
+               <button onClick={() => setSelectedExercise(null)} className="absolute top-4 right-4 p-2 bg-slate-800/80 rounded-full text-white z-[120] shadow-lg"><X size={24} /></button>
 
-               {/* COMPACT VIDEO CONTAINER */}
+               {/* RE-ENGINEERED COMPACT VIDEO CONTAINER */}
                {(() => {
                    const vId = getVideoId(selectedExercise.videoUrl || '');
                    const isShort = isShortsVideo(selectedExercise.videoUrl || '');
                    
                    return (
-                    <div className={`w-full bg-black relative shrink-0 transition-all duration-500 flex items-center justify-center border-b border-slate-800 ${videoExpanded ? 'h-[60vh]' : isShort ? 'h-[40vh] aspect-[9/16]' : 'h-[30vh] aspect-video'}`}>
+                    <div className={`w-full bg-black relative shrink-0 transition-all duration-500 flex items-center justify-center border-b border-slate-800 overflow-hidden ${isVideoExpanded ? 'h-[60vh] md:h-[70vh]' : 'h-[30vh] md:h-[35vh]'}`}>
                         {vId ? (
                             <div className="relative w-full h-full">
                                 {!isPlaying ? (
-                                    <div className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer group" onClick={() => setIsPlaying(true)}>
-                                        <img src={`https://img.youtube.com/vi/${vId}/hqdefault.jpg`} alt="Thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center cursor-pointer group" onClick={() => setIsPlaying(true)}>
+                                        <img src={`https://img.youtube.com/vi/${vId}/hqdefault.jpg`} alt="Thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
                                         <div className="relative z-20 w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform"><Play size={24} fill="white" className="text-white ml-1" /></div>
+                                        <div className="mt-4 bg-black/60 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity">Klicka för att spela</div>
                                     </div>
                                 ) : (
-                                    <iframe src={`https://www.youtube.com/embed/${vId}?autoplay=1&rel=0`} title={selectedExercise.title} className="w-full h-full absolute inset-0 z-10" allowFullScreen />
+                                    <iframe src={`https://www.youtube.com/embed/${vId}?autoplay=1&rel=0&modestbranding=1`} title={selectedExercise.title} className="w-full h-full absolute inset-0 z-10" allow="autoplay; fullscreen" />
                                 )}
-                                <button onClick={() => setVideoExpanded(!videoExpanded)} className="absolute bottom-4 right-4 z-20 p-2 bg-black/60 rounded-lg text-white hover:bg-black/90 transition-all">{videoExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
+                                
+                                {/* CONTROL BUTTONS ON VIDEO */}
+                                <div className="absolute bottom-4 right-4 z-20 flex gap-2">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setIsVideoExpanded(!isVideoExpanded); }} 
+                                        className="p-2 bg-black/60 backdrop-blur-md rounded-xl text-white hover:bg-black/90 transition-all border border-white/10"
+                                        title={isVideoExpanded ? "Kompakt vy" : "Expandera vy"}
+                                    >
+                                        {isVideoExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                                    </button>
+                                </div>
                             </div>
                         ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-500"><Youtube size={48} className="opacity-20 mb-2" /><p className="text-[10px] font-bold uppercase">Ingen video</p></div>
+                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900/50">
+                                <Youtube size={48} className="opacity-20 mb-2" />
+                                <p className="text-[10px] font-bold uppercase tracking-widest">Ingen video för denna övning</p>
+                            </div>
                         )}
                     </div>
                    );
                })()}
 
-               {/* Scrollable Details */}
-               <div className="flex-1 overflow-y-auto p-6 space-y-6 relative custom-scrollbar">
+               {/* Scrollable Details - Higher space now */}
+               <div className="flex-1 overflow-y-auto p-6 space-y-6 relative custom-scrollbar pb-10">
                    {!showAiChat ? (
-                       <>
-                           <div className="flex items-center justify-between gap-4">
+                       <div className="animate-in fade-in duration-300">
+                           <div className="flex items-center justify-between gap-4 mb-6">
                                <div className="flex-1">
                                    <span className="text-[8px] font-black uppercase tracking-widest text-purple-400 bg-purple-900/20 px-2 py-0.5 rounded">{selectedExercise.category}</span>
                                    <h2 className="text-xl font-black text-white italic uppercase tracking-tighter leading-tight mt-1">{selectedExercise.title}</h2>
                                </div>
-                               <button onClick={() => setShowAiChat(true)} className="p-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg animate-pulse"><Bot size={20} /></button>
+                               <button 
+                                    onClick={() => setShowAiChat(true)} 
+                                    className="px-6 py-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+                               >
+                                   <Bot size={18} className="animate-pulse" /> 
+                                   <span className="hidden sm:inline">AI Coachen</span>
+                               </button>
                            </div>
 
                            <div className="grid gap-4">
-                               <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
-                                   <h4 className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-2 flex items-center gap-2"><Info size={12} /> Utförande</h4>
-                                   <p className="text-sm text-slate-300 leading-relaxed">{selectedExercise.pedagogy?.how || selectedExercise.overview.action}</p>
+                               <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-3">
+                                   <h4 className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2"><Info size={12} /> Hur gör jag?</h4>
+                                   <p className="text-sm text-slate-300 leading-relaxed font-medium">{selectedExercise.pedagogy?.how || selectedExercise.overview.action}</p>
                                </div>
-                               <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
-                                   <h4 className="text-[9px] font-black text-blue-500 uppercase tracking-[0.2em] mb-2 flex items-center gap-2"><Lightbulb size={12} /> Coaching Point</h4>
+
+                               <div className="p-4 rounded-2xl bg-indigo-900/10 border border-indigo-500/20 space-y-3">
+                                   <h4 className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em] flex items-center gap-2"><Lightbulb size={12} /> Coaching Tip</h4>
                                    <p className="text-sm text-slate-200 font-bold italic">"{selectedExercise.overview.coachingPoint}"</p>
                                </div>
-                               <div className="space-y-2">
-                                   <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Fokusera på detta</h4>
-                                   {selectedExercise.criteria.map((c, i) => (
-                                       <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
-                                           <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-400 border border-slate-700">{i + 1}</div>
-                                           <span className="text-xs font-bold text-white uppercase">{c}</span>
-                                       </div>
-                                   ))}
+
+                               <div className="space-y-2 mt-2">
+                                   <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Coachbedömning (Kriterier)</h4>
+                                   <div className="grid gap-2">
+                                       {selectedExercise.criteria.map((c, i) => (
+                                           <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
+                                               <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-700">{i + 1}</div>
+                                               <span className="text-xs font-bold text-white uppercase tracking-tight">{c}</span>
+                                           </div>
+                                       ))}
+                                   </div>
                                </div>
                            </div>
-                       </>
+                       </div>
                    ) : (
-                       <div className="absolute inset-0 bg-slate-950 z-20 flex flex-col">
+                       /* AI CHAT OVERLAY - FIXED POSITIONING WITHIN MODAL */
+                       <div className="absolute inset-0 bg-slate-950 z-20 flex flex-col animate-in slide-in-from-right duration-300">
                            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md">
                                <div className="flex items-center gap-3">
                                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center"><Bot size={16} className="text-white" /></div>
                                    <div><h4 className="text-xs font-black text-white uppercase">AI Coach</h4><p className="text-[8px] text-purple-400 font-bold uppercase tracking-widest">{selectedExercise.title}</p></div>
                                </div>
-                               <button onClick={() => setShowAiChat(false)} className="text-slate-500 hover:text-white text-[9px] font-bold uppercase">Stäng Chatt</button>
+                               <button onClick={() => setShowAiChat(false)} className="text-slate-500 hover:text-white text-[9px] font-black uppercase p-2">Stäng</button>
                            </div>
+                           
                            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                               {chatMessages.length === 0 && (
+                                   <div className="text-center py-10 space-y-4 opacity-50">
+                                       <Bot size={40} className="mx-auto text-purple-500" />
+                                       <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest">Fråga något om övningen!</p>
+                                       <div className="flex flex-wrap justify-center gap-2">
+                                           <button onClick={() => { setChatInput("Hur ska jag sätta fötterna?"); handleAiAsk(); }} className="px-3 py-2 bg-slate-900 rounded-xl border border-slate-800 text-[9px] font-bold uppercase text-slate-400">Fötterna?</button>
+                                           <button onClick={() => { setChatInput("Vad är vanligaste felet?"); handleAiAsk(); }} className="px-3 py-2 bg-slate-900 rounded-xl border border-slate-800 text-[9px] font-bold uppercase text-slate-400">Vanliga fel?</button>
+                                       </div>
+                                   </div>
+                               )}
                                {chatMessages.map((msg, i) => (
                                    <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                                       <div className={`p-3 rounded-2xl text-xs leading-relaxed max-w-[85%] ${msg.role === 'user' ? 'bg-slate-800 text-white rounded-tr-none' : 'bg-purple-900/20 border border-purple-500/30 text-purple-100 rounded-tl-none'}`}>{msg.text}</div>
+                                       <div className={`p-4 rounded-[1.5rem] text-xs leading-relaxed max-w-[85%] ${msg.role === 'user' ? 'bg-slate-800 text-white rounded-tr-none' : 'bg-purple-900/20 border border-purple-500/30 text-purple-100 rounded-tl-none'}`}>{msg.text}</div>
                                    </div>
                                ))}
-                               {isAiLoading && <div className="flex gap-2 p-3"><span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce"></span><span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-100"></span></div>}
+                               {isAiLoading && <div className="flex gap-2 p-4"><span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce"></span><span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-100"></span><span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-200"></span></div>}
                                <div ref={chatScrollRef} />
                            </div>
-                           <form onSubmit={handleAiAsk} className="p-3 border-t border-slate-800 bg-slate-900 flex gap-2">
-                               <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Fråga coachen..." className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 text-xs text-white outline-none focus:border-purple-500" />
-                               <button type="submit" disabled={!chatInput.trim() || isAiLoading} className="p-3 bg-purple-600 rounded-xl text-white disabled:opacity-50"><Send size={16} /></button>
+
+                           <form onSubmit={handleAiAsk} className="p-4 border-t border-slate-800 bg-slate-900 flex gap-2 pb-8">
+                               <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Fråga coachen..." className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-purple-500 transition-colors" />
+                               <button type="submit" disabled={!chatInput.trim() || isAiLoading} className="p-3 bg-purple-600 rounded-xl text-white disabled:opacity-50 shadow-lg"><Send size={18} /></button>
                            </form>
                        </div>
                    )}
