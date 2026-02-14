@@ -18,7 +18,7 @@ import { dataService } from './services/dataService';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 // @ts-ignore
 import type { User } from 'firebase/auth';
-import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck } from 'lucide-react';
+import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock } from 'lucide-react';
 import { View, Player } from './types';
 
 const App: React.FC = () => {
@@ -26,7 +26,7 @@ const App: React.FC = () => {
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [isStaffAccess, setIsStaffAccess] = useState(false);
+  const [isDenied, setIsDenied] = useState(false);
   
   const [loginError, setLoginError] = useState<{ message: string, domain?: string } | null>(null);
   const [showPlayerLogin, setShowPlayerLogin] = useState(false);
@@ -38,15 +38,12 @@ const App: React.FC = () => {
     if (isFirebaseConfigured && auth) {
       const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
         if (currentUser && !currentUser.uid.startsWith('player_')) {
-            // Kolla om denna person är en inbjuden medcoach
-            const ownerUid = await dataService.checkAccessMapping(currentUser.email);
-            if (ownerUid && ownerUid !== currentUser.uid) {
-                console.log("Inloggad som medcoach för:", ownerUid);
-                dataService.setActiveOwner(ownerUid);
-                setIsStaffAccess(true);
+            // Kolla om denna person får använda appen
+            const isAllowed = await dataService.isEmailWhitelisted(currentUser.email);
+            if (!isAllowed) {
+                setIsDenied(true);
             } else {
-                dataService.setActiveOwner(null);
-                setIsStaffAccess(false);
+                setIsDenied(false);
             }
         }
         setUser(currentUser);
@@ -132,11 +129,7 @@ const App: React.FC = () => {
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
       console.error("Login failed", error);
-      if (error.code === 'auth/api-key-not-valid' || !isFirebaseConfigured) {
-         setUser(createDemoUser('Demo Coach', 'demo_user'));
-         return;
-      }
-      setLoginError({ message: error.message || "Ett okänt fel uppstod.", domain: window.location.hostname });
+      setLoginError({ message: error.message || "Ett okänt fel uppstod." });
     }
   };
 
@@ -155,28 +148,9 @@ const App: React.FC = () => {
           setCurrentView(View.DASHBOARD);
       } else {
           await signOut(auth);
-          dataService.setActiveOwner(null);
-          setIsStaffAccess(false);
           setUser(null);
+          setIsDenied(false);
       }
-  };
-
-  const renderView = () => {
-    if (currentView === View.PLAYER_PORTAL && loggedInPlayer) {
-        return <PlayerPortal player={loggedInPlayer} onLogout={handleLogout} isPreview={user ? !user.uid.startsWith('player_') : true} />;
-    }
-    switch (currentView) {
-      case View.DASHBOARD: return <Dashboard onNavigateToHistory={() => setCurrentView(View.TRAINING)} />;
-      case View.ROSTER: return <Roster onSimulatePlayerLogin={handleSimulatePlayerLogin} />;
-      case View.PLAN: return <Plan />;
-      case View.TRAINING: return <Training />;
-      case View.MATCH_EVAL: return <MatchEvaluation />;
-      case View.VIDEO_ANALYSIS: return <VideoAnalysis />;
-      case View.AI_COACH: return <AICoach />;
-      case View.TOOLS: return <CoachTools onNavigate={setCurrentView} />;
-      case View.ACCOUNT: return <Account user={user} />;
-      default: return <Dashboard onNavigateToHistory={() => setCurrentView(View.TRAINING)} />;
-    }
   };
 
   if (authLoading) {
@@ -185,6 +159,24 @@ const App: React.FC = () => {
         <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
       </div>
     );
+  }
+
+  // DENIED ACCESS VIEW
+  if (isDenied) {
+      return (
+          <div className="min-h-screen w-full bg-[#020617] flex items-center justify-center p-6 text-center">
+              <div className="max-w-md w-full p-10 rounded-[3rem] bg-slate-900 border border-rose-500/20 shadow-2xl space-y-6">
+                  <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto">
+                      <Lock size={40} className="text-rose-500" />
+                  </div>
+                  <h2 className="text-2xl font-black text-white uppercase italic">Åtkomst nekad</h2>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                      Din email ({user?.email}) är inte inbjuden att använda Coach Pro ännu. Kontakta din admin för att få tillgång.
+                  </p>
+                  <button onClick={handleLogout} className="w-full py-4 rounded-2xl bg-slate-800 text-white font-black uppercase text-xs tracking-widest">Logga ut och försök igen</button>
+              </div>
+          </div>
+      );
   }
 
   if (!user) {
@@ -270,18 +262,31 @@ const App: React.FC = () => {
             <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-white">
               {currentView === View.ACCOUNT ? 'Inställningar' : currentView.replace('_', ' ')}
             </h2>
-            {isStaffAccess && (
-                <div className="px-3 py-1 rounded-lg bg-blue-600/10 border border-blue-500/30 flex items-center gap-2">
-                    <ShieldCheck size={14} className="text-blue-500" />
-                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Delad åtkomst</span>
-                </div>
-            )}
           </div>
           <button onClick={() => setCurrentView(View.ACCOUNT)} className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden hover:border-orange-500 transition-all">
               {user?.photoURL ? <img src={user.photoURL} alt="P" className="w-full h-full object-cover" /> : <span className="text-sm font-black text-slate-400">{user.displayName?.charAt(0) || 'C'}</span>}
           </button>
         </header>
-        <div className="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar w-full">{renderView()}</div>
+        <div className="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar w-full">
+            {loggedInPlayer ? (
+                <PlayerPortal player={loggedInPlayer} onLogout={handleLogout} isPreview={!user.uid.startsWith('player_')} />
+            ) : (
+                (() => {
+                    switch (currentView) {
+                      case View.DASHBOARD: return <Dashboard onNavigateToHistory={() => setCurrentView(View.TRAINING)} />;
+                      case View.ROSTER: return <Roster onSimulatePlayerLogin={handleSimulatePlayerLogin} />;
+                      case View.PLAN: return <Plan />;
+                      case View.TRAINING: return <Training />;
+                      case View.MATCH_EVAL: return <MatchEvaluation />;
+                      case View.VIDEO_ANALYSIS: return <VideoAnalysis />;
+                      case View.AI_COACH: return <AICoach />;
+                      case View.TOOLS: return <CoachTools onNavigate={setCurrentView} />;
+                      case View.ACCOUNT: return <Account user={user} />;
+                      default: return <Dashboard onNavigateToHistory={() => setCurrentView(View.TRAINING)} />;
+                    }
+                })()
+            )}
+        </div>
       </main>
     </div>
   );

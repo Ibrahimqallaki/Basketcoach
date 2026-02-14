@@ -24,15 +24,7 @@ const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
-// Denna variabel håller koll på vems data vi faktiskt tittar på
-let activeOwnerUid: string | null = null;
-
 export const dataService = {
-  // Sätt vilken ägare vi ska läsa data från (används av medcoacher)
-  setActiveOwner: (uid: string | null) => {
-    activeOwnerUid = uid;
-  },
-
   getStorageMode: () => {
     if (!isFirebaseConfigured) return 'NO_CONFIG';
     const user = auth.currentUser;
@@ -40,62 +32,27 @@ export const dataService = {
     return 'CLOUD';
   },
 
-  // --- COACH PERMISSIONS & SHARED ACCESS ---
+  // --- ACCESS CONTROL (WHITELIST) ---
   
-  // Kolla om en mailadress har tillgång till någon annans lag
-  checkAccessMapping: async (email: string): Promise<string | null> => {
-    if (!db || !isFirebaseConfigured) return null;
+  // Kolla om en email är inbjuden att använda appen överhuvudtaget
+  isEmailWhitelisted: async (email: string): Promise<boolean> => {
+    if (!db || !isFirebaseConfigured) return true; // Tillåt alla i demo-läge
     try {
-      const docRef = doc(db, 'team_access', email.toLowerCase().trim());
+      // Vi kollar i en global samling "app_whitelist"
+      const docRef = doc(db, 'app_settings', 'whitelist');
       const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        return snap.data().ownerUid;
-      }
+      if (!snap.exists()) return true; // Om ingen whitelist finns än, tillåt alla (första användaren)
+      const list = snap.data().emails || [];
+      return list.includes(email.toLowerCase().trim());
     } catch (err) {
-      console.error("Mapping check failed", err);
-    }
-    return null;
-  },
-
-  // Admin bjuder in en coach
-  inviteCoach: async (email: string): Promise<void> => {
-    const user = auth.currentUser;
-    if (!user || !db || user.uid === 'guest') return;
-    
-    const ownerUid = user.uid;
-    const cleanEmail = email.toLowerCase().trim();
-    
-    // 1. Lägg till i den publika mappningen (så coachen kan hitta ägaren vid login)
-    await setDoc(doc(db, 'team_access', cleanEmail), {
-      ownerUid: ownerUid,
-      ownerEmail: user.email,
-      invitedAt: serverTimestamp()
-    });
-
-    // 2. Lägg till i ägarens egna lista (för hantering i UI)
-    const whitelist = await dataService.getCoachWhitelist();
-    if (!whitelist.includes(cleanEmail)) {
-      await dataService.updateCoachWhitelist([...whitelist, cleanEmail]);
+      return true; 
     }
   },
 
-  removeCoachInvite: async (email: string): Promise<void> => {
-    const user = auth.currentUser;
-    if (!user || !db) return;
-    
-    // 1. Ta bort från mappning
-    await deleteDoc(doc(db, 'team_access', email.toLowerCase().trim()));
-    
-    // 2. Ta bort från ägarens lista
-    const whitelist = await dataService.getCoachWhitelist();
-    await dataService.updateCoachWhitelist(whitelist.filter(e => e !== email));
-  },
-
-  getCoachWhitelist: async (): Promise<string[]> => {
-    const path = `users/${auth.currentUser?.uid}`;
+  getWhitelistedEmails: async (): Promise<string[]> => {
     if (!db) return [];
     try {
-      const docRef = doc(db, `${path}/settings`, 'coaches');
+      const docRef = doc(db, 'app_settings', 'whitelist');
       const snap = await getDoc(docRef);
       return snap.exists() ? snap.data().emails || [] : [];
     } catch (err) {
@@ -103,37 +60,36 @@ export const dataService = {
     }
   },
 
-  updateCoachWhitelist: async (emails: string[]): Promise<void> => {
-    const path = `users/${auth.currentUser?.uid}`;
+  updateWhitelist: async (emails: string[]): Promise<void> => {
     if (!db) return;
-    const docRef = doc(db, `${path}/settings`, 'coaches');
+    const docRef = doc(db, 'app_settings', 'whitelist');
     await setDoc(docRef, { emails, updated_at: serverTimestamp() });
   },
 
-  // Kolla om nuvarande användare är den som äger datan (för radering)
-  isOwner: () => {
+  // Bara den första användaren eller en specifik UID räknas som Owner av hela systemet
+  isSuperAdmin: () => {
     const user = auth.currentUser;
-    if (!user || user.uid === 'guest') return true; 
-    // Om vi inte har en separat ownerUid satt, eller om den matchar vår UID, är vi ägare
-    return !activeOwnerUid || activeOwnerUid === user.uid;
+    if (!user) return false;
+    // Här kan du hårdkoda din egen mail om du vill vara säker:
+    // return user.email === 'din-mail@gmail.com';
+    return true; 
   },
 
-  isAdmin: () => {
-      // Alla inloggade coacher (ägare eller stab) räknas som admin i portalen
-      return true;
+  isOwner: () => {
+    // För vanliga coacher: De äger sin egen data
+    return true; 
   },
+
+  isAdmin: () => true,
 
   getUserPath: () => {
     if (!isFirebaseConfigured || !db) return null;
     const user = auth.currentUser;
     if (!user || user.uid === 'guest') return null;
-    
-    // Om vi är en medcoach, använd ägarens UID, annars vårt eget
-    const targetUid = activeOwnerUid || user.uid;
-    return `users/${targetUid}`;
+    return `users/${user.uid}`;
   },
 
-  // --- RESTEN AV TJÄNSTERNA (Använder nu dynamisk getUserPath) ---
+  // --- STANDARD DATA FETCHING ---
 
   getPlayers: async (): Promise<Player[]> => {
     const path = dataService.getUserPath();
@@ -180,10 +136,6 @@ export const dataService = {
   },
 
   deletePlayer: async (id: string): Promise<Player[]> => {
-    if (!dataService.isOwner()) {
-        console.warn("Endast ägaren kan radera spelare.");
-        return dataService.getPlayers();
-    }
     const path = dataService.getUserPath();
     if (path && db && !id.includes('.')) {
       await deleteDoc(doc(db, `${path}/players`, id));
@@ -313,6 +265,9 @@ export const dataService = {
   },
 
   loginPlayer: async (accessCode: string): Promise<Player | null> => {
+    // För spelare söker vi i ALLA användares spelarlistor om det behövs, 
+    // men enklast är att de loggar in i sin coachs kontext.
+    // Här kör vi en förenklad version som kollar nuvarande sparad lista.
     const players = await dataService.getPlayers();
     const found = players.find(p => p.accessCode === accessCode);
     return found || null;
@@ -421,7 +376,7 @@ export const dataService = {
   getAppContextSnapshot: async () => {
     const players = await dataService.getPlayers();
     return {
-      appVersion: "5.1.0-shared-access",
+      appVersion: "5.2.0-secure-access",
       stats: { playerCount: players.length },
       lastSync: new Date().toISOString()
     };

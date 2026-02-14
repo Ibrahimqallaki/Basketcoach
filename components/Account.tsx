@@ -50,21 +50,21 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
   const [diagStatus, setDiagStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [diagMessage, setDiagMessage] = useState<string | null>(null);
   
-  // Staff Management States
-  const [coaches, setCoaches] = useState<string[]>([]);
-  const [newCoachEmail, setNewCoachEmail] = useState("");
-  const [isSavingCoaches, setIsSavingCoaches] = useState(false);
+  // Whitelist States
+  const [whitelist, setWhitelist] = useState<string[]>([]);
+  const [newEmail, setNewEmail] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [copyStatus, setCopyStatus] = useState(false);
   
   const isGuest = !user || user.isAnonymous || user.uid === 'guest';
-  const isOwner = dataService.isOwner();
+  const isSuperAdmin = dataService.isSuperAdmin();
 
   useEffect(() => {
     setLocalStats(dataService.getLocalDataStats());
-    if (isOwner && !isGuest) {
-        dataService.getCoachWhitelist().then(setCoaches);
+    if (isSuperAdmin && !isGuest) {
+        dataService.getWhitelistedEmails().then(setWhitelist);
     }
-  }, [isOwner, isGuest]);
+  }, [isSuperAdmin, isGuest]);
 
   const handleLogout = async () => {
     try {
@@ -75,32 +75,34 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
     }
   };
 
-  const handleAddCoach = async () => {
-      const email = newCoachEmail.toLowerCase().trim();
+  const handleAddToWhitelist = async () => {
+      const email = newEmail.toLowerCase().trim();
       if (!email || !email.includes('@')) return;
-      if (coaches.includes(email)) return;
+      if (whitelist.includes(email)) return;
       
-      setIsSavingCoaches(true);
+      setIsSaving(true);
       try {
-          await dataService.inviteCoach(email);
-          setCoaches([...coaches, email]);
-          setNewCoachEmail("");
+          const updated = [...whitelist, email];
+          await dataService.updateWhitelist(updated);
+          setWhitelist(updated);
+          setNewEmail("");
       } finally {
-          setIsSavingCoaches(false);
+          setIsSaving(false);
       }
   };
 
-  const handleRemoveCoach = async (email: string) => {
-      setIsSavingCoaches(true);
+  const handleRemoveFromWhitelist = async (email: string) => {
+      setIsSaving(true);
       try {
-          await dataService.removeCoachInvite(email);
-          setCoaches(coaches.filter(e => e !== email));
+          const updated = whitelist.filter(e => e !== email);
+          await dataService.updateWhitelist(updated);
+          setWhitelist(updated);
       } finally {
-          setIsSavingCoaches(false);
+          setIsSaving(false);
       }
   };
 
-  const copyAppUrl = () => {
+  const copyInviteLink = () => {
     navigator.clipboard.writeText("https://basketcoach.vercel.app");
     setCopyStatus(true);
     setTimeout(() => setCopyStatus(false), 2000);
@@ -135,14 +137,14 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* STAFF MANAGEMENT (ADMIN ONLY) */}
-      {!isGuest && isOwner ? (
+      {/* WHITELIST MANAGEMENT (SUPER ADMIN ONLY) */}
+      {isSuperAdmin && !isGuest && (
           <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-xl relative overflow-hidden">
               <div className="flex justify-between items-start mb-6">
                 <h3 className="text-xs font-black text-white italic uppercase tracking-widest flex items-center gap-2">
-                    <UserPlus size={18} className="text-blue-500" /> Hantera Tränarstab
+                    <UserPlus size={18} className="text-blue-500" /> App-åtkomst & Inbjudningar
                 </h3>
-                <button onClick={copyAppUrl} className={`flex items-center gap-2 px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${copyStatus ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                <button onClick={copyInviteLink} className={`flex items-center gap-2 px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${copyStatus ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400'}`}>
                     {copyStatus ? <Check size={12} /> : <LinkIcon size={12} />}
                     {copyStatus ? 'Länk kopierad' : 'Kopiera App-länk'}
                 </button>
@@ -150,7 +152,7 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
               
               <div className="space-y-6">
                   <p className="text-[11px] text-slate-400 leading-relaxed max-w-lg">
-                    Bjud in andra coacher genom att lägga till deras Gmail. När de loggar in kommer de automatiskt att se dina spelare och träningar istället för sina egna.
+                    Här bestämmer du vilka Gmail-adresser som har tillåtelse att logga in i appen. Inbjudna coacher får sitt eget konto och ser inte din data.
                   </p>
 
                   <div className="flex gap-2">
@@ -158,54 +160,38 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                           <input 
                             type="email"
-                            value={newCoachEmail}
-                            onChange={(e) => setNewCoachEmail(e.target.value)}
-                            placeholder="Skriv in Gmail..."
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                            placeholder="Ange Gmail för inbjudan..."
                             className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-12 pr-4 text-xs text-white outline-none focus:border-blue-500 transition-colors"
                           />
                       </div>
                       <button 
-                        onClick={handleAddCoach}
-                        disabled={isSavingCoaches || !newCoachEmail.includes('@')}
+                        onClick={handleAddToWhitelist}
+                        disabled={isSaving || !newEmail.includes('@')}
                         className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-900/20 disabled:opacity-50"
                       >
-                        {isSavingCoaches ? <Loader2 size={16} className="animate-spin" /> : 'Bjud in'}
+                        {isSaving ? <Loader2 size={16} className="animate-spin" /> : 'Bjud in'}
                       </button>
                   </div>
 
                   <div className="grid gap-2">
-                      {coaches.map(email => (
+                      {whitelist.map(email => (
                           <div key={email} className="flex items-center justify-between p-4 bg-slate-950 rounded-2xl border border-slate-800">
                               <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
                                       <Mail size={14} />
                                   </div>
                                   <span className="text-xs font-bold text-slate-300">{email}</span>
-                                  <span className="text-[8px] font-black text-slate-600 uppercase bg-slate-900 px-2 py-0.5 rounded border border-slate-800">Coach</span>
                               </div>
-                              <button onClick={() => handleRemoveCoach(email)} className="p-2 text-slate-600 hover:text-rose-500 transition-colors" title="Ta bort åtkomst"><X size={16} /></button>
+                              <button onClick={() => handleRemoveFromWhitelist(email)} className="p-2 text-slate-600 hover:text-rose-500 transition-colors" title="Ta bort åtkomst"><X size={16} /></button>
                           </div>
                       ))}
-                      {coaches.length === 0 && (
-                          <div className="text-center py-6 border-2 border-dashed border-slate-800 rounded-2xl text-slate-600 text-[10px] font-black uppercase tracking-widest">Inga medcoacher tillagda</div>
+                      {whitelist.length === 0 && (
+                          <div className="text-center py-6 border-2 border-dashed border-slate-800 rounded-2xl text-slate-600 text-[10px] font-black uppercase tracking-widest">Ingen whitelist aktiverad (Alla får logga in)</div>
                       )}
                   </div>
-
-                  <div className="p-4 rounded-xl bg-orange-500/5 border border-orange-500/10 flex items-start gap-3">
-                      <ShieldAlert size={18} className="text-orange-500 shrink-0" />
-                      <p className="text-[10px] text-slate-400 leading-relaxed font-medium italic">
-                        <strong>Observera:</strong> Endast du (lagets skapare) har behörighet att radera spelare permanent. Dina medcoacher kan se allt, redigera uppgifter och registrera närvaro/evalueringar.
-                      </p>
-                  </div>
               </div>
-          </div>
-      ) : !isGuest && (
-          <div className="p-8 rounded-[2.5rem] bg-blue-900/10 border border-blue-500/30 shadow-xl text-center space-y-4">
-              <ShieldCheck size={48} className="text-blue-500 mx-auto" />
-              <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Du är en del av staben</h3>
-              <p className="text-sm text-slate-400 max-w-sm mx-auto italic">
-                Du är inloggad som coach med delad åtkomst. Du kan redigera allt utom att radera spelare eller hantera andra behörigheter.
-              </p>
           </div>
       )}
 
@@ -219,7 +205,7 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
                 <div className="w-12 h-12 rounded-xl bg-orange-600 flex items-center justify-center text-white shadow-lg"><Book size={24} /></div>
                 <div className="text-left flex-1">
                     <h4 className="text-sm font-black text-white uppercase italic">Öppna Manualen</h4>
-                    <p className="text-[10px] text-slate-400 font-medium">Lär dig allt om Säsong 25/26 plattformen.</p>
+                    <p className="text-[10px] text-slate-400 font-medium">Lär dig allt om plattformen.</p>
                 </div>
                 <ExternalLink size={16} className="text-slate-500" />
              </button>
