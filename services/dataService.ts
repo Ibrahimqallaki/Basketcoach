@@ -22,8 +22,8 @@ const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
-// ÄNDRA DENNA TILL DIN EGEN E-POST FÖR ATT SE ADMIN-VERKTYGEN
-const SUPER_ADMIN_EMAIL = "admin@basketcoach.pro"; 
+// SYSTEMETS ÄGARE - ENDAST DENNA PERSON KAN HANTERA ANDRA COACHER
+const SUPER_ADMIN_EMAIL = "Ibrahim.qallaki@gmail.com"; 
 
 export const dataService = {
   getStorageMode: () => {
@@ -39,7 +39,7 @@ export const dataService = {
     if (!db || !isFirebaseConfigured) return true;
     try {
       const lowerEmail = email.toLowerCase().trim();
-      // Du är alltid välkommen
+      // Ibrahim har alltid tillgång
       if (lowerEmail === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
 
       const docRef = doc(db, 'app_settings', 'whitelist');
@@ -72,8 +72,7 @@ export const dataService = {
   isSuperAdmin: () => {
     const user = auth.currentUser;
     if (!user) return false;
-    // Lokalt demo-läge tillåter allt
-    if (user.uid === 'guest') return true; 
+    // Ibrahim är ägare
     return user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
   },
 
@@ -189,7 +188,6 @@ export const dataService = {
     }
   },
 
-  // Implementation of getCustomExercises to retrieve manually created drills
   getCustomExercises: async (): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
@@ -205,7 +203,6 @@ export const dataService = {
     return stored ? JSON.parse(stored) : [];
   },
 
-  // Implementation of saveCustomExercise to persist manually created drills
   saveCustomExercise: async (exercise: Exercise): Promise<void> => {
     const path = dataService.getUserPath();
     if (path && db) {
@@ -217,7 +214,6 @@ export const dataService = {
     }
   },
 
-  // Implementation of deleteCustomExercise to remove manually created drills
   deleteCustomExercise: async (id: string): Promise<void> => {
     const path = dataService.getUserPath();
     if (path && db) {
