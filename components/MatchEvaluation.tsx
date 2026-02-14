@@ -1,9 +1,10 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Swords, Star, Save, Plus, ChevronRight, X, Heart, Zap, Target, MessageCircle, Trophy, Hash, Loader2, Presentation, PenTool, Image as ImageIcon, Trash2, Link as LinkIcon, DownloadCloud, AlertCircle, Clock, Activity, Code, Server, Undo2, Crosshair } from 'lucide-react';
+/* Added Check to the lucide-react imports */
+import { Swords, Star, Save, Plus, ChevronRight, X, Heart, Zap, Target, MessageCircle, Trophy, Hash, Loader2, Presentation, PenTool, Image as ImageIcon, Trash2, Link as LinkIcon, DownloadCloud, AlertCircle, Clock, Activity, Code, Server, Undo2, Crosshair, Camera, Sparkles, ClipboardPaste, Wand2, Check } from 'lucide-react';
 import { dataService } from '../services/dataService';
+import { parseMatchText } from '../services/gemini';
 import { Player, MatchRecord, MatchFeedback, Shot } from '../types';
-import { TacticalWhiteboard } from './TacticalWhiteboard';
 
 interface ImportedMatchEvent {
   time: string;
@@ -19,10 +20,7 @@ export const MatchEvaluation: React.FC = () => {
   const [matches, setMatches] = useState<MatchRecord[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const [showWhiteboard, setShowWhiteboard] = useState(false);
-  const [shotMode, setShotMode] = useState<'make' | 'miss'>('make');
-  
-  const [profixioUrl, setProfixioUrl] = useState("");
+  const [magicText, setMagicText] = useState("");
   const [importing, setImporting] = useState(false);
   const [importedEvents, setImportedEvents] = useState<ImportedMatchEvent[]>([]);
   
@@ -81,39 +79,29 @@ export const MatchEvaluation: React.FC = () => {
     loadData();
   }, []);
 
-  const handleProfixioImport = async () => {
-    if (!profixioUrl) return;
-    setImporting(true);
-    setImportedEvents([]);
-
-    // SIMULERING AV SCRAPER - Optimerad för Orion HU14
-    setTimeout(() => {
-        const mockOpponent = "AIK Basket Svart (HU14)";
-        const mockScore = "62";
-        const mockOpponentScore = "48";
-        
-        const mockEvents: ImportedMatchEvent[] = [
-            { time: "Q1", type: "period", description: "Period 1: Orion leder 18-12", team: 'us' },
-            { time: "15:20", type: "foul", description: "Lagfoul AIK", team: 'them' },
-            { time: "Q2", type: "period", description: "Halvtid: 32-28", team: 'us' },
-            { time: "28:10", type: "score", description: "Orion Run: 10-0 i tredje", team: 'us' },
-            { time: "Q3", type: "period", description: "Period 3 slut: 50-36", team: 'us' },
-            { time: "38:00", type: "timeout", description: "Timeout Orion vid 58-46", team: 'us' }
-        ];
-
-        setNewMatch(prev => ({
-            ...prev,
-            opponent: mockOpponent,
-            score: mockScore,
-            opponentScore: mockOpponentScore,
-            date: new Date().toISOString().split('T')[0],
-            teamSummary: "Data importerad för Orion HU14. Stark tredje period avgjorde matchen. Bra försvarsintensitet i helplan."
-        }));
-        
-        setImportedEvents(mockEvents);
-        setImporting(false);
-        setProfixioUrl("");
-    }, 2000);
+  const handleMagicImport = async () => {
+      if (!magicText.trim()) return;
+      
+      setImporting(true);
+      try {
+          const data = await parseMatchText(magicText);
+          if (data) {
+              setNewMatch(prev => ({
+                  ...prev,
+                  opponent: data.opponent || "",
+                  score: data.score?.toString() || "",
+                  opponentScore: data.opponentScore?.toString() || "",
+                  date: data.date || prev.date,
+                  teamSummary: `Smart Import: Orion HU14 vs ${data.opponent}. ${data.events?.length || 0} händelser analyserade.`
+              }));
+              setImportedEvents(data.events || []);
+              setMagicText(""); // Rensa efter lyckad import
+          }
+      } catch (err) {
+          alert("Kunde inte tolka texten. Försök kopiera mer av sidan.");
+      } finally {
+          setImporting(false);
+      }
   };
 
   const saveMatch = async () => {
@@ -132,7 +120,6 @@ export const MatchEvaluation: React.FC = () => {
     
     await loadData();
     setIsAdding(false);
-    setShowWhiteboard(false);
     setImportedEvents([]);
     
     setNewMatch({
@@ -167,83 +154,6 @@ export const MatchEvaluation: React.FC = () => {
     }));
   };
 
-  const handleWhiteboardSave = (dataUrl: string) => {
-    setNewMatch(prev => ({ 
-        ...prev, 
-        tacticalPlays: [...prev.tacticalPlays, dataUrl] 
-    }));
-    setShowWhiteboard(false);
-  };
-
-  const removeTacticalPlay = (index: number) => {
-      setNewMatch(prev => ({
-          ...prev,
-          tacticalPlays: prev.tacticalPlays.filter((_, i) => i !== index)
-      }));
-  };
-
-  const handleCourtClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
-      
-      const newShot: Shot = {
-          id: Date.now().toString(),
-          x,
-          y,
-          result: shotMode
-      };
-      
-      setNewMatch(prev => ({
-          ...prev,
-          shots: [...prev.shots, newShot]
-      }));
-  };
-
-  const undoLastShot = () => {
-      setNewMatch(prev => ({
-          ...prev,
-          shots: prev.shots.slice(0, -1)
-      }));
-  };
-
-  const shotStats = useMemo(() => {
-      const total = newMatch.shots.length;
-      if (total === 0) return { makes: 0, percentage: 0 };
-      const makes = newMatch.shots.filter(s => s.result === 'make').length;
-      return { makes, percentage: Math.round((makes / total) * 100) };
-  }, [newMatch.shots]);
-
-  const CourtVisual = ({ shots, onClick, readOnly = false }: { shots: Shot[], onClick?: (e: React.MouseEvent<HTMLDivElement>) => void, readOnly?: boolean }) => (
-      <div 
-        onClick={onClick}
-        className={`relative w-full aspect-[1.8/1] bg-slate-800 rounded-lg overflow-hidden border-2 border-slate-700 ${!readOnly ? 'cursor-crosshair active:scale-[0.99] transition-transform' : ''}`}
-      >
-          <div className="absolute inset-0 opacity-30 pointer-events-none">
-              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white transform -translate-x-1/2"></div>
-              <div className="absolute left-1/2 top-1/2 w-[15%] aspect-square border border-white rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
-              <div className="absolute left-0 top-[35%] bottom-[35%] w-[15%] border-r border-y border-white"></div>
-              <div className="absolute left-0 top-[10%] bottom-[10%] w-[30%] border-r border-y border-white rounded-r-[50%]"></div>
-              <div className="absolute right-0 top-[35%] bottom-[35%] w-[15%] border-l border-y border-white"></div>
-              <div className="absolute right-0 top-[10%] bottom-[10%] w-[30%] border-l border-y border-white rounded-l-[50%]"></div>
-          </div>
-          {shots.map((shot, i) => (
-              <div 
-                  key={i}
-                  className={`absolute w-3 h-3 md:w-4 md:h-4 rounded-full -ml-1.5 -mt-1.5 md:-ml-2 md:-mt-2 shadow-sm border border-black/20 ${shot.result === 'make' ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                  style={{ left: `${shot.x}%`, top: `${shot.y}%` }}
-              >
-                  {shot.result === 'miss' && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-2 h-0.5 bg-white/80 rotate-45 absolute"></div>
-                          <div className="w-2 h-0.5 bg-white/80 -rotate-45 absolute"></div>
-                      </div>
-                  )}
-              </div>
-          ))}
-      </div>
-  );
-
   if (loading && players.length === 0) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center space-y-4">
@@ -258,7 +168,7 @@ export const MatchEvaluation: React.FC = () => {
       <div className="flex items-center justify-between px-1">
         <div>
           <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter">Matchanalys</h3>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Laget: Orion HU14</p>
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Orion HU14 Intelligence</p>
         </div>
         {!isAdding && (
           <button 
@@ -274,44 +184,57 @@ export const MatchEvaluation: React.FC = () => {
         <div className="space-y-8 animate-in slide-in-from-bottom duration-500">
           <div className="p-6 md:p-10 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-8 shadow-2xl">
             
-            <div className={`p-5 rounded-2xl border transition-all ${importedEvents.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30' : 'bg-blue-600/10 border-blue-500/20'} space-y-3`}>
-                <div className="flex items-center gap-2 text-blue-400">
-                    <DownloadCloud size={16} className={importedEvents.length > 0 ? "text-emerald-500" : "text-blue-400"} />
-                    <h4 className={`text-[10px] font-black uppercase tracking-widest ${importedEvents.length > 0 ? "text-emerald-500" : "text-blue-400"}`}>
-                        {importedEvents.length > 0 ? "Matchdata för Orion HU14 klar" : "Hämta från Profixio (Orion HU14)"}
-                    </h4>
+            {/* MAGIC PASTE SECTION */}
+            <div className="p-6 rounded-[2rem] bg-gradient-to-br from-indigo-900/20 to-blue-900/10 border border-indigo-500/30 space-y-4 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Sparkles size={80} className="text-indigo-400" />
                 </div>
                 
-                <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                        <LinkIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input 
-                            value={profixioUrl}
-                            onChange={(e) => setProfixioUrl(e.target.value)}
-                            placeholder="Klistra in Profixio-länk..."
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-9 pr-3 text-xs text-white outline-none focus:border-blue-500"
-                            disabled={importedEvents.length > 0}
+                <div className="flex items-center gap-2 text-indigo-400 relative z-10">
+                    <Wand2 size={20} className="animate-pulse" />
+                    <h4 className="text-xs font-black uppercase tracking-[0.2em]">Magic Import (Don't Make Me Think)</h4>
+                </div>
+                
+                <div className="space-y-4 relative z-10">
+                    <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                        Gå till matchen på Profixio, <span className="text-indigo-400 font-bold">Markera allt & Kopiera</span>. 
+                        Klistra sedan in röran här nere så fixar AI:n resultatet!
+                    </p>
+                    
+                    <div className="relative">
+                        <textarea 
+                            value={magicText}
+                            onChange={(e) => setMagicText(e.target.value)}
+                            placeholder="Klistra in matchdata här..."
+                            className="w-full h-32 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-xs text-slate-300 outline-none focus:border-indigo-500 transition-all custom-scrollbar resize-none"
                         />
+                        {magicText && !importing && (
+                            <button 
+                                onClick={handleMagicImport}
+                                className="absolute bottom-4 right-4 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl animate-in zoom-in"
+                            >
+                                Kör AI-Analys
+                            </button>
+                        )}
+                        {importing && (
+                             <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl animate-in fade-in">
+                                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
+                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">AI:n läser röran...</span>
+                             </div>
+                        )}
                     </div>
-                    <button 
-                        onClick={handleProfixioImport}
-                        disabled={!profixioUrl || importing || importedEvents.length > 0}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 text-white ${importedEvents.length > 0 ? 'bg-emerald-600' : 'bg-blue-600 hover:bg-blue-500'}`}
-                    >
-                        {importing ? <Loader2 size={14} className="animate-spin" /> : importedEvents.length > 0 ? <Clock size={14} /> : "Hämta"}
-                    </button>
                 </div>
 
                 {importedEvents.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-slate-800/50 animate-in slide-in-from-top duration-500">
-                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                             <Activity size={12} /> Orion HU14 Game Log
+                    <div className="mt-4 pt-4 border-t border-indigo-500/20 animate-in slide-in-from-top duration-500">
+                        <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                             <Check size={12} /> Orion HU14 Data Extraherad!
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-32 overflow-y-auto custom-scrollbar pr-2">
                             {importedEvents.map((evt, i) => (
                                 <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-slate-950/50 border border-slate-800/50">
-                                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${evt.team === 'us' ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-800 text-slate-400'}`}>{evt.time}</span>
-                                    <span className="text-[10px] text-slate-300 truncate">{evt.description}</span>
+                                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${evt.team === 'us' ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-800 text-slate-400'}`}>{evt.time || "INFO"}</span>
+                                    <span className="text-[10px] text-slate-400 truncate">{evt.description}</span>
                                 </div>
                             ))}
                         </div>
@@ -340,38 +263,40 @@ export const MatchEvaluation: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 space-y-4">
+            <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 space-y-4 shadow-inner">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-center mb-2">Matchresultat</label>
               <div className="flex items-center justify-center gap-8">
                 <div className="text-center space-y-2">
-                  <span className="text-[10px] font-black text-orange-500 uppercase">Hemma</span>
+                  <span className="text-[10px] font-black text-orange-500 uppercase">Orion</span>
                   <input 
                     type="number"
                     value={newMatch.score}
                     onChange={e => setNewMatch({...newMatch, score: e.target.value})}
                     placeholder="0"
-                    className="w-24 h-24 bg-slate-900 border-2 border-slate-800 rounded-[2rem] text-4xl font-black text-white text-center focus:border-orange-500 outline-none shadow-inner"
+                    className="w-24 h-24 bg-slate-900 border-2 border-slate-800 rounded-[2rem] text-4xl font-black text-white text-center focus:border-orange-500 outline-none shadow-xl"
                   />
                 </div>
                 <div className="text-4xl font-black text-slate-800 pt-6">-</div>
                 <div className="text-center space-y-2">
-                  <span className="text-[10px] font-black text-slate-500 uppercase">Borta</span>
+                  <span className="text-[10px] font-black text-slate-500 uppercase">Motståndare</span>
                   <input 
                     type="number"
                     value={newMatch.opponentScore}
                     onChange={e => setNewMatch({...newMatch, opponentScore: e.target.value})}
                     placeholder="0"
-                    className="w-24 h-24 bg-slate-900 border-2 border-slate-800 rounded-[2rem] text-4xl font-black text-white text-center focus:border-orange-500 outline-none shadow-inner"
+                    className="w-24 h-24 bg-slate-900 border-2 border-slate-800 rounded-[2rem] text-4xl font-black text-white text-center focus:border-orange-500 outline-none shadow-xl"
                   />
                 </div>
               </div>
             </div>
 
             <div className="space-y-6">
-              <h4 className="text-sm font-black text-emerald-400 uppercase tracking-tighter italic">Individuell Bedömning (SISU)</h4>
-              <div className="grid gap-6">
+              <h4 className="text-sm font-black text-emerald-400 uppercase tracking-tighter italic flex items-center gap-2">
+                <ClipboardPaste size={18} /> Individuell Bedömning (SISU)
+              </h4>
+              <div className="grid gap-4">
                 {players.map(p => (
-                  <div key={p.id} className="p-6 md:p-8 rounded-3xl bg-slate-950 border border-slate-800 space-y-6">
+                  <div key={p.id} className="p-6 rounded-3xl bg-slate-950 border border-slate-800 space-y-6">
                     <div className="flex items-center gap-4 border-b border-slate-900 pb-4">
                       <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-white italic">#{p.number}</div>
                       <h5 className="text-lg font-black uppercase text-white italic">{p.name}</h5>
@@ -417,10 +342,10 @@ export const MatchEvaluation: React.FC = () => {
           {matches.map(m => {
             const isWin = m.score > m.opponentScore;
             return (
-              <div key={m.id} onClick={() => setSelectedMatch(selectedMatch?.id === m.id ? null : m)} className="p-6 rounded-[2rem] bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer">
+              <div key={m.id} onClick={() => setSelectedMatch(selectedMatch?.id === m.id ? null : m)} className="p-6 rounded-[2rem] bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer group">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-2xl ${isWin ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}><Trophy size={20} /></div>
+                    <div className={`p-3 rounded-2xl transition-colors ${isWin ? 'bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20' : 'bg-rose-500/10 text-rose-500 group-hover:bg-rose-500/20'}`}><Trophy size={20} /></div>
                     <div><h4 className="text-lg font-black text-white italic uppercase">{m.opponent}</h4><p className="text-[9px] text-slate-500 font-bold uppercase">{m.date}</p></div>
                   </div>
                   <div className="flex items-center gap-6">

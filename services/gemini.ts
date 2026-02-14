@@ -25,6 +25,97 @@ export const generateAppConcept = async (prompt: string): Promise<string> => {
   }
 };
 
+export const parseMatchText = async (rawText: string): Promise<any> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Här är rå text kopierad från en Profixio-matchsida för Orion HU14. Extrahera matchdata. 
+      Text: "${rawText}"`,
+      config: {
+        systemInstruction: "Du är en data-extraherare för basketmatcher. Hitta motståndare, poäng för Orion, poäng för motståndare, datum och en logg över händelser (periodresultat, fouls etc). Returnera strikt JSON.",
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            opponent: { type: Type.STRING },
+            score: { type: Type.NUMBER },
+            opponentScore: { type: Type.NUMBER },
+            date: { type: Type.STRING },
+            events: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  time: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  team: { type: Type.STRING }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return JSON.parse(response.text || "{}");
+  } catch (error) {
+    console.error("Text parsing error:", error);
+    throw error;
+  }
+};
+
+export const parseMatchScreenshot = async (base64Image: string): Promise<any> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  try {
+    const cleanBase64 = base64Image.split(',')[1] || base64Image;
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: cleanBase64
+            }
+          },
+          {
+            text: "Extrahera basketmatch-data från denna Profixio-skärmdump. Returnera JSON med följande fält: opponent, score, opponentScore, date, events."
+          }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            opponent: { type: Type.STRING },
+            score: { type: Type.NUMBER },
+            opponentScore: { type: Type.NUMBER },
+            date: { type: Type.STRING },
+            events: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  time: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  team: { type: Type.STRING }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return JSON.parse(response.text || "{}");
+  } catch (error) {
+    console.error("Screenshot parsing error:", error);
+    throw error;
+  }
+};
+
 export const generateImage = async (prompt: string): Promise<string | null> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
@@ -108,16 +199,14 @@ export const analyzeGameFrame = async (base64Images: string | string[], userInst
   try {
     const images = Array.isArray(base64Images) ? base64Images : [base64Images];
     const isSequence = images.length > 1;
-    const isFullVideo = images.length > 10; // Assuming storyboard has 10+ images
+    const isFullVideo = images.length > 10; 
 
     let prompt = "";
 
     if (isFullVideo) {
-      prompt = `Here are ${images.length} frames extracted evenly from a basketball video (spanning the whole duration). 
-      Provide a SUMMARY analysis of the game flow, energy levels, and tactical patterns observed across these frames. 
-      Identify recurring issues or strengths.`;
+      prompt = `Here are ${images.length} frames extracted evenly from a basketball video. Provide a SUMMARY analysis.`;
     } else if (isSequence) {
-      prompt = "Analyze this sequence of 5 basketball frames (spanning approx 2 seconds). Look at the movement and development of the play.";
+      prompt = "Analyze this sequence of 5 basketball frames.";
     } else {
       prompt = "Analyze this specific basketball frame.";
     }
@@ -125,16 +214,13 @@ export const analyzeGameFrame = async (base64Images: string | string[], userInst
     prompt += " Identify spacing issues, defensive stance quality, or scoring opportunities.";
     
     if (playerFocus) {
-      prompt += ` Focus specifically on player number ${playerFocus}. Track their movement and consistency.`;
+      prompt += ` Focus specifically on player number ${playerFocus}.`;
     }
     
     if (userInstruction) {
       prompt += ` The coach is specifically asking: "${userInstruction}".`;
     }
 
-    prompt += " Be concise and speak like a professional coach. Focus on actionable advice.";
-
-    // Construct parts array
     const parts: any[] = images.map(img => {
        const cleanBase64 = img.split(',')[1] || img;
        return {
@@ -145,7 +231,6 @@ export const analyzeGameFrame = async (base64Images: string | string[], userInst
        };
     });
 
-    // Add text prompt at the end
     parts.push({ text: prompt });
 
     const response = await ai.models.generateContent({
@@ -158,7 +243,7 @@ export const analyzeGameFrame = async (base64Images: string | string[], userInst
     return response.text || "Ingen analys kunde genereras.";
   } catch (error) {
     console.error("Frame analysis error:", error);
-    return "Ett fel uppstod vid AI-analysen. Kontrollera din API-nyckel.";
+    return "Ett fel uppstod vid AI-analysen.";
   }
 };
 
