@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Send, Bot, User, Loader2, Sparkles, AlertCircle, Trash2, Key } from 'lucide-react';
@@ -108,7 +107,8 @@ export const AICoach: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col pb-6">
+    // Adjusted height calculation for mobile (dvh) and subtracted more space to clear bottom nav
+    <div className="max-w-4xl mx-auto h-[calc(100dvh-220px)] md:h-[calc(100vh-140px)] flex flex-col pb-2 md:pb-6 relative">
       <div className="flex items-center justify-between mb-4 px-1">
         <div>
           <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2 text-white">
@@ -139,7 +139,7 @@ export const AICoach: React.FC = () => {
 
       <div className="flex-1 bg-slate-900 border border-slate-800 rounded-[2rem] overflow-hidden flex flex-col shadow-2xl relative">
         {messages.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 opacity-80 z-10">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 opacity-80 z-10 pointer-events-none">
             <div className="w-20 h-20 bg-slate-800 rounded-3xl flex items-center justify-center mb-6 shadow-inner border border-slate-700 text-blue-500">
                <Sparkles size={40} />
             </div>
@@ -150,7 +150,7 @@ export const AICoach: React.FC = () => {
             {!hasKeySet && (
               <button 
                 onClick={handleOpenKeySelection}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg transition-all"
+                className="pointer-events-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg transition-all"
               >
                 <Key size={14} /> Aktivera med API-nyckel
               </button>
