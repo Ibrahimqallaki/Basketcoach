@@ -24,6 +24,9 @@ const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
+// Definiera admin-email (Ändra denna vid behov för att låsa appen till dig)
+const ADMIN_EMAIL = "admin@basketcoach.pro"; 
+
 export const dataService = {
   getStorageMode: () => {
     if (!isFirebaseConfigured) return 'NO_CONFIG';
@@ -41,8 +44,10 @@ export const dataService = {
       const snap = await getDoc(docRef);
       if (!snap.exists()) return true; 
       const list = snap.data().emails || [];
-      // Om listan är tom, tillåt alla. Annars kolla om mailen finns med.
-      return list.length === 0 || list.includes(email.toLowerCase().trim());
+      // Admin är alltid tillåten. Om listan är tom, tillåt alla. Annars kolla om mailen finns med.
+      const lowerEmail = email.toLowerCase().trim();
+      if (lowerEmail === ADMIN_EMAIL.toLowerCase()) return true;
+      return list.length === 0 || list.includes(lowerEmail);
     } catch (err) {
       return true; 
     }
@@ -67,10 +72,11 @@ export const dataService = {
 
   isSuperAdmin: () => {
     const user = auth.currentUser;
-    if (!user || user.uid === 'guest') return true; 
-    // SuperAdmin är den som har rätt att hantera whitelist och radera spelare
-    // I en enkel miljö räknar vi nuvarande användare som admin för sitt eget lag.
-    return true; 
+    if (!user) return false;
+    if (user.uid === 'guest') return true; // Lokal demo tillåter allt
+    
+    // ENDAST den specifika admin-mailen får ändra whitelist och coacher
+    return user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   },
 
   isAdmin: () => true,
@@ -79,7 +85,6 @@ export const dataService = {
     if (!isFirebaseConfigured || !db) return null;
     const user = auth.currentUser;
     if (!user || user.uid === 'guest') return null;
-    // Varje coach får sin egen data-mapp i Firebase
     return `users/${user.uid}`;
   },
 
