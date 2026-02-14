@@ -105,7 +105,7 @@ service cloud.firestore {
               <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">Firestore Säkerhetsregler</h3>
            </div>
            <p className="text-slate-400 text-xs font-medium leading-relaxed italic">
-             Klistra in detta i Firebase Console -> Firestore -> Rules för att skydda din lagdata.
+             Klistra in detta i Firebase Console → Firestore → Rules för att skydda din lagdata.
            </p>
            <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">
               <pre className="text-[10px] text-emerald-500/80 font-mono leading-tight overflow-x-auto">

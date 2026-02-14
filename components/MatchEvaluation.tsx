@@ -88,7 +88,6 @@ export const MatchEvaluation: React.FC = () => {
 
     // SIMULERING AV SCRAPER - Optimerad för Orion HU14
     setTimeout(() => {
-        // Här simulerar vi vad en riktig scraper skulle hitta på Profixio-sidan
         const mockOpponent = "AIK Basket Svart (HU14)";
         const mockScore = "62";
         const mockOpponentScore = "48";
@@ -111,7 +110,6 @@ export const MatchEvaluation: React.FC = () => {
             teamSummary: "Data importerad för Orion HU14. Stark tredje period avgjorde matchen. Bra försvarsintensitet i helplan."
         }));
         
-        setImportedEvents(mockEvents);
         setImportedEvents(mockEvents);
         setImporting(false);
         setProfixioUrl("");
