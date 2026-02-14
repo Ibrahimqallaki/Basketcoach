@@ -13,7 +13,9 @@ import {
   orderBy,
   writeBatch,
   serverTimestamp,
-  where
+  where,
+  getDoc,
+  setDoc
 } from 'firebase/firestore';
 
 const PLAYERS_KEY = 'basket_coach_players_v4';
@@ -22,9 +24,7 @@ const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
-// Helper to ensure players persist on first save in local mode
 const ensurePlayersPersisted = () => {
-  // Fix: Check for !auth.currentUser as well to cover uninitialized auth state which defaults to local
   if (!isFirebaseConfigured || !auth.currentUser || auth.currentUser.uid === 'guest') {
     if (localStorage.getItem(PLAYERS_KEY) === null) {
       localStorage.setItem(PLAYERS_KEY, JSON.stringify(mockPlayers));
@@ -38,6 +38,34 @@ export const dataService = {
     const user = auth.currentUser;
     if (!user || user.uid === 'guest') return 'LOCAL';
     return 'CLOUD';
+  },
+
+  // --- COACH PERMISSIONS ---
+  getCoachWhitelist: async (): Promise<string[]> => {
+    const path = dataService.getUserPath();
+    if (!path || !db) return [];
+    try {
+      const docRef = doc(db, `${path}/settings`, 'coaches');
+      const snap = await getDoc(docRef);
+      return snap.exists() ? snap.data().emails || [] : [];
+    } catch (err) {
+      return [];
+    }
+  },
+
+  updateCoachWhitelist: async (emails: string[]): Promise<void> => {
+    const path = dataService.getUserPath();
+    if (!path || !db) return;
+    const docRef = doc(db, `${path}/settings`, 'coaches');
+    await setDoc(docRef, { emails, updated_at: serverTimestamp() });
+  },
+
+  isAdmin: () => {
+    const user = auth.currentUser;
+    if (!user || user.uid === 'guest') return true; // Local users are always admins of their own device
+    // In a real app, we'd check a 'role' field in Firestore. 
+    // For this implementation, we assume the primary logged in user who owns the path is Admin.
+    return true; 
   },
 
   getAppContextSnapshot: async () => {
@@ -140,14 +168,8 @@ export const dataService = {
     }
   },
 
-  // --- CUSTOM EXERCISES ---
-  
   getCustomExercises: async (): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
-    // For now, keep custom exercises local or cloud based on simple check
-    // Ideally, these should also go to cloud, but let's start with LocalStorage for simplicity/MVP
-    // unless cloud path is active.
-    
     if (path && db) {
        try {
          const q = query(collection(db, `${path}/exercises`));
@@ -158,7 +180,6 @@ export const dataService = {
          return [];
        }
     }
-
     const stored = localStorage.getItem(CUSTOM_EXERCISES_KEY);
     return stored ? JSON.parse(stored) : [];
   },
@@ -166,7 +187,6 @@ export const dataService = {
   saveCustomExercise: async (exercise: Exercise): Promise<void> => {
     const path = dataService.getUserPath();
     if (path && db) {
-        // Remove ID from data if it exists to let Firestore handle it or use setDoc
         const { id, ...data } = exercise;
         await addDoc(collection(db, `${path}/exercises`), data);
     } else {
@@ -187,22 +207,10 @@ export const dataService = {
       }
   },
 
-  // Merges built-in mock phases with custom exercises
   getUnifiedPhases: async (): Promise<Phase[]> => {
     const customExercises = await dataService.getCustomExercises();
-    
-    // Deep copy mock phases to avoid mutating original
     const phases = JSON.parse(JSON.stringify(mockPhases));
-
     if (customExercises.length > 0) {
-        // Strategy: We can either add them to specific phases if we had a 'phaseId' in Exercise
-        // OR simpler: Add them all to a "Custom / Egna" Phase or append to Phase 1-8 based on complexity.
-        // Let's create a "Fas 9: Egna Övningar" for now to make them distinct, 
-        // OR append them to Phase 8 if no phase specified.
-        
-        // Let's try appending them to the first phase for now, or a new phase.
-        // Better: Let the user decide phase? For MVP, let's put them in a new Phase 9.
-        
         const customPhase: Phase = {
             id: 9,
             title: "Fas 9: Egna Övningar",
@@ -216,23 +224,10 @@ export const dataService = {
     return phases;
   },
 
-  // --- PLAYER LOGIN LOGIC ---
   loginPlayer: async (accessCode: string): Promise<Player | null> => {
-    // 1. Try Cloud
-    if (db && isFirebaseConfigured) {
-        // Query ALL users' player collections to find the code.
-        // NOTE: In a real production app with strict rules, this would require a Collection Group query
-        // or a dedicated 'public_player_codes' collection. 
-        // For this architecture, we will attempt to find the player within the current setup if we can.
-        // Limitation: If not logged in as coach, we can't search other users' subcollections easily without Collection Groups.
-        // FALLBACK: For this prototype, we assume the coach is using the device or it uses LocalStorage for demo.
-    }
-
-    // 2. Local Storage Search (Simpler for Demo/MVP)
     const stored = localStorage.getItem(PLAYERS_KEY);
     const players: Player[] = stored ? JSON.parse(stored) : mockPlayers;
     const found = players.find(p => p.accessCode === accessCode);
-    
     return found || null;
   },
 
@@ -269,19 +264,15 @@ export const dataService = {
     }
   },
 
-  // --- EXISTING METHODS ---
-
   getPlayers: async (): Promise<Player[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
       try {
         const q = query(collection(db, `${path}/players`), orderBy('number', 'asc'));
         const snapshot = await getDocs(q);
-        // Strictly return cloud data if in cloud mode. Do not fallback to local storage.
         return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Player));
       } catch (err) {
         console.error("Failed to fetch players from cloud", err);
-        // Return empty array on error to prevent showing inconsistent guest data
         return [];
       }
     }
@@ -291,15 +282,10 @@ export const dataService = {
   },
 
   addPlayer: async (player: Omit<Player, 'id'>): Promise<Player[]> => {
-    // Optimistic update for local view if needed, but primarily source of truth depends on mode.
-    // For cloud mode, we re-fetch or assume consistency.
-    // Here we maintain the pattern: write to source, then return updated list.
-    
     const path = dataService.getUserPath();
     if (path && db) {
       try { 
         await addDoc(collection(db, `${path}/players`), { ...player, created_at: new Date().toISOString() });
-        // Fetch fresh to ensure sync
         return dataService.getPlayers();
       } catch (err) {
         console.error("Cloud save failed", err);
@@ -316,7 +302,7 @@ export const dataService = {
 
   updatePlayer: async (id: string, updates: Partial<Player>): Promise<Player[]> => {
     const path = dataService.getUserPath();
-    if (path && db && !id.includes('.')) { // Cloud IDs are usually not dot-separated (local IDs might be?)
+    if (path && db && !id.includes('.')) {
       try { 
         await updateDoc(doc(db, `${path}/players`, id), updates);
         return dataService.getPlayers();
@@ -377,9 +363,7 @@ export const dataService = {
         throw e;
       }
     } else {
-      // Fix: Ensure default players are saved before saving session to prevent data loss on next reload
       ensurePlayersPersisted();
-      
       const sessions = await dataService.getSessions();
       const newSession: TrainingSession = { ...session, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
       const updated = [newSession, ...sessions];
@@ -415,9 +399,7 @@ export const dataService = {
         throw e;
       }
     } else {
-      // Fix: Ensure default players are saved before saving match
       ensurePlayersPersisted();
-
       const matches = await dataService.getMatches();
       const newMatch: MatchRecord = { ...match, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
       const updated = [newMatch, ...matches];
