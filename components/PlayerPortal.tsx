@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Player, MatchRecord, TrainingSession, Badge, Exercise } from '../types';
+import { Player, MatchRecord, TrainingSession, Badge, Exercise, Phase } from '../types';
 import { dataService } from '../services/dataService';
 import { SKILL_COLORS } from './Roster';
 import { 
@@ -24,6 +24,11 @@ const getVideoId = (url: string) => {
   const cleanUrl = url.trim();
   const match = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
   return match ? match[1] : null;
+};
+
+const isShortsVideo = (url: string) => {
+    if (!url) return false;
+    return url.includes('shorts/');
 };
 
 // Radar Chart Helper
@@ -81,8 +86,6 @@ const RadarChart = ({ skills, colors }: { skills: Record<string, number>, colors
                     const labelRadius = radius + 25;
                     const lx = center + labelRadius * Math.cos(angle);
                     const ly = center + labelRadius * Math.sin(angle);
-                    const colorClass = colors[p.label]?.replace('bg-', '') || 'orange-500';
-
                     return (
                         <g key={i}>
                             <circle cx={p.x} cy={p.y} r="3" fill="#fff" className="drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]" />
@@ -113,11 +116,14 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
   const [myPlayer, setMyPlayer] = useState<Player>(player);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
+  
+  // AI Coach State
   const [showAiChat, setShowAiChat] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  
   const [fuelTasks, setFuelTasks] = useState(
       [{ id: 'protein', label: 'Ägg/Protein Frukost', type: 'protein' as const, completed: false },
        { id: 'water', label: 'Drick 1.5L Vatten', type: 'hydration' as const, completed: false },
@@ -140,6 +146,12 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
     };
     loadData();
   }, [player.id]);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+        chatScrollRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, showAiChat]);
 
   const handleAiAsk = async (e?: React.FormEvent) => {
       e?.preventDefault();
@@ -188,6 +200,10 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
 
       return { xp, level, progressToNext, badges, ovr };
   }, [sessions, matches, myPlayer, fuelTasks]);
+
+  const myTrainingPlan = useMemo(() => (myPlayer.individualPlan || [])
+    .map(id => allExercises.find(e => e.id === id))
+    .filter((e): e is Exercise => !!e), [myPlayer.individualPlan, allExercises]);
 
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
 
@@ -292,7 +308,31 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                       </div>
                    ))}
                 </div>
-                {/* Individual Plan Exercises Here... */}
+                
+                {/* INDIVIDUAL PLAN SECTION */}
+                <div className="space-y-3">
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 flex items-center gap-2"><Target size={14} /> Din Utvecklingsplan</h3>
+                    {myTrainingPlan.map((ex, index) => (
+                        <div key={ex.id} onClick={() => setSelectedExercise(ex)} className="group relative p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/50 transition-all cursor-pointer">
+                            <div className="relative z-10 flex items-start gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 shadow-inner">
+                                    <span className="text-lg font-black text-slate-700 group-hover:text-purple-500 transition-colors">{index + 1}</span>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1"><span className="text-[8px] font-bold uppercase tracking-widest text-purple-400 bg-purple-900/20 px-2 py-0.5 rounded">{ex.category}</span></div>
+                                    <h4 className="text-sm font-black text-white italic uppercase tracking-tight leading-none mb-1">{ex.title}</h4>
+                                    <div className="flex items-center gap-1 text-[9px] text-slate-500 font-bold uppercase"><Youtube size={10} /> <span>Video & Instruktioner</span></div>
+                                </div>
+                                <ChevronRight size={16} className="text-slate-700 mt-2" />
+                            </div>
+                        </div>
+                    ))}
+                    {myTrainingPlan.length === 0 && (
+                        <div className="py-8 text-center border-2 border-dashed border-slate-800 rounded-[2rem]">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Inga övningar tilldelade än</p>
+                        </div>
+                    )}
+                </div>
              </div>
           )}
 
@@ -317,8 +357,135 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                 </div>
              </div>
           )}
-          {/* Matches Tab Here... */}
+          
+          {activeTab === 'matches' && (
+             <div className="space-y-4 animate-in slide-in-from-right duration-300">
+                {matches.map(m => {
+                    const feedback = m.feedbacks.find(f => f.playerId === player.id);
+                    const isWin = m.score > m.opponentScore;
+                    return (
+                        <div key={m.id} className="p-6 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-4 shadow-lg">
+                           <div className="flex justify-between items-center pb-4 border-b border-slate-800/50">
+                              <div>
+                                  <h3 className="text-lg font-black text-white italic uppercase truncate">{m.opponent}</h3>
+                                  <span className="text-[9px] font-bold text-slate-500 uppercase">{m.date}</span>
+                              </div>
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${isWin ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{isWin ? 'W' : 'L'}</div>
+                           </div>
+                           {feedback && (
+                              <div className="grid grid-cols-3 gap-2">
+                                     <div className="p-2 bg-slate-950 rounded-xl text-center border border-slate-800">
+                                         <div className="text-[7px] font-bold text-slate-500 uppercase mb-1">Effort</div>
+                                         <div className="text-sm font-black text-yellow-500 flex justify-center items-center gap-1"><Zap size={10} fill="currentColor"/> {feedback.effort}</div>
+                                     </div>
+                                     <div className="p-2 bg-slate-950 rounded-xl text-center border border-slate-800">
+                                         <div className="text-[7px] font-bold text-slate-500 uppercase mb-1">Laganda</div>
+                                         <div className="text-sm font-black text-rose-500 flex justify-center items-center gap-1"><Heart size={10} fill="currentColor"/> {feedback.teamwork}</div>
+                                     </div>
+                                     <div className="p-2 bg-slate-950 rounded-xl text-center border border-slate-800">
+                                         <div className="text-[7px] font-bold text-slate-500 uppercase mb-1">Utv.</div>
+                                         <div className="text-sm font-black text-emerald-500 flex justify-center items-center gap-1"><BrainCircuit size={10} /> {feedback.learning}</div>
+                                     </div>
+                              </div>
+                           )}
+                        </div>
+                    );
+                })}
+             </div>
+          )}
        </main>
+
+       {/* EXERCISE DETAIL MODAL */}
+       {selectedExercise && (
+           <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col animate-in slide-in-from-bottom duration-300">
+               <button onClick={() => setSelectedExercise(null)} className="absolute top-4 right-4 p-2 bg-slate-800/80 rounded-full text-white z-[120] shadow-lg"><X size={24} /></button>
+
+               <div className={`w-full bg-black relative shrink-0 transition-all duration-500 flex items-center justify-center border-b border-slate-800 overflow-hidden ${isVideoExpanded ? 'h-[60vh] md:h-[70vh]' : 'h-[30vh] md:h-[35vh]'}`}>
+                    {(() => {
+                        const vId = getVideoId(selectedExercise.videoUrl || '');
+                        if (vId) {
+                            return (
+                                <div className="relative w-full h-full">
+                                    {!isPlaying ? (
+                                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center cursor-pointer group" onClick={() => setIsPlaying(true)}>
+                                            <img src={`https://img.youtube.com/vi/${vId}/hqdefault.jpg`} alt="Thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                                            <div className="relative z-20 w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform"><Play size={24} fill="white" className="text-white ml-1" /></div>
+                                        </div>
+                                    ) : (
+                                        <iframe src={`https://www.youtube.com/embed/${vId}?autoplay=1&rel=0&modestbranding=1`} title={selectedExercise.title} className="w-full h-full absolute inset-0 z-10" allow="autoplay; fullscreen" />
+                                    )}
+                                    <div className="absolute bottom-4 right-4 z-20">
+                                        <button onClick={(e) => { e.stopPropagation(); setIsVideoExpanded(!isVideoExpanded); }} className="p-2 bg-black/60 backdrop-blur-md rounded-xl text-white hover:bg-black/90 border border-white/10">
+                                            {isVideoExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900/50"><Youtube size={48} className="opacity-20 mb-2" /><p className="text-[10px] font-bold uppercase tracking-widest">Ingen video</p></div>;
+                    })()}
+               </div>
+
+               <div className="flex-1 overflow-y-auto p-6 space-y-6 relative custom-scrollbar pb-10">
+                   {!showAiChat ? (
+                       <div className="animate-in fade-in duration-300">
+                           <div className="flex items-center justify-between gap-4 mb-6">
+                               <div className="flex-1">
+                                   <span className="text-[8px] font-black uppercase tracking-widest text-purple-400 bg-purple-900/20 px-2 py-0.5 rounded">{selectedExercise.category}</span>
+                                   <h2 className="text-xl font-black text-white italic uppercase tracking-tighter leading-tight mt-1">{selectedExercise.title}</h2>
+                               </div>
+                               <button onClick={() => setShowAiChat(true)} className="px-6 py-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest">
+                                   <Bot size={18} className="animate-pulse" /> <span>Coach</span>
+                               </button>
+                           </div>
+
+                           <div className="grid gap-4">
+                               <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-2">
+                                   <h4 className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2"><Info size={12} /> Utförande</h4>
+                                   <p className="text-sm text-slate-300 leading-relaxed">{selectedExercise.pedagogy?.how || selectedExercise.overview.action}</p>
+                               </div>
+                               <div className="p-4 rounded-2xl bg-indigo-900/10 border border-indigo-500/20 space-y-2">
+                                   <h4 className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Lightbulb size={12} /> Tips</h4>
+                                   <p className="text-sm text-slate-200 font-bold italic">"{selectedExercise.overview.coachingPoint}"</p>
+                               </div>
+                               <div className="space-y-2">
+                                   <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Fokusområden</h4>
+                                   {(selectedExercise.criteria || []).map((c, i) => (
+                                       <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
+                                           <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-700">{i + 1}</div>
+                                           <span className="text-xs font-bold text-white uppercase">{c}</span>
+                                       </div>
+                                   ))}
+                               </div>
+                           </div>
+                       </div>
+                   ) : (
+                       <div className="absolute inset-0 bg-slate-950 z-20 flex flex-col">
+                           <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md">
+                               <div className="flex items-center gap-3">
+                                   <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center"><Bot size={16} className="text-white" /></div>
+                                   <div><h4 className="text-xs font-black text-white uppercase">AI Coach</h4><p className="text-[8px] text-purple-400 font-bold uppercase tracking-widest">{selectedExercise.title}</p></div>
+                               </div>
+                               <button onClick={() => setShowAiChat(false)} className="text-slate-500 hover:text-white text-[9px] font-black uppercase p-2">Stäng</button>
+                           </div>
+                           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                               {chatMessages.map((msg, i) => (
+                                   <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                       <div className={`p-4 rounded-[1.5rem] text-xs leading-relaxed max-w-[85%] ${msg.role === 'user' ? 'bg-slate-800 text-white rounded-tr-none' : 'bg-purple-900/20 border border-purple-500/30 text-purple-100 rounded-tl-none'}`}>{msg.text}</div>
+                                   </div>
+                               ))}
+                               {isAiLoading && <div className="flex gap-2 p-4"><span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce"></span><span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-100"></span></div>}
+                               <div ref={chatScrollRef} />
+                           </div>
+                           <form onSubmit={handleAiAsk} className="p-4 border-t border-slate-800 bg-slate-900 flex gap-2">
+                               <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Fråga coachen..." className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-purple-500 transition-colors" />
+                               <button type="submit" disabled={!chatInput.trim() || isAiLoading} className="p-3 bg-purple-600 rounded-xl text-white disabled:opacity-50"><Send size={18} /></button>
+                           </form>
+                       </div>
+                   )}
+               </div>
+           </div>
+       )}
     </div>
   );
 };
