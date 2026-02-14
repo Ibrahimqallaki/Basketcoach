@@ -21,7 +21,9 @@ import {
   ShieldCheck,
   Settings,
   ShieldAlert,
-  Crown
+  Crown,
+  Copy,
+  FileCode
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
@@ -36,9 +38,29 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
   const [newEmail, setNewEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [copyStatus, setCopyStatus] = useState(false);
+  const [rulesCopied, setRulesCopied] = useState(false);
   
   const isGuest = !user || user.uid === 'guest';
   const isSuperAdmin = dataService.isSuperAdmin();
+
+  const dbRules = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Inställningar (Whitelist)
+    // Alla måste kunna läsa för att se om de får logga in.
+    match /app_settings/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 2. Användardata
+    // Varje coach har bara tillgång till sin egen mapp
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}`;
 
   useEffect(() => {
     setLocalStats(dataService.getLocalDataStats());
@@ -78,6 +100,12 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
     navigator.clipboard.writeText(window.location.origin);
     setCopyStatus(true);
     setTimeout(() => setCopyStatus(false), 2000);
+  };
+
+  const copyRules = () => {
+    navigator.clipboard.writeText(dbRules);
+    setRulesCopied(true);
+    setTimeout(() => setRulesCopied(false), 2000);
   };
 
   return (
@@ -136,6 +164,7 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
                <h3 className="text-xs font-black text-white uppercase tracking-widest">Systemkontroll (Systemägare)</h3>
             </div>
 
+            {/* Inbjudningspanel */}
             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-blue-500/30 shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><ShieldCheck size={120} /></div>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -179,11 +208,40 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
                                 <button onClick={() => handleRemoveFromWhitelist(email)} className="p-3 text-slate-700 hover:text-rose-500 transition-colors"><X size={20} /></button>
                             </div>
                         ))}
+                        {whitelist.length === 0 && (
+                            <div className="text-center p-4 text-[10px] text-slate-600 font-bold uppercase">Inga coacher inbjudna än.</div>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Databasregler - FIXAT SÅ DU HITTAR DET! */}
+            <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-emerald-500/20 shadow-2xl relative overflow-hidden">
+                <div className="flex items-center gap-3 text-emerald-400 mb-4">
+                    <FileCode size={24} />
+                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Databas-regler (Krävs för inbjudningar)</h3>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
+                    <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <p className="text-slate-300 text-xs font-bold leading-relaxed">
+                        För att de coacher du bjudit in ovan ska kunna logga in, måste du kopiera koden nedan och klistra in den i Firebase Console &rarr; Firestore &rarr; Rules.
+                    </p>
+                </div>
+                <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">
+                    <pre className="text-[10px] text-emerald-500/80 font-mono leading-tight overflow-x-auto whitespace-pre-wrap">
+                        {dbRules}
+                    </pre>
+                    <button 
+                        onClick={copyRules}
+                        className="absolute top-4 right-4 p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-2"
+                    >
+                        {rulesCopied ? <span className="text-[10px] font-bold text-emerald-500">Kopierad!</span> : null}
+                        {rulesCopied ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
+                </div>
+            </div>
             
-            {/* Global Backup - Endast Ibrahim */}
+            {/* Global Backup */}
             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-xl space-y-6">
               <h3 className="text-xs font-black text-white italic uppercase tracking-widest flex items-center gap-2">
                   <Database size={18} className="text-orange-500" /> Systembackup
