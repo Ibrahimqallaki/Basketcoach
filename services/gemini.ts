@@ -28,12 +28,16 @@ export const generateAppConcept = async (prompt: string): Promise<string> => {
 export const parseMatchText = async (rawText: string): Promise<any> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
+    // Korta ner kontexten om den är extremt lång för att spara tid
+    const optimizedText = rawText.length > 10000 ? rawText.substring(0, 10000) : rawText;
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Här är rå text kopierad från en Profixio-matchsida för Orion HU14. Extrahera matchdata. 
-      Text: "${rawText}"`,
+      contents: `Extrahera matchdata från denna textdump (Profixio/Basket app).
+      Text: "${optimizedText}"`,
       config: {
-        systemInstruction: "Du är en data-extraherare för basketmatcher. Hitta motståndare, poäng för Orion, poäng för motståndare, datum och en logg över händelser (periodresultat, fouls etc). Returnera strikt JSON.",
+        systemInstruction: "Du är en snabb data-parser. Hitta: opponent, score (Orion), opponentScore, date, events (perioder/fouls). Returnera ENDAST JSON.",
+        temperature: 0, // Zero temp for max speed and precision
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

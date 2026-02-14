@@ -13,6 +13,14 @@ interface ImportedMatchEvent {
   team: 'us' | 'them';
 }
 
+const LOADING_MESSAGES = [
+    "🔍 Läser textmassan...",
+    "🏀 Letar efter Orion HU14...",
+    "📊 Extraherar poängställning...",
+    "🧠 Analyserar händelseförlopp...",
+    "✨ Formaterar matchdata..."
+];
+
 export const MatchEvaluation: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchRecord | null>(null);
@@ -22,6 +30,7 @@ export const MatchEvaluation: React.FC = () => {
   
   const [magicText, setMagicText] = useState("");
   const [importing, setImporting] = useState(false);
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   const [importedEvents, setImportedEvents] = useState<ImportedMatchEvent[]>([]);
   
   const [newMatch, setNewMatch] = useState<{
@@ -78,6 +87,18 @@ export const MatchEvaluation: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Cycling loading message effect
+  useEffect(() => {
+      let interval: number;
+      if (importing) {
+          setLoadingMsgIndex(0);
+          interval = window.setInterval(() => {
+              setLoadingMsgIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
+          }, 600); // Change message every 600ms to make it feel fast
+      }
+      return () => clearInterval(interval);
+  }, [importing]);
 
   const handleMagicImport = async () => {
       if (!magicText.trim()) return;
@@ -217,9 +238,9 @@ export const MatchEvaluation: React.FC = () => {
                             </button>
                         )}
                         {importing && (
-                             <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl animate-in fade-in">
-                                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
-                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">AI:n läser röran...</span>
+                             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center rounded-2xl animate-in fade-in z-20">
+                                <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+                                <span className="text-[10px] font-black text-white uppercase tracking-widest animate-pulse">{LOADING_MESSAGES[loadingMsgIndex]}</span>
                              </div>
                         )}
                     </div>
