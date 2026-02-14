@@ -1,33 +1,6 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 
-export const parseProfixioData = async (rawText: string): Promise<any> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Extrahera matchdata från följande råtext från en Profixio-matchsida. 
-      Jag vill ha ett JSON-objekt med: 
-      - opponent (sträng)
-      - score (nummer, hemmalagets total)
-      - opponentScore (nummer, bortalagets total)
-      - date (YYYY-MM-DD)
-      - events (array med {time, description, type: 'score'|'foul'|'timeout'|'period', team: 'us'|'them'})
-      - summary (en kort coach-summering baserat på statistiken)
-
-      Text: ${rawText}`,
-      config: {
-        responseMimeType: "application/json",
-        systemInstruction: "Du är en data-extraherare för basketmatcher. Om du inte hittar specifika fält, gissa kvalificerat eller lämna tomma. 'Us' är alltid det lag coachen representerar (ofta det lokala laget i listan).",
-      },
-    });
-    return JSON.parse(response.text || "{}");
-  } catch (error) {
-    console.error("Profixio parse error:", error);
-    throw error;
-  }
-};
-
 export const generateAppConcept = async (prompt: string): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {

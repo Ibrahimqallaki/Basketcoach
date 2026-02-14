@@ -11,7 +11,7 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [matches, setMatches] = useState<MatchRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [chartTimeRange, setChartTimeRange] = useState<'Week' | 'Month' | 'Season'>('Season');
+  const [chartTimeRange, setChartTimeRange] = useState<'Vecka' | 'Månad' | 'Säsong'>('Säsong');
   const storageMode = dataService.getStorageMode();
 
   useEffect(() => {
@@ -37,10 +37,8 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
 
   // --- STATISTIK BERÄKNINGAR ---
 
-  // 1. Närvaro (Attendance)
   const attendanceRate = useMemo(() => dataService.calculateAttendanceRate(sessions), [sessions]);
 
-  // 2. Matchstatistik (Win Rate & Form)
   const matchStats = useMemo(() => {
     const total = matches.length;
     if (total === 0) return { winRate: 0, wins: 0, losses: 0, draws: 0, streak: '-' };
@@ -49,14 +47,11 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
     const losses = matches.filter(m => m.score < m.opponentScore).length;
     const draws = total - wins - losses;
     const winRate = Math.round((wins / total) * 100);
-    
-    // Enkel formrad (senaste 5)
     const recent = [...matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
     
     return { winRate, wins, losses, draws, recent };
   }, [matches]);
 
-  // 3. Fys & Atletism (Volume)
   const fysStats = useMemo(() => {
     const fysExerciseIds = new Set(
         mockPhases.flatMap(p => p.exercises)
@@ -80,23 +75,27 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
     return { count: fysEvaluations, ratio };
   }, [sessions]);
 
-  // 4. Team Timeline & Insights
   const teamTimeline = useMemo(() => dataService.getTeamProgressTimeline(sessions), [sessions]);
   
-  // Filter Timeline based on selection
   const filteredTimeline = useMemo(() => {
-    if (chartTimeRange === 'Season') return teamTimeline;
+    if (chartTimeRange === 'Säsong') return teamTimeline;
 
     const now = new Date();
+    now.setHours(23, 59, 59, 999);
+    
     const cutoffDate = new Date();
+    cutoffDate.setHours(0, 0, 0, 0);
 
-    if (chartTimeRange === 'Week') {
+    if (chartTimeRange === 'Vecka') {
         cutoffDate.setDate(now.getDate() - 7);
-    } else if (chartTimeRange === 'Month') {
+    } else if (chartTimeRange === 'Månad') {
         cutoffDate.setDate(now.getDate() - 30);
     }
 
-    return teamTimeline.filter(item => new Date(item.date) >= cutoffDate);
+    return teamTimeline.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= cutoffDate;
+    });
   }, [teamTimeline, chartTimeRange]);
 
   const currentPhaseId = useMemo(() => sessions.length > 0 ? sessions[0].phaseId : 1, [sessions]);
@@ -105,13 +104,9 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
     sessions.reduce((acc, s) => acc + s.evaluations.length, 0), 
   [sessions]);
 
-  // 5. Match Intelligence (SISU - Effort, Teamwork, Learning)
   const sisuStats = useMemo(() => {
     if (matches.length === 0) return null;
-    
-    // Analyze last 5 matches
     const recentMatches = [...matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-    
     let totalEffort = 0, totalTeamwork = 0, totalLearning = 0, count = 0;
     
     recentMatches.forEach(m => {
@@ -129,12 +124,10 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
         effort: (totalEffort / count).toFixed(1),
         teamwork: (totalTeamwork / count).toFixed(1),
         learning: (totalLearning / count).toFixed(1),
-        latestSummary: matches[0].teamSummary // Most recent match summary
+        latestSummary: matches[0].teamSummary
     };
   }, [matches]);
 
-
-  // --- DEFINITION AV STAT-KORT ---
   const stats = [
     { 
       label: 'Närvaro', 
@@ -185,13 +178,11 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in pb-24">
-      
-      {/* Storage Mode Status */}
       <div className="flex items-center justify-between">
          <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-slate-900 border border-slate-800">
             <div className={`w-2 h-2 rounded-full ${storageMode === 'CLOUD' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`}></div>
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-               {storageMode === 'CLOUD' ? 'Connected to Cloud' : 'Local Storage Mode'}
+               {storageMode === 'CLOUD' ? 'Moln-läge aktivt' : 'Lokalt läge'}
             </span>
          </div>
          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -199,7 +190,6 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
          </div>
       </div>
 
-      {/* Stats Grid - Adjusted Gap */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
         {stats.map((s, i) => (
           <div key={i} className={`p-4 md:p-6 rounded-3xl border ${s.border} ${s.bg} backdrop-blur-sm relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300`}>
@@ -213,23 +203,21 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                 <div className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase mt-1 tracking-wide truncate">{s.subtext}</div>
               </div>
             </div>
-            {/* Background Gradient Blob */}
             <div className={`absolute -bottom-4 -right-4 w-24 h-24 bg-gradient-to-br ${s.gradient} rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity`}></div>
           </div>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6 md:gap-8">
-        {/* Main Chart Section */}
         <div className="lg:col-span-8 space-y-6 min-w-0">
           <div className="p-6 md:p-8 rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md relative overflow-hidden">
              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-4 relative z-10">
                 <div>
-                  <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Performance Trend</h3>
-                  <p className="text-xs text-slate-500 font-medium mt-1">Spelarutveckling över tid (Snittbetyg på träning)</p>
+                  <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Utvecklingskurva</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-1">Snittbetyg på träning över tid</p>
                 </div>
                 <div className="flex gap-2">
-                   {(['Week', 'Month', 'Season'] as const).map(t => (
+                   {(['Vecka', 'Månad', 'Säsong'] as const).map(t => (
                       <button 
                         key={t} 
                         onClick={() => setChartTimeRange(t)}
@@ -252,7 +240,7 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                         style={{ height: `${height}%` }}
                      >
                         <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded transition-opacity whitespace-nowrap z-50 pointer-events-none border border-slate-700">
-                           {item.avg}
+                           {item.avg} / 5
                         </div>
                      </div>
                      <div className="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase h-4 truncate w-full text-center">
@@ -263,7 +251,7 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                }) : (
                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 space-y-2">
                     <TrendingUp className="opacity-20" size={32} />
-                    <span className="text-xs font-bold uppercase tracking-widest">Ingen data för denna period</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">Ingen data för {chartTimeRange.toLowerCase()}</span>
                  </div>
                )}
              </div>
@@ -291,10 +279,7 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
           </div>
         </div>
 
-        {/* Side Panel: Match Intelligence & Activity */}
         <div className="lg:col-span-4 space-y-6 min-w-0">
-          
-          {/* Match Intelligence Card (SISU) */}
           <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
              
@@ -304,7 +289,6 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
 
              {sisuStats ? (
                 <div className="space-y-6 relative z-10">
-                   {/* SISU Metrics */}
                    <div className="space-y-4">
                       <div className="space-y-1">
                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -337,7 +321,6 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                       </div>
                    </div>
 
-                   {/* Latest Insight */}
                    {sisuStats.latestSummary && (
                       <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
                          <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-1">
@@ -355,11 +338,10 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
              )}
           </div>
 
-          {/* Activity Feed */}
           <div className="p-6 md:p-8 rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white">
-                <Calendar className="text-slate-400" size={18} /> Recent Activity
+                <Calendar className="text-slate-400" size={18} /> Senaste Aktivitet
               </h3>
             </div>
             <div className="space-y-3">

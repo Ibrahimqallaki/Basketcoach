@@ -31,9 +31,9 @@ const PHASE_STORAGE_KEY = 'basket_coach_plan_phase_v1';
 // Robust helper to get YouTube ID from any valid URL
 const getVideoId = (url: string) => {
   if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
+  const cleanUrl = url.trim();
+  const match = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  return match ? match[1] : null;
 };
 
 // Check if the URL is a YouTube Shorts URL

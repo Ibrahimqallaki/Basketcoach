@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Player, MatchRecord, TrainingSession, Badge, Exercise, Phase } from '../types';
 import { dataService } from '../services/dataService';
@@ -36,9 +35,9 @@ interface PlayerPortalProps {
 
 const getVideoId = (url: string) => {
   if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
+  const cleanUrl = url.trim();
+  const match = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  return match ? match[1] : null;
 };
 
 const isShortsVideo = (url: string) => {
@@ -409,12 +408,12 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                                  <div className="p-3 rounded-xl bg-slate-950/50 border border-slate-800/50 space-y-2">
                                      <div>
                                         <div className="text-[8px] font-black text-emerald-500 uppercase mb-1 flex items-center gap-1"><Flame size={10}/> Bra jobbat</div>
-                                        <p className="text-[10px] text-slate-300 italic leading-relaxed">"{feedback.strengths || 'Starkt jobbat idag!'}"</p>
+                                        <p className="text-sm text-slate-300 italic leading-relaxed">"{feedback.strengths || 'Starkt jobbat idag!'}"</p>
                                      </div>
                                      <div className="w-full h-px bg-slate-800"></div>
                                      <div>
                                         <div className="text-[8px] font-black text-blue-500 uppercase mb-1 flex items-center gap-1"><Target size={10}/> Nästa steg</div>
-                                        <p className="text-[10px] text-slate-300 italic leading-relaxed">"{feedback.improvements || 'Fortsätt träna!'}"</p>
+                                        <p className="text-sm text-slate-300 italic leading-relaxed">"{feedback.improvements || 'Fortsätt träna!'}"</p>
                                      </div>
                                  </div>
                               </div>
@@ -525,6 +524,12 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                </div>
            </div>
        )}
+       {/* FOOTER */}
+        {/* Fix: Changed 'class' to 'className' to comply with React prop naming conventions and resolve errors on lines 529-531 */}
+        <footer className="border-t border-slate-800 pt-12 text-center">
+            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">Basketcoach Pro • Build 5.0.0</p>
+            <p className="text-[10px] text-slate-700 mt-2">Designad för coacher, av coacher.</p>
+        </footer>
     </div>
   );
 };
