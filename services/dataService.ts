@@ -11,9 +11,7 @@ import {
   doc, 
   query, 
   orderBy,
-  writeBatch,
   serverTimestamp,
-  where,
   getDoc,
   setDoc
 } from 'firebase/firestore';
@@ -24,8 +22,8 @@ const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
-// Definiera admin-email (Ändra denna vid behov för att låsa appen till dig)
-const ADMIN_EMAIL = "admin@basketcoach.pro"; 
+// DIN ADMIN-EMAIL - ENDAST DENNA PERSON KAN HANTERA COACHER
+const SUPER_ADMIN_EMAIL = "admin@basketcoach.pro"; 
 
 export const dataService = {
   getStorageMode: () => {
@@ -35,21 +33,21 @@ export const dataService = {
     return 'CLOUD';
   },
 
-  // --- ACCESS CONTROL (WHITELIST) ---
+  // --- ACCESS CONTROL ---
   
   isEmailWhitelisted: async (email: string): Promise<boolean> => {
     if (!db || !isFirebaseConfigured) return true;
     try {
+      const lowerEmail = email.toLowerCase().trim();
+      if (lowerEmail === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
+
       const docRef = doc(db, 'app_settings', 'whitelist');
       const snap = await getDoc(docRef);
-      if (!snap.exists()) return true; 
+      if (!snap.exists()) return false; 
       const list = snap.data().emails || [];
-      // Admin är alltid tillåten. Om listan är tom, tillåt alla. Annars kolla om mailen finns med.
-      const lowerEmail = email.toLowerCase().trim();
-      if (lowerEmail === ADMIN_EMAIL.toLowerCase()) return true;
-      return list.length === 0 || list.includes(lowerEmail);
+      return list.includes(lowerEmail);
     } catch (err) {
-      return true; 
+      return false; 
     }
   },
 
@@ -65,7 +63,7 @@ export const dataService = {
   },
 
   updateWhitelist: async (emails: string[]): Promise<void> => {
-    if (!db) return;
+    if (!db || !dataService.isSuperAdmin()) return;
     const docRef = doc(db, 'app_settings', 'whitelist');
     await setDoc(docRef, { emails, updated_at: serverTimestamp() });
   },
@@ -73,13 +71,10 @@ export const dataService = {
   isSuperAdmin: () => {
     const user = auth.currentUser;
     if (!user) return false;
-    if (user.uid === 'guest') return true; // Lokal demo tillåter allt
-    
-    // ENDAST den specifika admin-mailen får ändra whitelist och coacher
-    return user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    // Gästläge räknas som admin lokalt för demo
+    if (user.uid === 'guest') return true; 
+    return user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
   },
-
-  isAdmin: () => true,
 
   getUserPath: () => {
     if (!isFirebaseConfigured || !db) return null;
@@ -88,7 +83,7 @@ export const dataService = {
     return `users/${user.uid}`;
   },
 
-  // --- DATA OPERATIONS ---
+  // --- DATA OPERATIONS (SILOED PER USER UID) ---
 
   getPlayers: async (): Promise<Player[]> => {
     const path = dataService.getUserPath();
@@ -98,13 +93,11 @@ export const dataService = {
         const snapshot = await getDocs(q);
         return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Player));
       } catch (err) {
-        console.error("Failed to fetch players", err);
         return [];
       }
     }
     const stored = localStorage.getItem(PLAYERS_KEY);
-    if (stored !== null) return JSON.parse(stored);
-    return localStorage.getItem(INIT_KEY) ? [] : mockPlayers;
+    return stored ? JSON.parse(stored) : mockPlayers;
   },
 
   addPlayer: async (player: Omit<Player, 'id'>): Promise<Player[]> => {
@@ -113,9 +106,9 @@ export const dataService = {
       await addDoc(collection(db, `${path}/players`), { ...player, created_at: new Date().toISOString() });
       return dataService.getPlayers();
     } else {
-      const currentPlayers = await dataService.getPlayers();
-      const newPlayer: Player = { ...player, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-      const updated = [...currentPlayers, newPlayer];
+      const current = await dataService.getPlayers();
+      const newP: Player = { ...player, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
+      const updated = [...current, newP];
       dataService.saveLocal(PLAYERS_KEY, updated);
       return updated;
     }
@@ -123,7 +116,7 @@ export const dataService = {
 
   updatePlayer: async (id: string, updates: Partial<Player>): Promise<Player[]> => {
     const path = dataService.getUserPath();
-    if (path && db && !id.includes('.')) {
+    if (path && db) {
       await updateDoc(doc(db, `${path}/players`, id), updates);
       return dataService.getPlayers();
     } else {
@@ -136,7 +129,7 @@ export const dataService = {
 
   deletePlayer: async (id: string): Promise<Player[]> => {
     const path = dataService.getUserPath();
-    if (path && db && !id.includes('.')) {
+    if (path && db) {
       await deleteDoc(doc(db, `${path}/players`, id));
       return dataService.getPlayers();
     } else {
@@ -165,10 +158,9 @@ export const dataService = {
       return { ...session, id: docRef.id } as TrainingSession;
     } else {
       const sessions = await dataService.getSessions();
-      const newSession: TrainingSession = { ...session, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-      const updated = [newSession, ...sessions];
-      dataService.saveLocal(SESSIONS_KEY, updated);
-      return newSession;
+      const newS: TrainingSession = { ...session, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
+      dataService.saveLocal(SESSIONS_KEY, [newS, ...sessions]);
+      return newS;
     }
   },
 
@@ -190,10 +182,9 @@ export const dataService = {
       return { ...match, id: docRef.id } as MatchRecord;
     } else {
       const matches = await dataService.getMatches();
-      const newMatch: MatchRecord = { ...match, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
-      const updated = [newMatch, ...matches];
-      dataService.saveLocal(MATCHES_KEY, updated);
-      return newMatch;
+      const newM: MatchRecord = { ...match, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
+      dataService.saveLocal(MATCHES_KEY, [newM, ...matches]);
+      return newM;
     }
   },
 
@@ -215,8 +206,7 @@ export const dataService = {
         await addDoc(collection(db, `${path}/exercises`), data);
     } else {
         const current = await dataService.getCustomExercises();
-        const updated = [...current, exercise];
-        localStorage.setItem(CUSTOM_EXERCISES_KEY, JSON.stringify(updated));
+        dataService.saveLocal(CUSTOM_EXERCISES_KEY, [...current, exercise]);
     }
   },
 
@@ -226,24 +216,22 @@ export const dataService = {
           await deleteDoc(doc(db, `${path}/exercises`, id));
       } else {
           const current = await dataService.getCustomExercises();
-          const updated = current.filter(e => e.id !== id);
-          localStorage.setItem(CUSTOM_EXERCISES_KEY, JSON.stringify(updated));
+          dataService.saveLocal(CUSTOM_EXERCISES_KEY, current.filter(e => e.id !== id));
       }
   },
 
   getUnifiedPhases: async (): Promise<Phase[]> => {
-    const customExercises = await dataService.getCustomExercises();
+    const custom = await dataService.getCustomExercises();
     const phases = JSON.parse(JSON.stringify(mockPhases));
-    if (customExercises.length > 0) {
-        const customPhase: Phase = {
+    if (custom.length > 0) {
+        phases.push({
             id: 9,
-            title: "Fas 9: Egna Övningar",
-            duration: "Hela Säsongen",
-            color: "from-pink-600 to-rose-500",
-            description: "Dina egna skapade övningar och taktiker.",
-            exercises: customExercises
-        };
-        phases.push(customPhase);
+            title: "Egna Övningar",
+            duration: "Säsong",
+            color: "from-indigo-600 to-blue-500",
+            description: "Dina skräddarsydda övningar.",
+            exercises: custom
+        });
     }
     return phases;
   },
@@ -265,25 +253,15 @@ export const dataService = {
 
   loginPlayer: async (accessCode: string): Promise<Player | null> => {
     const players = await dataService.getPlayers();
-    const found = players.find(p => p.accessCode === accessCode);
-    return found || null;
-  },
-
-  generatePlayerCode: (player: Player): string => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let code = "";
-    for(let i=0; i<4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
-    return `P-${player.number}-${code}`;
+    return players.find(p => p.accessCode === accessCode) || null;
   },
 
   toggleHomework: async (playerId: string, homeworkId: string): Promise<void> => {
      const players = await dataService.getPlayers();
      const player = players.find(p => p.id === playerId);
      if (player && player.homework) {
-         const updatedHomework = player.homework.map(h => 
-             h.id === homeworkId ? { ...h, completed: !h.completed } : h
-         );
-         await dataService.updatePlayer(playerId, { homework: updatedHomework });
+         const updated = player.homework.map(h => h.id === homeworkId ? { ...h, completed: !h.completed } : h);
+         await dataService.updatePlayer(playerId, { homework: updated });
      }
   },
 
@@ -291,14 +269,8 @@ export const dataService = {
     const players = await dataService.getPlayers();
     const player = players.find(p => p.id === playerId);
     if(player) {
-        const newHw: Homework = {
-            id: Math.random().toString(36).substr(2, 9),
-            title,
-            completed: false,
-            dateAssigned: new Date().toISOString()
-        };
-        const updatedHomework = [...(player.homework || []), newHw];
-        await dataService.updatePlayer(playerId, { homework: updatedHomework });
+        const newHw = { id: Math.random().toString(36).substr(2, 9), title, completed: false, dateAssigned: new Date().toISOString() };
+        await dataService.updatePlayer(playerId, { homework: [...(player.homework || []), newHw] });
     }
   },
 
@@ -308,7 +280,7 @@ export const dataService = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `basketcoach_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
   },
 
@@ -324,57 +296,25 @@ export const dataService = {
   },
 
   saveLocal: (key: string, data: any) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-      localStorage.setItem(INIT_KEY, 'true');
-    } catch (e) {
-      console.error("LocalStorage Save Error:", e);
-    }
+    localStorage.setItem(key, JSON.stringify(data));
+    localStorage.setItem(INIT_KEY, 'true');
   },
 
   getLocalDataStats: () => {
-    try {
-      const p = localStorage.getItem(PLAYERS_KEY);
-      const s = localStorage.getItem(SESSIONS_KEY);
-      const m = localStorage.getItem(MATCHES_KEY);
-      return {
-        players: p ? JSON.parse(p).length : 0,
-        sessions: s ? JSON.parse(s).length : 0,
-        matches: m ? JSON.parse(m).length : 0
-      };
-    } catch (e) {
-      return { players: 0, sessions: 0, matches: 0 };
-    }
-  },
-
-  checkLocalStorage: (): boolean => {
-    try {
-      const test = '__storage_test__';
-      localStorage.setItem(test, test);
-      localStorage.removeItem(test);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  },
-
-  testCloudConnection: async (): Promise<{ success: boolean; message: string }> => {
-    const path = dataService.getUserPath();
-    if (!path || !db) return { success: false, message: "Logga in för att testa." };
-    try {
-      await addDoc(collection(db, `${path}/_connection_test`), { timestamp: serverTimestamp(), test: "OK" });
-      return { success: true, message: "Anslutning OK!" };
-    } catch (err: any) {
-      return { success: false, message: `Fel: ${err.message}` };
-    }
+    const p = localStorage.getItem(PLAYERS_KEY);
+    const s = localStorage.getItem(SESSIONS_KEY);
+    return {
+      players: p ? JSON.parse(p).length : 0,
+      sessions: s ? JSON.parse(s).length : 0
+    };
   },
 
   getAppContextSnapshot: async () => {
     const players = await dataService.getPlayers();
     return {
-      appVersion: "5.3.0-private-teams",
-      stats: { playerCount: players.length },
-      lastSync: new Date().toISOString()
+      version: "5.5.0",
+      playerCount: players.length,
+      timestamp: new Date().toISOString()
     };
   }
 };
