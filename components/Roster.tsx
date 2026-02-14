@@ -23,7 +23,7 @@ export const SKILL_COLORS: Record<string, string> = {
     'Transition': 'bg-orange-500'
 };
 
-// Radar Chart Component för synkad visualisering
+// Den "syrade cirkeln" (Radargraf)
 const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
     const entries = Object.entries(skills);
     const numPoints = entries.length;
@@ -70,15 +70,10 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [modalState, setModalState] = useState<{ show: boolean, mode: 'add' | 'edit', player?: Player }>({ show: false, mode: 'add' });
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   
   const isSuperAdmin = dataService.isSuperAdmin();
   const [newHomework, setNewHomework] = useState("");
-
-  const [formData, setFormData] = useState({
-    name: '', number: '', position: 'Point Guard (1)', level: 'Nybörjare', age: '13', notes: ''
-  });
 
   const loadData = async () => {
     setLoading(true);
@@ -103,28 +98,16 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
 
   const playerMatchStats = useMemo(() => {
       if (!player) return null;
-      const feedbacks = matches
-        .flatMap(m => m.feedbacks)
-        .filter(f => f.playerId === player.id);
-      
+      const feedbacks = matches.flatMap(m => m.feedbacks).filter(f => f.playerId === player.id);
       if (feedbacks.length === 0) return null;
-      
       const avg = (key: 'effort' | 'teamwork' | 'learning') => 
         (feedbacks.reduce((acc, f) => acc + f[key], 0) / feedbacks.length).toFixed(1);
-
-      return {
-          effort: avg('effort'),
-          teamwork: avg('teamwork'),
-          learning: avg('learning'),
-          count: feedbacks.length
-      };
+      return { effort: avg('effort'), teamwork: avg('teamwork'), learning: avg('learning') };
   }, [player, matches]);
 
   const currentSkills = useMemo((): Record<string, number> => {
     const defaultSkills = { 'Skytte': 5, 'Dribbling': 5, 'Passning': 5, 'Försvar': 5, 'Spelförståelse': 5, 'Kondition': 5, 'Fysik': 5 };
-    return player?.skillAssessment && Object.keys(player.skillAssessment).length > 0 
-      ? (player.skillAssessment as Record<string, number>)
-      : defaultSkills;
+    return player?.skillAssessment || defaultSkills;
   }, [player]);
 
   const allExercises = useMemo(() => phases.flatMap(p => p.exercises), [phases]);
@@ -144,62 +127,22 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
     setPlayers(updated);
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const payload = {
-        name: formData.name,
-        number: parseInt(formData.number) || 0,
-        position: formData.position,
-        level: formData.level,
-        age: parseInt(formData.age) || 13,
-        notes: formData.notes
-      };
-      if (modalState.mode === 'add') await dataService.addPlayer(payload);
-      else if (modalState.mode === 'edit' && modalState.player) await dataService.updatePlayer(modalState.player.id, payload);
-      await loadData();
-      setModalState({ show: false, mode: 'add' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const confirmDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSubmitting(true);
-    try {
-      await dataService.deletePlayer(id);
-      const updated = await dataService.getPlayers();
-      setPlayers(updated);
-      setDeleteConfirmId(null);
-      if (selectedPlayerId === id) {
-        setSelectedPlayerId(updated.length > 0 ? updated[0].id : null);
-        setMobileDetailOpen(false);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (loading && players.length === 0) {
-    return <div className="h-full w-full flex flex-col items-center justify-center space-y-4"><Loader2 className="w-12 h-12 text-orange-500 animate-spin" /><p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Hämtar truppen...</p></div>;
-  }
+  if (loading && players.length === 0) return <div className="h-full w-full flex flex-col items-center justify-center"><Loader2 className="w-12 h-12 text-orange-500 animate-spin" /></div>;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 md:space-y-8 animate-in slide-in-from-right duration-500 pb-24 md:pb-0">
+    <div className="max-w-6xl mx-auto space-y-6 pb-24">
       <div className="flex items-center justify-between px-1">
-        <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">Laget</h3>
-        <button onClick={() => setModalState({ show: true, mode: 'add' })} className="px-4 py-2 bg-orange-600 rounded-xl text-xs font-black shadow-lg shadow-orange-900/20 text-white flex items-center gap-2 transition-all hover:bg-orange-500"><Plus size={16} /> Lägg till</button>
+        <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter text-white">Laget</h3>
+        <button onClick={() => setModalState({ show: true, mode: 'add' })} className="px-6 py-3 bg-orange-600 rounded-xl text-[10px] font-black uppercase text-white shadow-lg shadow-orange-900/20 hover:bg-orange-500 transition-all flex items-center gap-2"><Plus size={16} /> Lägg till</button>
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-6 items-start">
+      <div className="grid lg:grid-cols-12 gap-6">
         <div className={`lg:col-span-3 space-y-2 ${mobileDetailOpen ? 'hidden lg:block' : 'block'}`}>
           {players.map(p => (
-            <div key={p.id} onClick={() => { setSelectedPlayerId(p.id); setMobileDetailOpen(true); }} className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${selectedPlayerId === p.id ? 'bg-orange-600/10 border-orange-500 shadow-lg' : 'bg-slate-900 border-slate-800'}`}>
+            <div key={p.id} onClick={() => { setSelectedPlayerId(p.id); setMobileDetailOpen(true); }} className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${selectedPlayerId === p.id ? 'bg-orange-600/10 border-orange-500 shadow-lg' : 'bg-slate-900 border-slate-800'}`}>
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs ${selectedPlayerId === p.id ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-500'}`}>#{p.number}</div>
-                <div className="font-bold text-slate-200 text-xs truncate">{p.name}</div>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${selectedPlayerId === p.id ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-500'}`}>#{p.number}</div>
+                <div className="font-bold text-slate-200 text-xs">{p.name}</div>
               </div>
             </div>
           ))}
@@ -207,31 +150,27 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
 
         <div className={`lg:col-span-9 ${mobileDetailOpen ? 'block' : 'hidden lg:block'}`}>
           {player ? (
-            <div className="space-y-6 animate-in slide-in-from-bottom duration-300">
-              <button onClick={() => setMobileDetailOpen(false)} className="lg:hidden flex items-center gap-1 text-slate-500 text-[10px] font-black uppercase mb-2"><X size={14}/> Tillbaka till listan</button>
+            <div className="space-y-6 animate-in slide-in-from-bottom">
+              <button onClick={() => setMobileDetailOpen(false)} className="lg:hidden flex items-center gap-2 text-slate-500 text-[10px] font-black uppercase mb-2"><X size={14}/> Tillbaka</button>
 
-              {/* HEADER */}
-              <div className="p-5 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 shadow-2xl relative overflow-hidden">
+              {/* SPELAR-INFO HEADER */}
+              <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 shadow-2xl relative overflow-hidden">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
-                   <div className="flex items-center gap-4 md:gap-6">
-                      <div className="w-14 h-14 md:w-20 md:h-20 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-2xl md:text-3xl font-black text-orange-500 shadow-inner">{player.number}</div>
+                   <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-3xl font-black text-orange-500 shadow-inner">{player.number}</div>
                       <div>
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <h2 className="text-2xl md:text-3xl font-black text-white italic uppercase leading-none">{player.name}</h2>
-                          <span className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 text-[7px] md:text-[8px] font-black uppercase">{player.position}</span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{player.age || 13} år • Nivå {player.level}</p>
+                        <h2 className="text-2xl md:text-3xl font-black text-white italic uppercase tracking-tighter">{player.name}</h2>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{player.position} • {player.age} år</p>
                       </div>
                    </div>
                    <div className="flex gap-2 w-full md:w-auto">
                       {player.accessCode && onSimulatePlayerLogin && <button onClick={() => onSimulatePlayerLogin(player)} className="p-3 bg-blue-600/10 text-blue-400 border border-blue-500/20 rounded-xl hover:bg-blue-600 hover:text-white transition-all"><Eye size={18}/></button>}
-                      <button onClick={() => { setFormData({ name: player.name, number: player.number.toString(), position: player.position || 'Point Guard (1)', level: player.level || 'Nybörjare', age: player.age?.toString() || '13', notes: player.notes || '' }); setModalState({ show: true, mode: 'edit', player }); }} className="flex-1 md:flex-none px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-[9px] font-black uppercase flex items-center justify-center gap-2 hover:text-white transition-all"><PenTool size={14}/> Redigera</button>
-                      {isSuperAdmin && <button onClick={() => setDeleteConfirmId(player.id)} className="p-2 w-10 h-10 rounded-xl bg-rose-600/10 text-rose-500 border border-rose-500/20 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"><Trash2 size={16}/></button>}
+                      <button className="flex-1 md:flex-none px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-[9px] font-black uppercase flex items-center justify-center gap-2 hover:text-white transition-all"><PenTool size={14}/> Redigera</button>
                    </div>
                 </div>
               </div>
 
-              {/* 1. HOMEWORK */}
+              {/* 1. HEMLÄXOR (TOPP) */}
               <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl">
                  <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Dumbbell size={14} className="text-blue-400" /> Hemläxor & Uppdrag</h3>
                  <div className="flex gap-2">
@@ -248,7 +187,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                  </div>
               </div>
 
-              {/* 2. INDIVIDUAL PLAN */}
+              {/* 2. INDIVIDUELL PLAN (MITTEN) */}
               <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl">
                   <div className="flex justify-between items-center">
                       <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><BookPlus size={14} className="text-purple-400" /> Individuell Utvecklingsplan</h3>
@@ -271,10 +210,10 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                   </div>
               </div>
 
-              {/* 3. MATCH SISU STATS */}
+              {/* 3. MATCHBEDÖMNING (SISU) */}
               <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Trophy size={80} /></div>
-                <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><BrainCircuit size={14} className="text-indigo-400" /> Matchbedömning (SISU-index)</h3>
+                <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><BrainCircuit size={14} className="text-indigo-400" /> Matchstatistik (SISU-index)</h3>
                 {playerMatchStats ? (
                     <div className="grid md:grid-cols-3 gap-6">
                         <div className="space-y-2">
@@ -291,12 +230,12 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center py-4 border border-dashed border-slate-800 rounded-2xl text-[10px] font-bold text-slate-600 uppercase italic">Ingen matchdata tillgänglig än</div>
+                    <div className="text-center py-4 border border-dashed border-slate-800 rounded-2xl text-[10px] font-bold text-slate-600 uppercase italic">Ingen matchdata än</div>
                 )}
               </div>
 
-              {/* 4. SKILL ASSESSMENT WITH ACID CIRCLE */}
-              <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-2xl relative">
+              {/* 4. FÄRDIGHETSBEDÖMNING (SYRAD CIRKEL LÄNGST NER) */}
+              <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-2xl relative overflow-hidden">
                   <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Star size={14} className="text-yellow-500" /> Färdighetsbedömning</h3>
                   <div className="grid md:grid-cols-2 gap-12 items-center">
                       <div className="space-y-5">
@@ -313,40 +252,45 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                               </div>
                           ))}
                       </div>
-                      <div className="bg-slate-950 rounded-[3rem] border border-slate-800 p-8 shadow-inner flex flex-col items-center">
+                      <div className="bg-slate-950 rounded-[3rem] border border-slate-800 p-8 shadow-inner flex flex-col items-center group relative">
+                          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-orange-500/5 via-transparent to-transparent"></div>
                           <RadarChart skills={currentSkills} />
                           <div className="mt-4 text-center">
                               <h4 className="text-xs font-black text-white uppercase italic tracking-widest">Utvecklingsgraf</h4>
-                              <p className="text-[8px] text-slate-500 uppercase mt-1">Visuellt index för spelarens styrkor</p>
+                              <p className="text-[8px] text-slate-500 uppercase mt-1">Realtidssynk till portal</p>
                           </div>
                       </div>
                   </div>
               </div>
             </div>
           ) : (
-            <div className="h-64 border-2 border-dashed border-slate-800 rounded-[2rem] flex flex-col items-center justify-center text-slate-700 text-center"><User size={32} className="opacity-10 mb-2" /><p className="text-[10px] font-bold uppercase tracking-widest">Välj spelare i listan</p></div>
+            <div className="h-64 border-2 border-dashed border-slate-800 rounded-[2rem] flex flex-col items-center justify-center text-slate-700"><User size={32} className="opacity-10 mb-2" /><p className="text-[10px] font-bold uppercase tracking-widest">Välj spelare i listan</p></div>
           )}
         </div>
       </div>
 
-      {/* EXERCISE PICKER */}
+      {/* ÖVNINGSVÄLJARE MODAL */}
       {showExercisePicker && (
           <div className="fixed inset-0 z-[700] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
-              <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
-                  <div className="p-6 border-b border-slate-800 flex justify-between items-center shrink-0">
-                      <div><h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Välj övningar för {player?.name}</h3></div>
+              <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95">
+                  <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
+                      <div>
+                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Välj övningar för {player?.name}</h3>
+                        <p className="text-[9px] font-bold text-slate-500 uppercase">Dessa visas i spelarens utbildningsplan</p>
+                      </div>
                       <button onClick={() => setShowExercisePicker(false)} className="p-2 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white transition-colors"><X size={24} /></button>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                  <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-slate-950/20">
                       {phases.map(phase => (
                           <div key={phase.id} className="space-y-4">
                               <h4 className="text-xs font-black text-white uppercase tracking-[0.2em] flex items-center gap-2 border-l-4 border-orange-500 pl-3">{phase.title}</h4>
                               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                   {phase.exercises.map(ex => {
                                       const isSelected = player?.individualPlan?.includes(ex.id);
+                                      const isFys = ex.category === 'Fysik' || ex.category === 'Kondition';
                                       return (
-                                          <button key={ex.id} onClick={() => handleToggleExercise(ex.id)} className={`p-4 rounded-2xl border text-left transition-all group flex flex-col gap-2 ${isSelected ? 'bg-orange-600 border-orange-400 shadow-lg' : 'bg-slate-950 border-slate-800 hover:border-slate-600'}`}>
-                                              <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-900 text-slate-500'}`}>{ex.category}</span>
+                                          <button key={ex.id} onClick={() => handleToggleExercise(ex.id)} className={`p-4 rounded-2xl border text-left transition-all group flex flex-col gap-2 ${isSelected ? 'bg-orange-600 border-orange-400 shadow-lg shadow-orange-900/20' : 'bg-slate-900 border-slate-800 hover:border-slate-600'}`}>
+                                              <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : isFys ? 'bg-blue-600/20 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>{ex.category}</span>
                                               <div className={`text-[10px] font-black uppercase leading-tight ${isSelected ? 'text-white' : 'text-slate-300'}`}>{ex.title}</div>
                                           </button>
                                       );
@@ -358,31 +302,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                   <div className="p-6 border-t border-slate-800 bg-slate-900 shrink-0"><button onClick={() => setShowExercisePicker(false)} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black uppercase text-xs tracking-widest transition-all">Klar</button></div>
               </div>
           </div>
-      )}
-
-      {/* ADD/EDIT PLAYER MODAL */}
-      {modalState.show && (
-        <div className="fixed inset-0 z-[600] flex items-start md:items-center justify-center p-4 pt-12 md:p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 max-h-[85vh]">
-            <div className="flex justify-between items-center p-6 pb-4 border-b border-slate-800 bg-slate-900 shrink-0">
-              <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">{modalState.mode === 'add' ? 'Ny Spelare' : 'Redigera Spelare'}</h3>
-              <button onClick={() => setModalState({ show: false, mode: 'add' })} className="p-2 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white transition-colors"><X size={20}/></button>
-            </div>
-            <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 pt-4 custom-scrollbar space-y-5">
-              <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Namn</label><input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nummer</label><input required type="number" value={formData.number} onChange={e => setFormData({...formData, number: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none" /></div>
-                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ålder</label><input type="number" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none" /></div>
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Position</label><select value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none">
-                  <option>Point Guard (1)</option><option>Shooting Guard (2)</option><option>Small Forward (3)</option><option>Power Forward (4)</option><option>Center (5)</option><option>Guard</option><option>Forward</option>
-                </select></div>
-              </div>
-              <div className="pt-6"><button disabled={submitting} type="submit" className="w-full py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 hover:bg-orange-500 transition-all shadow-lg">{submitting ? <Loader2 className="animate-spin" /> : <Save size={16} />}<span>Spara Spelare</span></button></div>
-            </form>
-          </div>
-        </div>
       )}
     </div>
   );
