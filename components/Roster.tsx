@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { dataService } from '../services/dataService';
-import { User, Plus, X, Trash2, Star, PenTool, Target, Check, Save, Loader2, Eye, BookPlus, BrainCircuit, Trophy, Dumbbell } from 'lucide-react';
+import { User, Plus, X, Trash2, Star, PenTool, Target, Check, Save, Loader2, Eye, BookPlus, BrainCircuit, Trophy, Dumbbell, ChevronRight } from 'lucide-react';
 import { Player, Phase, MatchRecord } from '../types';
 
 interface RosterProps {
@@ -69,13 +69,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
     setPlayers(updated);
   };
 
-  const handleToggleExercise = async (exId: string) => {
-    if (!player) return;
-    const plan = player.individualPlan || [];
-    const newPlan = plan.includes(exId) ? plan.filter(id => id !== exId) : [...plan, exId];
-    setPlayers(await dataService.updatePlayer(player.id, { individualPlan: newPlan }));
-  };
-
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -101,17 +94,23 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
     <div className="max-w-6xl mx-auto space-y-6 pb-24">
       <div className="flex items-center justify-between px-1">
         <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter text-white">Laget</h3>
-        <button onClick={() => { setFormData({ name: '', number: '', position: 'Point Guard (1)', age: '13', notes: '' }); setModalState({ show: true, mode: 'add' }); }} className="px-6 py-3 bg-orange-600 rounded-xl text-[10px] font-black uppercase text-white shadow-lg flex items-center gap-2 hover:bg-orange-500 transition-all"><Plus size={16} /> Lägg till Spelare</button>
+        <button onClick={() => { 
+            setFormData({ name: '', number: '', position: 'Point Guard (1)', age: '13', notes: '' }); 
+            setModalState({ show: true, mode: 'add' }); 
+        }} className="px-6 py-3 bg-orange-600 rounded-xl text-[10px] font-black uppercase text-white shadow-lg flex items-center gap-2 hover:bg-orange-500 transition-all">
+            <Plus size={16} /> Lägg till Spelare
+        </button>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6">
         <div className={`lg:col-span-3 space-y-2 ${mobileDetailOpen ? 'hidden lg:block' : 'block'}`}>
           {players.map(p => (
-            <div key={p.id} onClick={() => { setSelectedPlayerId(p.id); setMobileDetailOpen(true); }} className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${selectedPlayerId === p.id ? 'bg-orange-600/10 border-orange-500' : 'bg-slate-900 border-slate-800'}`}>
+            <div key={p.id} onClick={() => { setSelectedPlayerId(p.id); setMobileDetailOpen(true); }} className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${selectedPlayerId === p.id ? 'bg-orange-600/10 border-orange-500 shadow-md' : 'bg-slate-900 border-slate-800'}`}>
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${selectedPlayerId === p.id ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-500'}`}>#{p.number}</div>
-                <div className="font-bold text-slate-200 text-xs truncate">{p.name}</div>
+                <div className="font-bold text-slate-200 text-xs truncate max-w-[120px]">{p.name}</div>
               </div>
+              <ChevronRight size={14} className={selectedPlayerId === p.id ? 'text-orange-500' : 'text-slate-800'} />
             </div>
           ))}
         </div>
@@ -122,74 +121,151 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
               <button onClick={() => setMobileDetailOpen(false)} className="lg:hidden flex items-center gap-2 text-slate-500 text-[10px] font-black uppercase mb-4"><X size={14}/> Tillbaka</button>
               <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-6">
                    <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-3xl font-black text-orange-500">{player.number}</div>
+                      <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-3xl font-black text-orange-500 shadow-inner">{player.number}</div>
                       <div>
                         <h2 className="text-2xl md:text-3xl font-black text-white italic uppercase tracking-tighter">{player.name}</h2>
                         <p className="text-[10px] text-slate-500 font-bold uppercase">{player.position} • {player.age} år</p>
                       </div>
                    </div>
-                   <div className="flex gap-2">
-                      {player.accessCode && onSimulatePlayerLogin && <button onClick={() => onSimulatePlayerLogin(player)} className="p-3 bg-blue-600/10 text-blue-400 border border-blue-500/20 rounded-xl hover:bg-blue-600 hover:text-white transition-all"><Eye size={18}/></button>}
-                      <button onClick={() => { setFormData({ name: player.name, number: player.number.toString(), position: player.position || 'Point Guard (1)', age: (player.age || 13).toString(), notes: player.notes || '' }); setModalState({ show: true, mode: 'edit', player }); }} className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-[9px] font-black uppercase flex items-center gap-2 hover:text-white transition-all"><PenTool size={14}/> Redigera</button>
+                   <div className="flex gap-2 w-full md:w-auto">
+                      {player.accessCode && onSimulatePlayerLogin && <button onClick={() => onSimulatePlayerLogin(player)} className="flex-1 md:flex-none p-3 bg-blue-600/10 text-blue-400 border border-blue-500/20 rounded-xl hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center" title="Visa som spelare"><Eye size={18}/></button>}
+                      <button onClick={() => { setFormData({ name: player.name, number: player.number.toString(), position: player.position || 'Point Guard (1)', age: (player.age || 13).toString(), notes: player.notes || '' }); setModalState({ show: true, mode: 'edit', player }); }} className="flex-[2] md:flex-none px-6 py-2 rounded-xl bg-slate-800 text-slate-400 text-[9px] font-black uppercase flex items-center justify-center gap-2 hover:text-white transition-all shadow-lg"><PenTool size={14}/> Redigera</button>
                    </div>
               </div>
 
-              {/* Assignments */}
-              <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6">
-                 <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2"><Dumbbell size={14} className="text-blue-400" /> Hemläxor</h3>
+              {/* Hemläxor */}
+              <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl">
+                 <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Dumbbell size={14} className="text-blue-400" /> Aktiva Uppdrag</h3>
                  <div className="flex gap-2">
-                     <input type="text" value={newHomework} onChange={(e) => setNewHomework(e.target.value)} placeholder="Ny läxa..." className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white" />
-                     <button onClick={async () => { if(!newHomework.trim()) return; await dataService.addHomework(player.id, newHomework); setNewHomework(""); loadData(); }} className="px-4 py-3 bg-blue-600 rounded-xl text-white font-black text-[10px]">Lägg till</button>
+                     <input type="text" value={newHomework} onChange={(e) => setNewHomework(e.target.value)} placeholder="Skriv ett nytt uppdrag..." className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-blue-500" />
+                     <button onClick={async () => { if(!newHomework.trim()) return; await dataService.addHomework(player.id, newHomework); setNewHomework(""); loadData(); }} className="px-6 py-3 bg-blue-600 rounded-xl text-white font-black text-[10px] uppercase shadow-lg shadow-blue-900/20">Lägg till</button>
                  </div>
                  <div className="space-y-2">
                      {(player.homework || []).map(hw => (
-                         <div key={hw.id} className="p-3 rounded-xl bg-slate-950 flex items-center gap-4">
-                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${hw.completed ? 'bg-emerald-500 border-emerald-500' : 'border-slate-700'}`}>{hw.completed && <Check size={12} className="text-white" />}</div>
-                             <div className="text-xs font-bold text-white">{hw.title}</div>
+                         <div key={hw.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-4 group">
+                             <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${hw.completed ? 'bg-emerald-500 border-emerald-500' : 'border-slate-800'}`}>{hw.completed && <Check size={12} className="text-white" />}</div>
+                             <div className={`text-xs font-bold ${hw.completed ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{hw.title}</div>
                          </div>
                      ))}
                  </div>
               </div>
 
-              {/* Assessment Circle */}
-              <div className="p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-8 relative overflow-hidden">
-                  <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2"><Star size={14} className="text-yellow-500" /> Utveckling</h3>
+              {/* Utveckling */}
+              <div className="p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-8 relative overflow-hidden shadow-2xl">
+                  <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Star size={14} className="text-yellow-500" /> Färdighetsbedömning</h3>
                   <div className="grid md:grid-cols-2 gap-12 items-center">
-                      <div className="space-y-5">
+                      <div className="space-y-6">
                           {Object.entries(currentSkills).map(([skill, val]) => (
                               <div key={skill} className="space-y-2 group">
-                                  <div className="flex justify-between text-[9px] font-black uppercase text-slate-400"><span>{skill}</span><span className="text-white">{val}/10</span></div>
-                                  <input type="range" min="1" max="10" value={val} onChange={(e) => handleUpdateAssessment(skill, parseInt(e.target.value))} className="w-full h-1.5 bg-slate-950 rounded-full appearance-none accent-orange-600" />
+                                  <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 group-hover:text-slate-200 transition-colors">
+                                      <span>{skill}</span>
+                                      <span className="text-white">{val}/10</span>
+                                  </div>
+                                  <div className="relative pt-1">
+                                      <input 
+                                          type="range" 
+                                          min="1" 
+                                          max="10" 
+                                          value={val} 
+                                          onChange={(e) => handleUpdateAssessment(skill, parseInt(e.target.value))} 
+                                          className="w-full h-1.5 bg-slate-950 rounded-full appearance-none accent-orange-600 cursor-pointer shadow-inner" 
+                                      />
+                                  </div>
                               </div>
                           ))}
                       </div>
-                      <div className="bg-slate-950 rounded-[3rem] p-8 flex flex-col items-center">
+                      <div className="bg-slate-950 rounded-[3rem] p-10 flex flex-col items-center shadow-inner border border-slate-800">
                           <RadarChart skills={currentSkills} />
+                          <div className="mt-6 text-center">
+                              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Utvecklingsgraf</p>
+                          </div>
                       </div>
                   </div>
               </div>
             </div>
-          ) : <div className="h-64 border-2 border-dashed border-slate-800 rounded-[2rem] flex items-center justify-center text-slate-700 uppercase font-black text-[10px]">Välj spelare</div>}
+          ) : (
+            <div className="h-64 border-2 border-dashed border-slate-800 rounded-[2rem] flex flex-col items-center justify-center text-slate-700 space-y-4">
+                <User size={48} className="opacity-10" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Välj en spelare för att se detaljer</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* PLAYER MODAL */}
+      {/* MODAL FÖR SPELARE */}
       {modalState.show && (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2rem] shadow-2xl animate-in zoom-in-95">
-            <div className="flex justify-between items-center p-6 border-b border-slate-800">
-              <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">{modalState.mode === 'add' ? 'Ny Spelare' : 'Redigera Spelare'}</h3>
-              <button onClick={() => setModalState({ show: false, mode: 'add' })}><X size={20} className="text-slate-500" /></button>
-            </div>
-            <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
-              <input required placeholder="Namn" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none" />
-              <div className="grid grid-cols-2 gap-4">
-                <input required type="number" placeholder="Nummer" value={formData.number} onChange={e => setFormData({...formData, number: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white" />
-                <input type="number" placeholder="Ålder" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white" />
-              </div>
-              <button disabled={submitting} type="submit" className="w-full py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-xs shadow-lg hover:bg-orange-500 transition-all">
-                {submitting ? <Loader2 className="animate-spin" /> : 'Spara Spelare'}
+        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95">
+            <div className="flex justify-between items-center p-8 border-b border-slate-800 bg-slate-900 shrink-0">
+              <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">
+                {modalState.mode === 'add' ? 'Ny Spelare' : 'Redigera Spelare'}
+              </h3>
+              <button onClick={() => setModalState({ show: false, mode: 'add' })} className="p-2 bg-slate-800 rounded-full text-slate-500 hover:text-white transition-colors">
+                <X size={20} />
               </button>
+            </div>
+            
+            <form onSubmit={handleFormSubmit} className="p-8 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Namn</label>
+                <input 
+                  required 
+                  placeholder="t.ex. Aldrin" 
+                  value={formData.name} 
+                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-orange-500 outline-none shadow-inner" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Nummer</label>
+                  <input 
+                    required 
+                    type="number" 
+                    placeholder="10" 
+                    value={formData.number} 
+                    onChange={e => setFormData({...formData, number: e.target.value})} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-orange-500 outline-none" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Ålder</label>
+                  <input 
+                    type="number" 
+                    placeholder="13" 
+                    value={formData.age} 
+                    onChange={e => setFormData({...formData, age: e.target.value})} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-orange-500 outline-none" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Position</label>
+                <select 
+                  value={formData.position} 
+                  onChange={e => setFormData({...formData, position: e.target.value})} 
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-orange-500 outline-none appearance-none"
+                >
+                    <option>Point Guard (1)</option>
+                    <option>Shooting Guard (2)</option>
+                    <option>Small Forward (3)</option>
+                    <option>Power Forward (4)</option>
+                    <option>Center (5)</option>
+                </select>
+              </div>
+
+              <div className="pt-4">
+                <button 
+                  disabled={submitting} 
+                  type="submit" 
+                  className="w-full py-5 bg-orange-600 hover:bg-orange-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-orange-900/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 className="animate-spin" /> : <Save size={18} />}
+                  <span>{modalState.mode === 'add' ? 'Skapa Spelare' : 'Spara Ändringar'}</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

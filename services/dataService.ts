@@ -22,7 +22,7 @@ const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
-// DIN ADMIN-EMAIL - ENDAST DENNA PERSON KAN HANTERA COACHER
+// ÄNDRA DENNA TILL DIN EGEN E-POST FÖR ATT SE ADMIN-VERKTYGEN
 const SUPER_ADMIN_EMAIL = "admin@basketcoach.pro"; 
 
 export const dataService = {
@@ -33,12 +33,13 @@ export const dataService = {
     return 'CLOUD';
   },
 
-  // --- ACCESS CONTROL ---
+  // --- BEHÖRIGHETSKONTROLL ---
   
   isEmailWhitelisted: async (email: string): Promise<boolean> => {
     if (!db || !isFirebaseConfigured) return true;
     try {
       const lowerEmail = email.toLowerCase().trim();
+      // Du är alltid välkommen
       if (lowerEmail === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
 
       const docRef = doc(db, 'app_settings', 'whitelist');
@@ -71,7 +72,7 @@ export const dataService = {
   isSuperAdmin: () => {
     const user = auth.currentUser;
     if (!user) return false;
-    // Gästläge räknas som admin lokalt för demo
+    // Lokalt demo-läge tillåter allt
     if (user.uid === 'guest') return true; 
     return user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
   },
@@ -83,7 +84,7 @@ export const dataService = {
     return `users/${user.uid}`;
   },
 
-  // --- DATA OPERATIONS (SILOED PER USER UID) ---
+  // --- DATAOPERATIONER (Varje coach har sin egen mapp) ---
 
   getPlayers: async (): Promise<Player[]> => {
     const path = dataService.getUserPath();
@@ -188,36 +189,44 @@ export const dataService = {
     }
   },
 
+  // Implementation of getCustomExercises to retrieve manually created drills
   getCustomExercises: async (): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
-       const q = query(collection(db, `${path}/exercises`));
-       const snapshot = await getDocs(q);
-       return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Exercise));
+      try {
+        const q = query(collection(db, `${path}/custom_exercises`));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Exercise));
+      } catch (err) {
+        return [];
+      }
     }
     const stored = localStorage.getItem(CUSTOM_EXERCISES_KEY);
     return stored ? JSON.parse(stored) : [];
   },
 
+  // Implementation of saveCustomExercise to persist manually created drills
   saveCustomExercise: async (exercise: Exercise): Promise<void> => {
     const path = dataService.getUserPath();
     if (path && db) {
-        const { id, ...data } = exercise;
-        await addDoc(collection(db, `${path}/exercises`), data);
+      await setDoc(doc(db, `${path}/custom_exercises`, exercise.id), { ...exercise, created_at: new Date().toISOString() });
     } else {
-        const current = await dataService.getCustomExercises();
-        dataService.saveLocal(CUSTOM_EXERCISES_KEY, [...current, exercise]);
+      const exercises = await dataService.getCustomExercises();
+      const updated = [...exercises, { ...exercise, created_at: new Date().toISOString() }];
+      dataService.saveLocal(CUSTOM_EXERCISES_KEY, updated);
     }
   },
 
+  // Implementation of deleteCustomExercise to remove manually created drills
   deleteCustomExercise: async (id: string): Promise<void> => {
-      const path = dataService.getUserPath();
-      if (path && db) {
-          await deleteDoc(doc(db, `${path}/exercises`, id));
-      } else {
-          const current = await dataService.getCustomExercises();
-          dataService.saveLocal(CUSTOM_EXERCISES_KEY, current.filter(e => e.id !== id));
-      }
+    const path = dataService.getUserPath();
+    if (path && db) {
+      await deleteDoc(doc(db, `${path}/custom_exercises`, id));
+    } else {
+      const exercises = await dataService.getCustomExercises();
+      const updated = exercises.filter(e => e.id !== id);
+      dataService.saveLocal(CUSTOM_EXERCISES_KEY, updated);
+    }
   },
 
   getUnifiedPhases: async (): Promise<Phase[]> => {
