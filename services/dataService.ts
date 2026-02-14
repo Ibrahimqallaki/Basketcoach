@@ -34,16 +34,15 @@ export const dataService = {
 
   // --- ACCESS CONTROL (WHITELIST) ---
   
-  // Kolla om en email är inbjuden att använda appen överhuvudtaget
   isEmailWhitelisted: async (email: string): Promise<boolean> => {
-    if (!db || !isFirebaseConfigured) return true; // Tillåt alla i demo-läge
+    if (!db || !isFirebaseConfigured) return true;
     try {
-      // Vi kollar i en global samling "app_whitelist"
       const docRef = doc(db, 'app_settings', 'whitelist');
       const snap = await getDoc(docRef);
-      if (!snap.exists()) return true; // Om ingen whitelist finns än, tillåt alla (första användaren)
+      if (!snap.exists()) return true; 
       const list = snap.data().emails || [];
-      return list.includes(email.toLowerCase().trim());
+      // Om listan är tom, tillåt alla. Annars kolla om mailen finns med.
+      return list.length === 0 || list.includes(email.toLowerCase().trim());
     } catch (err) {
       return true; 
     }
@@ -66,17 +65,11 @@ export const dataService = {
     await setDoc(docRef, { emails, updated_at: serverTimestamp() });
   },
 
-  // Bara den första användaren eller en specifik UID räknas som Owner av hela systemet
   isSuperAdmin: () => {
     const user = auth.currentUser;
-    if (!user) return false;
-    // Här kan du hårdkoda din egen mail om du vill vara säker:
-    // return user.email === 'din-mail@gmail.com';
-    return true; 
-  },
-
-  isOwner: () => {
-    // För vanliga coacher: De äger sin egen data
+    if (!user || user.uid === 'guest') return true; 
+    // SuperAdmin är den som har rätt att hantera whitelist och radera spelare
+    // I en enkel miljö räknar vi nuvarande användare som admin för sitt eget lag.
     return true; 
   },
 
@@ -86,10 +79,11 @@ export const dataService = {
     if (!isFirebaseConfigured || !db) return null;
     const user = auth.currentUser;
     if (!user || user.uid === 'guest') return null;
+    // Varje coach får sin egen data-mapp i Firebase
     return `users/${user.uid}`;
   },
 
-  // --- STANDARD DATA FETCHING ---
+  // --- DATA OPERATIONS ---
 
   getPlayers: async (): Promise<Player[]> => {
     const path = dataService.getUserPath();
@@ -265,9 +259,6 @@ export const dataService = {
   },
 
   loginPlayer: async (accessCode: string): Promise<Player | null> => {
-    // För spelare söker vi i ALLA användares spelarlistor om det behövs, 
-    // men enklast är att de loggar in i sin coachs kontext.
-    // Här kör vi en förenklad version som kollar nuvarande sparad lista.
     const players = await dataService.getPlayers();
     const found = players.find(p => p.accessCode === accessCode);
     return found || null;
@@ -376,7 +367,7 @@ export const dataService = {
   getAppContextSnapshot: async () => {
     const players = await dataService.getPlayers();
     return {
-      appVersion: "5.2.0-secure-access",
+      appVersion: "5.3.0-private-teams",
       stats: { playerCount: players.length },
       lastSync: new Date().toISOString()
     };

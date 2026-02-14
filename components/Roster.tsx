@@ -18,8 +18,9 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const storageMode = dataService.getStorageMode();
+  
   const isAdmin = dataService.isAdmin();
+  const isSuperAdmin = dataService.isSuperAdmin();
   
   // Homework State
   const [newHomework, setNewHomework] = useState("");
@@ -67,21 +68,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
       : defaultSkills;
   }, [player]);
 
-  const radarPoints = useMemo(() => {
-    const categories = Object.keys(currentSkills);
-    const size = 120;
-    const center = size / 2;
-    const radius = size * 0.4;
-    const points = categories.map((cat, i) => {
-      const angle = (Math.PI * 2 / categories.length) * i - Math.PI / 2;
-      const val = (currentSkills[cat] / 10) * radius;
-      const x = center + Math.cos(angle) * val;
-      const y = center + Math.sin(angle) * val;
-      return `${x},${y}`;
-    });
-    return points.join(" ");
-  }, [currentSkills]);
-
   const handleUpdateAssessment = async (category: string, value: number) => {
     if (!selectedPlayerId) return;
     const updatedAssessment = { ...currentSkills, [category]: value };
@@ -101,22 +87,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
     await dataService.addHomework(player.id, newHomework);
     setNewHomework("");
     const updated = await dataService.getPlayers();
-    setPlayers(updated);
-  };
-
-  const handleAddExerciseToPlan = async (exId: string) => {
-    if (!selectedPlayerId) return;
-    const currentPlan = player?.individualPlan || [];
-    if (currentPlan.includes(exId)) return;
-    const updated = await dataService.updatePlayer(selectedPlayerId, { individualPlan: [...currentPlan, exId] });
-    setPlayers(updated);
-    setShowExercisePicker(false);
-  };
-
-  const handleRemoveExerciseFromPlan = async (exId: string) => {
-    if (!selectedPlayerId) return;
-    const updatedPlan = (player?.individualPlan || []).filter(id => id !== exId);
-    const updated = await dataService.updatePlayer(selectedPlayerId, { individualPlan: updatedPlan });
     setPlayers(updated);
   };
 
@@ -164,7 +134,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
 
   const confirmDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAdmin) return;
     setSubmitting(true);
     try {
       await dataService.deletePlayer(id);
@@ -219,9 +188,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
           )) : (
              <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 text-center space-y-2">
                 <p className="text-[10px] text-slate-500 font-bold uppercase">Inga spelare hittades</p>
-                <button onClick={loadPlayers} className="text-[10px] text-orange-500 underline flex items-center justify-center gap-1 mx-auto mt-2">
-                    <RefreshCw size={10} /> Försök igen
-                </button>
              </div>
           )}
         </div>
@@ -271,7 +237,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
 
                    <div className="flex gap-2 w-full md:w-auto">
                       <button onClick={openEditModal} className="flex-1 md:flex-none px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-[9px] font-black uppercase flex items-center justify-center gap-2 hover:text-white transition-all"><PenTool size={14}/> Redigera</button>
-                      {isAdmin && (
+                      {isSuperAdmin && (
                           <button onClick={() => setDeleteConfirmId(player.id)} className="p-2 w-10 h-10 rounded-xl bg-rose-600/10 text-rose-500 border border-rose-500/20 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"><Trash2 size={16}/></button>
                       )}
                    </div>
@@ -299,7 +265,33 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                        ))}
                    </div>
                 </div>
-                {/* Other detailed sections (Skill Assessment, Plan, Notes) remain same... */}
+
+                <div className="md:col-span-12 p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6">
+                    <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Star size={14} className="text-yellow-500" /> Färdighetsbedömning</h3>
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            {Object.entries(currentSkills).map(([skill, val]) => (
+                                <div key={skill} className="space-y-2">
+                                    <div className="flex justify-between text-[9px] font-black uppercase text-slate-300">
+                                        <span>{skill}</span>
+                                        <span>{val}/10</span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min="1" 
+                                        max="10" 
+                                        value={val} 
+                                        onChange={(e) => handleUpdateAssessment(skill, parseInt(e.target.value))}
+                                        className="w-full h-1.5 bg-slate-950 rounded-full appearance-none accent-orange-600"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex items-center justify-center bg-slate-950 rounded-3xl border border-slate-800 p-8">
+                             <div className="text-center text-slate-500 italic text-xs">Färdighetsprofil baserad på bedömning</div>
+                        </div>
+                    </div>
+                </div>
               </div>
             </div>
           ) : (
@@ -313,15 +305,88 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
 
       {modalState.show && (
         <div className="fixed inset-0 z-[600] flex items-start md:items-center justify-center p-4 pt-12 md:p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 max-h-[80vh] md:max-h-[85vh]">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 max-h-[85vh]">
             <div className="flex justify-between items-center p-6 pb-4 border-b border-slate-800 bg-slate-900 shrink-0">
               <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">{modalState.mode === 'add' ? 'Ny Spelare' : 'Redigera Spelare'}</h3>
               <button onClick={() => setModalState({ show: false, mode: 'add' })} className="p-2 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white transition-colors"><X size={20}/></button>
             </div>
-            <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 pt-4 custom-scrollbar">
-              {/* Form fields same as before... */}
-              <div className="pt-6 mt-2">
-                 <button disabled={submitting} type="submit" className="w-full py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 hover:bg-orange-500 transition-all disabled:opacity-50 shadow-lg shadow-orange-900/20">
+            
+            <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 pt-4 custom-scrollbar space-y-5">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Namn</label>
+                <input 
+                    required 
+                    type="text" 
+                    value={formData.name} 
+                    onChange={e => setFormData({...formData, name: e.target.value})} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none transition-all"
+                    placeholder="Förnamn Efternamn"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Nummer</label>
+                    <input 
+                        required 
+                        type="number" 
+                        value={formData.number} 
+                        onChange={e => setFormData({...formData, number: e.target.value})} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none"
+                        placeholder="Tröjnummer"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Ålder</label>
+                    <input 
+                        type="number" 
+                        value={formData.age} 
+                        onChange={e => setFormData({...formData, age: e.target.value})} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none"
+                    />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Position</label>
+                    <select 
+                        value={formData.position} 
+                        onChange={e => setFormData({...formData, position: e.target.value})} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none"
+                    >
+                        <option>Point Guard</option>
+                        <option>Guard</option>
+                        <option>Forward</option>
+                        <option>Center</option>
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Nivå</label>
+                    <select 
+                        value={formData.level} 
+                        onChange={e => setFormData({...formData, level: e.target.value})} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none"
+                    >
+                        <option>Nybörjare</option>
+                        <option>Medel</option>
+                        <option>Avancerad</option>
+                    </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Coach-noteringar</label>
+                <textarea 
+                    value={formData.notes} 
+                    onChange={e => setFormData({...formData, notes: e.target.value})} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none h-24 resize-none"
+                    placeholder="Extra info om spelaren..."
+                />
+              </div>
+
+              <div className="pt-6">
+                 <button disabled={submitting} type="submit" className="w-full py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 hover:bg-orange-500 transition-all disabled:opacity-50 shadow-lg">
                     {submitting ? <Loader2 className="animate-spin" /> : <Save size={16} />}
                     <span>Spara Spelare</span>
                   </button>
