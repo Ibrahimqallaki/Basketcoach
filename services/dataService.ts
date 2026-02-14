@@ -48,6 +48,7 @@ export const dataService = {
       const list = snap.data().emails || [];
       return list.includes(lowerEmail);
     } catch (err) {
+      console.error("Whitelist check failed. Check Firestore Rules.", err);
       return false; 
     }
   },
@@ -59,6 +60,7 @@ export const dataService = {
       const snap = await getDoc(docRef);
       return snap.exists() ? snap.data().emails || [] : [];
     } catch (err) {
+      console.error("Failed to get whitelist", err);
       return [];
     }
   },
@@ -66,7 +68,8 @@ export const dataService = {
   updateWhitelist: async (emails: string[]): Promise<void> => {
     if (!db || !dataService.isSuperAdmin()) return;
     const docRef = doc(db, 'app_settings', 'whitelist');
-    await setDoc(docRef, { emails, updated_at: serverTimestamp() });
+    // Använd merge: true för att inte skriva över andra fält om de finns
+    await setDoc(docRef, { emails, updated_at: serverTimestamp() }, { merge: true });
   },
 
   isSuperAdmin: () => {

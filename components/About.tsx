@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Trophy, Target, Download, Upload, ClipboardCheck, Activity, Copy, Check, Terminal, Layout, Database, Book } from 'lucide-react';
+import { Trophy, Target, Download, Upload, ClipboardCheck, Activity, Copy, Check, Terminal, Layout, Database, Book, ShieldAlert } from 'lucide-react';
 import { dataService } from '../services/dataService';
 
 export const About: React.FC = () => {
@@ -25,6 +25,17 @@ export const About: React.FC = () => {
     const rules = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // 1. App Settings (Whitelist)
+    // Alla måste kunna läsa för att se om de får logga in.
+    // Endast inloggade får skriva (Admin-kontroll sker i appen).
+    match /app_settings/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 2. Användardata
+    // Varje coach har full kontroll över sin egen mapp.
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
@@ -102,28 +113,39 @@ service cloud.firestore {
         <div className="p-8 md:p-12 rounded-[2.5rem] bg-slate-900 border border-emerald-500/20 shadow-xl space-y-6">
            <div className="flex items-center gap-3 text-emerald-400">
               <Database size={24} />
-              <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">Firestore Säkerhetsregler</h3>
+              <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">VIKTIGT: Säkerhetsregler</h3>
            </div>
-           <p className="text-slate-400 text-xs font-medium leading-relaxed italic">
-             Klistra in detta i Firebase Console → Firestore → Rules för att skydda din lagdata.
-           </p>
+           <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
+              <p className="text-slate-300 text-xs font-bold leading-relaxed">
+                För att coacher ska kunna logga in måste du uppdatera reglerna i Firebase. Kopiera koden nedan och ersätt allt i Firebase Console &rarr; Firestore &rarr; Rules.
+              </p>
+           </div>
            <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">
               <pre className="text-[10px] text-emerald-500/80 font-mono leading-tight overflow-x-auto">
 {`rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // 1. App Settings (Whitelist)
+    match /app_settings/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 2. Användardata (Privat)
     match /users/{userId}/{document=**} {
-      allow read, write: 
-        if request.auth != null && 
-           request.auth.uid == userId;
+      allow read, write: if request.auth != null && 
+                         request.auth.uid == userId;
     }
   }
 }`}
               </pre>
               <button 
                 onClick={copyRules}
-                className="absolute top-4 right-4 p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-all"
+                className="absolute top-4 right-4 p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-2"
               >
+                {rulesCopied ? <span className="text-[10px] font-bold text-emerald-500">Kopierad!</span> : null}
                 {rulesCopied ? <Check size={14} /> : <Copy size={14} />}
               </button>
            </div>
