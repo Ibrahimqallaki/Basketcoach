@@ -39,7 +39,8 @@ import {
   Loader2,
   Maximize2,
   Minimize2,
-  ChevronRight
+  ChevronRight,
+  BookOpen
 } from 'lucide-react';
 
 interface PlayerPortalProps {
@@ -71,6 +72,18 @@ const DEFAULT_FUEL_TASKS = [
     { id: 'greens', label: 'Frukt/Grönt Snack', type: 'greens' as const },
     { id: 'sleep', label: '8h Sömn inatt', type: 'recovery' as const },
 ];
+
+const SKILL_COLORS: Record<string, string> = {
+    'Skytte': 'bg-rose-500',
+    'Dribbling': 'bg-amber-500',
+    'Passning': 'bg-blue-500',
+    'Försvar': 'bg-emerald-500',
+    'Spelförståelse': 'bg-purple-500',
+    'Kondition': 'bg-cyan-500',
+    'Fysik': 'bg-indigo-500',
+    'Basket-IQ': 'bg-violet-500',
+    'Transition': 'bg-orange-500'
+};
 
 export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, isPreview = false }) => {
   const [activeTab, setActiveTab] = useState<'career' | 'training' | 'fuel' | 'matches'>('career');
@@ -173,8 +186,11 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
       const avgSkill = skills.length > 0 ? skills.reduce((a, b) => a + b, 0) / skills.length : 5;
       const ovr = Math.min(99, Math.round(50 + (avgSkill * 5)));
 
+      const hasDoneAllHomework = myPlayer.homework && myPlayer.homework.length > 0 && myPlayer.homework.every(h => h.completed);
+
       const badges: Badge[] = [
           { id: 'sniper', label: 'Sniper', icon: 'crosshair', description: 'Skytte-betyg över 8', color: 'text-rose-500', unlocked: (myPlayer.skillAssessment?.['Skytte'] || 0) >= 8 },
+          { id: 'professor', label: 'Professor', icon: 'book', description: 'Gjort alla uppdrag', color: 'text-indigo-400', unlocked: !!hasDoneAllHomework },
           { id: 'gymrat', label: 'Gym Rat', icon: 'dumbbell', description: 'Över 80% närvaro', color: 'text-blue-500', unlocked: dataService.calculateAttendanceRate(sessions) > 80 && sessions.length > 5 },
           { id: 'mvp', label: 'Heart & Soul', icon: 'heart', description: 'Hög ansträngning', color: 'text-orange-500', unlocked: matches.length > 0 }
       ];
@@ -219,7 +235,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                 </div>
 
                 <div className="relative h-40 flex items-end justify-center -mt-4">
-                    <div className="w-32 h-32 bg-slate-900 rounded-full border-4 border-slate-800 flex items-center justify-center relative overflow-hidden shadow-2xl">
+                    <div className="w-32 h-32 bg-slate-950 rounded-full border-4 border-slate-800 flex items-center justify-center relative overflow-hidden shadow-2xl">
                         <span className="text-4xl font-black text-slate-700">#{player.number}</span>
                     </div>
                     <div className="absolute bottom-0 right-1/2 translate-x-14 translate-y-2 bg-gradient-to-r from-orange-600 to-orange-500 px-3 py-1 rounded-full border-2 border-slate-900 shadow-lg z-20">
@@ -257,7 +273,9 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                         {gamification.badges.map(badge => (
                             <div key={badge.id} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all ${badge.unlocked ? 'bg-slate-900 border-slate-800' : 'bg-slate-900/50 border-slate-800/50 opacity-60'}`}>
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${badge.unlocked ? 'bg-slate-950 shadow-inner' : 'bg-slate-900'}`}>
-                                    {badge.unlocked ? <Target size={20} className={badge.color} /> : <Lock size={16} className="text-slate-600" />}
+                                    {badge.unlocked ? (
+                                        badge.id === 'professor' ? <BookOpen size={20} className={badge.color} /> : <Target size={20} className={badge.color} />
+                                    ) : <Lock size={16} className="text-slate-600" />}
                                 </div>
                                 <div>
                                     <div className={`text-[10px] font-black uppercase ${badge.unlocked ? 'text-white' : 'text-slate-500'}`}>{badge.label}</div>
@@ -278,7 +296,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                                    <span>{val}/10</span>
                                </div>
                                <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden">
-                                   <div className="h-full bg-orange-500 rounded-full" style={{ width: `${(val as number) * 10}%` }}></div>
+                                   <div className={`h-full rounded-full transition-all duration-1000 ${SKILL_COLORS[skill] || 'bg-orange-500'}`} style={{ width: `${(val as number) * 10}%` }}></div>
                                </div>
                            </div>
                        ))}

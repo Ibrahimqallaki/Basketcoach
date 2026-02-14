@@ -28,7 +28,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   const [formData, setFormData] = useState({
     name: '',
     number: '',
-    position: 'Point Guard',
+    position: 'Point Guard (1)',
     level: 'Nybörjare',
     age: '13',
     notes: ''
@@ -91,7 +91,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   };
 
   const openAddModal = () => {
-    setFormData({ name: '', number: '', position: 'Point Guard', level: 'Nybörjare', age: '13', notes: '' });
+    setFormData({ name: '', number: '', position: 'Point Guard (1)', level: 'Nybörjare', age: '13', notes: '' });
     setModalState({ show: true, mode: 'add' });
   };
 
@@ -100,7 +100,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
     setFormData({
       name: player.name,
       number: player.number.toString(),
-      position: player.position || 'Point Guard',
+      position: player.position || 'Point Guard (1)',
       level: player.level || 'Nybörjare',
       age: player.age?.toString() || '13',
       notes: player.notes || ''
@@ -347,7 +347,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Position</label>
                     <select 
@@ -355,10 +355,13 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                         onChange={e => setFormData({...formData, position: e.target.value})} 
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-white focus:border-orange-500 outline-none"
                     >
-                        <option>Point Guard</option>
+                        <option>Point Guard (1)</option>
+                        <option>Shooting Guard (2)</option>
+                        <option>Small Forward (3)</option>
+                        <option>Power Forward (4)</option>
+                        <option>Center (5)</option>
                         <option>Guard</option>
                         <option>Forward</option>
-                        <option>Center</option>
                     </select>
                 </div>
                 <div className="space-y-2">
