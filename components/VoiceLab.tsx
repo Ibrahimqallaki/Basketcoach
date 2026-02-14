@@ -63,13 +63,13 @@ export const VoiceLab: React.FC = () => {
             scriptProcessor.connect(audioContextRef.current!.destination);
           },
           onmessage: async (message) => {
-            if (message.serverContent?.outputTranscription) {
-              setTranscription(prev => [...prev, `AI: ${message.serverContent.outputTranscription!.text}`]);
-            } else if (message.serverContent?.inputTranscription) {
-              setTranscription(prev => [...prev, `You: ${message.serverContent.inputTranscription!.text}`]);
+            if (message?.serverContent?.outputTranscription) {
+              setTranscription(prev => [...prev, `AI: ${message.serverContent?.outputTranscription?.text}`]);
+            } else if (message?.serverContent?.inputTranscription) {
+              setTranscription(prev => [...prev, `You: ${message.serverContent?.inputTranscription?.text}`]);
             }
 
-            const audioData = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            const audioData = message?.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (audioData && outputAudioContextRef.current) {
               const ctx = outputAudioContextRef.current;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
@@ -83,7 +83,7 @@ export const VoiceLab: React.FC = () => {
               source.onended = () => sourcesRef.current.delete(source);
             }
 
-            if (message.serverContent?.interrupted) {
+            if (message?.serverContent?.interrupted) {
               sourcesRef.current.forEach(s => s.stop());
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;

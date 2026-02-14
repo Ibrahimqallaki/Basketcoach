@@ -51,7 +51,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
 
   const player = useMemo(() => players.find(p => p.id === selectedPlayerId), [players, selectedPlayerId]);
 
-  const currentSkills = useMemo(() => {
+  const currentSkills = useMemo((): Record<string, number> => {
     const defaultSkills = {
       'Skytte': 5,
       'Dribbling': 5,
@@ -62,7 +62,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
       'Fysik': 5
     };
     return player?.skillAssessment && Object.keys(player.skillAssessment).length > 0 
-      ? player.skillAssessment 
+      ? (player.skillAssessment as Record<string, number>)
       : defaultSkills;
   }, [player]);
 
@@ -525,7 +525,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
       {/* DELETE CONFIRM */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[600] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-6">
-          <div className="max-w-sm w-full p-8 rounded-[2rem] bg-slate-900 border border-slate-800 shadow-2xl text-center space-y-6 animate-in zoom-in duration-200">
+          <div className="max-sm w-full p-8 rounded-[2rem] bg-slate-900 border border-slate-800 shadow-2xl text-center space-y-6 animate-in zoom-in duration-200">
             <Trash2 size={48} className="text-rose-500 mx-auto" />
             <h4 className="text-xl font-black text-white italic uppercase">Ta bort spelare?</h4>
             <div className="flex gap-4">
