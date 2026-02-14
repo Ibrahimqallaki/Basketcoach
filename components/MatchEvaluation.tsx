@@ -1,6 +1,5 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-/* Added Check to the lucide-react imports */
 import { Swords, Star, Save, Plus, ChevronRight, X, Heart, Zap, Target, MessageCircle, Trophy, Hash, Loader2, Presentation, PenTool, Image as ImageIcon, Trash2, Link as LinkIcon, DownloadCloud, AlertCircle, Clock, Activity, Code, Server, Undo2, Crosshair, Camera, Sparkles, ClipboardPaste, Wand2, Check } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { parseMatchText } from '../services/gemini';
@@ -14,11 +13,9 @@ interface ImportedMatchEvent {
 }
 
 const LOADING_MESSAGES = [
-    "🔍 Läser textmassan...",
-    "🏀 Letar efter Orion HU14...",
-    "📊 Extraherar poängställning...",
-    "🧠 Analyserar händelseförlopp...",
-    "✨ Formaterar matchdata..."
+    "🚀 Startar Turbo-extrahering...",
+    "📊 Hittar Orion HU14 poäng...",
+    "✨ Formaterar fält..."
 ];
 
 export const MatchEvaluation: React.FC = () => {
@@ -88,14 +85,13 @@ export const MatchEvaluation: React.FC = () => {
     loadData();
   }, []);
 
-  // Cycling loading message effect
   useEffect(() => {
       let interval: number;
       if (importing) {
           setLoadingMsgIndex(0);
           interval = window.setInterval(() => {
               setLoadingMsgIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
-          }, 600); // Change message every 600ms to make it feel fast
+          }, 400); 
       }
       return () => clearInterval(interval);
   }, [importing]);
@@ -113,13 +109,13 @@ export const MatchEvaluation: React.FC = () => {
                   score: data.score?.toString() || "",
                   opponentScore: data.opponentScore?.toString() || "",
                   date: data.date || prev.date,
-                  teamSummary: `Smart Import: Orion HU14 vs ${data.opponent}. ${data.events?.length || 0} händelser analyserade.`
+                  teamSummary: `Auto-genererad från Profixio. ${data.events?.length || 0} perioder/händelser lästes in.`
               }));
               setImportedEvents(data.events || []);
-              setMagicText(""); // Rensa efter lyckad import
+              setMagicText(""); 
           }
       } catch (err) {
-          alert("Kunde inte tolka texten. Försök kopiera mer av sidan.");
+          console.error(err);
       } finally {
           setImporting(false);
       }
@@ -205,7 +201,6 @@ export const MatchEvaluation: React.FC = () => {
         <div className="space-y-8 animate-in slide-in-from-bottom duration-500">
           <div className="p-6 md:p-10 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-8 shadow-2xl">
             
-            {/* MAGIC PASTE SECTION */}
             <div className="p-6 rounded-[2rem] bg-gradient-to-br from-indigo-900/20 to-blue-900/10 border border-indigo-500/30 space-y-4 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <Sparkles size={80} className="text-indigo-400" />
@@ -213,20 +208,15 @@ export const MatchEvaluation: React.FC = () => {
                 
                 <div className="flex items-center gap-2 text-indigo-400 relative z-10">
                     <Wand2 size={20} className="animate-pulse" />
-                    <h4 className="text-xs font-black uppercase tracking-[0.2em]">Magic Import (Don't Make Me Think)</h4>
+                    <h4 className="text-xs font-black uppercase tracking-[0.2em]">Snabb-import (Markera allt & Kopiera)</h4>
                 </div>
                 
                 <div className="space-y-4 relative z-10">
-                    <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                        Gå till matchen på Profixio, <span className="text-indigo-400 font-bold">Markera allt & Kopiera</span>. 
-                        Klistra sedan in röran här nere så fixar AI:n resultatet!
-                    </p>
-                    
                     <div className="relative">
                         <textarea 
                             value={magicText}
                             onChange={(e) => setMagicText(e.target.value)}
-                            placeholder="Klistra in matchdata här..."
+                            placeholder="Klistra in allt från Profixio här..."
                             className="w-full h-32 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-xs text-slate-300 outline-none focus:border-indigo-500 transition-all custom-scrollbar resize-none"
                         />
                         {magicText && !importing && (
@@ -234,7 +224,7 @@ export const MatchEvaluation: React.FC = () => {
                                 onClick={handleMagicImport}
                                 className="absolute bottom-4 right-4 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl animate-in zoom-in"
                             >
-                                Kör AI-Analys
+                                Fyll i fälten nu
                             </button>
                         )}
                         {importing && (
@@ -249,7 +239,7 @@ export const MatchEvaluation: React.FC = () => {
                 {importedEvents.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-indigo-500/20 animate-in slide-in-from-top duration-500">
                         <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                             <Check size={12} /> Orion HU14 Data Extraherad!
+                             <Check size={12} /> Data Extraherad! Kontrollera fälten nedan.
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-32 overflow-y-auto custom-scrollbar pr-2">
                             {importedEvents.map((evt, i) => (

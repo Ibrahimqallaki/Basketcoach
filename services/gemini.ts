@@ -28,16 +28,15 @@ export const generateAppConcept = async (prompt: string): Promise<string> => {
 export const parseMatchText = async (rawText: string): Promise<any> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    // Korta ner kontexten om den är extremt lång för att spara tid
-    const optimizedText = rawText.length > 10000 ? rawText.substring(0, 10000) : rawText;
+    const optimizedText = rawText.length > 5000 ? rawText.substring(0, 5000) : rawText;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Extrahera matchdata från denna textdump (Profixio/Basket app).
-      Text: "${optimizedText}"`,
+      contents: `Extract basketball match data for Orion HU14 from this text: "${optimizedText}"`,
       config: {
-        systemInstruction: "Du är en snabb data-parser. Hitta: opponent, score (Orion), opponentScore, date, events (perioder/fouls). Returnera ENDAST JSON.",
-        temperature: 0, // Zero temp for max speed and precision
+        systemInstruction: "Strict data extractor. Fields: opponent (string), score (number), opponentScore (number), date (YYYY-MM-DD), events (array of {time, description, team}). Output JSON only.",
+        temperature: 0,
+        thinkingConfig: { thinkingBudget: 0 }, // Disable thinking for speed
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -84,12 +83,13 @@ export const parseMatchScreenshot = async (base64Image: string): Promise<any> =>
             }
           },
           {
-            text: "Extrahera basketmatch-data från denna Profixio-skärmdump. Returnera JSON med följande fält: opponent, score, opponentScore, date, events."
+            text: "Extract basketball data. JSON fields: opponent, score, opponentScore, date, events."
           }
         ]
       },
       config: {
         responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 0 },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -241,6 +241,9 @@ export const analyzeGameFrame = async (base64Images: string | string[], userInst
       model: 'gemini-3-flash-preview', 
       contents: {
         parts: parts
+      },
+      config: {
+        thinkingConfig: { thinkingBudget: 0 }
       }
     });
 

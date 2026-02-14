@@ -1,5 +1,4 @@
 
-
 export enum View {
   DASHBOARD = 'DASHBOARD',
   ROSTER = 'ROSTER',
@@ -26,6 +25,16 @@ export interface Homework {
   dateAssigned: string;
 }
 
+export interface NutritionLog {
+  date: string;
+  items: {
+    id: string;
+    label: string;
+    completed: boolean;
+    type: 'protein' | 'hydration' | 'recovery' | 'greens';
+  }[];
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -39,6 +48,7 @@ export interface Player {
   notes?: string;
   accessCode?: string; // Code for player login
   homework?: Homework[]; // List of assignments
+  nutrition?: NutritionLog; // Daily nutrition tracking
   created_at?: string;
 }
 
