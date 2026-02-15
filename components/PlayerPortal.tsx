@@ -10,6 +10,7 @@ import { GoogleGenAI } from "@google/genai";
 
 interface PlayerPortalProps {
   player: Player;
+  coachId?: string;
   onLogout: () => void;
   isPreview?: boolean;
 }
@@ -79,7 +80,7 @@ const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
     );
 };
 
-export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, isPreview = false }) => {
+export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onLogout, isPreview = false }) => {
   const [activeTab, setActiveTab] = useState<'career' | 'training' | 'fuel' | 'matches'>('career');
   const [matches, setMatches] = useState<MatchRecord[]>([]);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
@@ -103,9 +104,10 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
 
   useEffect(() => {
     const loadData = async () => {
+      setLoading(true);
       const [allMatches, allSessions, phases, currentPlayers] = await Promise.all([
-          dataService.getMatches(),
-          dataService.getSessions(),
+          dataService.getMatches(coachId),
+          dataService.getSessions(coachId),
           dataService.getUnifiedPhases(),
           dataService.getPlayers()
       ]);
@@ -118,7 +120,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
       setLoading(false);
     };
     loadData();
-  }, [player.id, activeTab]);
+  }, [player.id, activeTab, coachId]);
 
   useEffect(() => {
     localStorage.setItem(`fuel_${player.id}_${new Date().toISOString().split('T')[0]}`, JSON.stringify(fuelChecks));
@@ -156,7 +158,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
       } finally { setIsAiLoading(false); }
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
+  if (loading) return <div className="min-h-screen bg-[#020617] flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-24 relative overflow-x-hidden">

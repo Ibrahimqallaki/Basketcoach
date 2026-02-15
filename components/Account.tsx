@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 // @ts-ignore
 import { signOut } from 'firebase/auth';
@@ -124,9 +123,10 @@ service cloud.firestore {
       setIsTesting(true);
       setTestResult({ status: 'idle', message: '' });
       try {
-          const player = await dataService.loginPlayer(testCode);
-          if (player) {
-              setTestResult({ status: 'success', message: `Hittade: ${player.name} (#${player.number})` });
+          const result = await dataService.loginPlayer(testCode);
+          if (result) {
+              // Fix: Access name and number from the nested player object in the result
+              setTestResult({ status: 'success', message: `Hittade: ${result.player.name} (#${result.player.number})` });
           } else {
               setTestResult({ status: 'error', message: 'Ingen spelare hittades med denna kod.' });
           }

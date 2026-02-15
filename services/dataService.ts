@@ -144,8 +144,8 @@ export const dataService = {
     }
   },
 
-  getSessions: async (): Promise<TrainingSession[]> => {
-    const path = dataService.getUserPath();
+  getSessions: async (coachId?: string): Promise<TrainingSession[]> => {
+    const path = coachId ? `users/${coachId}` : dataService.getUserPath();
     if (path && db) {
       const q = query(collection(db, `${path}/sessions`), orderBy('date', 'desc'));
       const snapshot = await getDocs(q);
@@ -168,8 +168,8 @@ export const dataService = {
     }
   },
 
-  getMatches: async (): Promise<MatchRecord[]> => {
-    const path = dataService.getUserPath();
+  getMatches: async (coachId?: string): Promise<MatchRecord[]> => {
+    const path = coachId ? `users/${coachId}` : dataService.getUserPath();
     if (path && db) {
       const q = query(collection(db, `${path}/matches`), orderBy('date', 'desc'));
       const snapshot = await getDocs(q);
@@ -277,7 +277,7 @@ export const dataService = {
     });
   },
 
-  loginPlayer: async (accessCode: string): Promise<Player | null> => {
+  loginPlayer: async (accessCode: string): Promise<{ player: Player, coachId: string } | null> => {
     const cleanCode = accessCode.trim().toUpperCase();
     
     if (isFirebaseConfigured && db) {
@@ -286,8 +286,13 @@ export const dataService = {
         const q = query(playersRef, where('accessCode', '==', cleanCode));
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
-          const doc = snapshot.docs[0];
-          return { id: doc.id, ...doc.data() } as Player;
+          const d = snapshot.docs[0];
+          // Extrahera coachens UID från sökvägen users/COACH_ID/players/PLAYER_ID
+          const coachId = d.ref.parent.parent?.id || "";
+          return { 
+            player: { id: d.id, ...d.data() } as Player, 
+            coachId 
+          };
         }
       } catch (err: any) {
         console.warn("Player search index status:", err.code, err.message);
@@ -304,9 +309,13 @@ export const dataService = {
       }
     }
 
-    // Fallback till lokal data om Firebase inte är inloggat eller koden inte hittas globalt
+    // Fallback till lokal data
     const players = await dataService.getPlayers();
-    return players.find(p => p.accessCode?.trim().toUpperCase() === cleanCode) || null;
+    const localPlayer = players.find(p => p.accessCode?.trim().toUpperCase() === cleanCode);
+    if (localPlayer) {
+        return { player: localPlayer, coachId: 'guest' };
+    }
+    return null;
   },
 
   toggleHomework: async (playerId: string, homeworkId: string): Promise<void> => {

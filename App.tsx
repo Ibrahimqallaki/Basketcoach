@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [showPlayerLogin, setShowPlayerLogin] = useState(false);
   const [playerCode, setPlayerCode] = useState("");
   const [loggedInPlayer, setLoggedInPlayer] = useState<Player | null>(null);
+  const [currentCoachId, setCurrentCoachId] = useState<string | null>(null);
   const [verifyingCode, setVerifyingCode] = useState(false);
 
   useEffect(() => {
@@ -98,10 +99,11 @@ const App: React.FC = () => {
     setVerifyingCode(true);
     setLoginError(null);
     try {
-        const player = await dataService.loginPlayer(playerCode);
-        if (player) {
-            setLoggedInPlayer(player);
-            setUser(createDemoUser(player.name, `player_${player.id}`));
+        const result = await dataService.loginPlayer(playerCode);
+        if (result) {
+            setLoggedInPlayer(result.player);
+            setCurrentCoachId(result.coachId);
+            setUser(createDemoUser(result.player.name, `player_${result.player.id}`));
             setCurrentView(View.PLAYER_PORTAL);
         } else {
             setLoginError({ 
@@ -126,6 +128,10 @@ const App: React.FC = () => {
 
   const handleSimulatePlayerLogin = (player: Player) => {
       setLoggedInPlayer(player);
+      // Hämta aktuell coach-path för simulering
+      const coachPath = dataService.getUserPath();
+      const coachId = coachPath ? coachPath.split('/')[1] : 'guest';
+      setCurrentCoachId(coachId);
       setCurrentView(View.PLAYER_PORTAL);
   };
 
@@ -147,6 +153,7 @@ const App: React.FC = () => {
       if (loggedInPlayer) {
           const wasSimulated = user && !user.uid.startsWith('player_');
           setLoggedInPlayer(null);
+          setCurrentCoachId(null);
           if (user?.uid.startsWith('player_')) {
              setUser(null);
              setShowPlayerLogin(false);
@@ -249,6 +256,10 @@ const App: React.FC = () => {
                                 <input 
                                     autoFocus 
                                     type="text" 
+                                    inputMode="text"
+                                    autoCapitalize="characters"
+                                    autoCorrect="off"
+                                    spellCheck="false"
                                     placeholder="T.ex. P-10-XY3Z" 
                                     value={playerCode} 
                                     onChange={(e) => setPlayerCode(e.target.value)} 
@@ -322,7 +333,7 @@ const App: React.FC = () => {
 
         <div className={`flex-1 overflow-y-auto ${!loggedInPlayer ? 'p-4 md:p-10' : ''} custom-scrollbar w-full`}>
             {loggedInPlayer ? (
-                <PlayerPortal player={loggedInPlayer} onLogout={handleLogout} isPreview={!user.uid.startsWith('player_')} />
+                <PlayerPortal player={loggedInPlayer} coachId={currentCoachId || undefined} onLogout={handleLogout} isPreview={!user.uid.startsWith('player_')} />
             ) : (
                 (() => {
                     switch (currentView) {
