@@ -14,6 +14,28 @@ export enum View {
   PLAYER_PORTAL = 'PLAYER_PORTAL'
 }
 
+export type TicketStatus = 'backlog' | 'todo' | 'in_progress' | 'done';
+export type TicketType = 'bug' | 'feature' | 'feedback';
+
+export interface AppTicket {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  role: 'coach' | 'player';
+  title: string;
+  description: string;
+  type: TicketType;
+  status: TicketStatus;
+  priority: 'low' | 'medium' | 'high';
+  appVersion: string;
+  createdAt: string;
+  technicalInfo?: {
+    userAgent: string;
+    platform: string;
+  };
+}
+
 /* Added 'Layups' and 'Returtagning' to SkillCategory to match mockData usage */
 export type SkillCategory = 'Skott' | 'Dribbling' | 'Passningar' | 'Försvar' | 'Kondition' | 'Basket-IQ' | 'Transition' | 'Pick & Roll' | 'Fysik' | 'Taktik' | 'Layups' | 'Returtagning';
 

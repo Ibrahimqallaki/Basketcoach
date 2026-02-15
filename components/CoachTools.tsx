@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, Plus, Minus, Wrench, Clock, Hash, Timer, MonitorPlay, Bot, ArrowRight, User, AlertTriangle, ShieldAlert, PencilRuler, UserCheck, ChevronRight, ArrowLeftRight, BellRing } from 'lucide-react';
+import { Play, Pause, RotateCcw, Plus, Minus, Wrench, Clock, Hash, Timer, MonitorPlay, Bot, ArrowRight, User, AlertTriangle, ShieldAlert, PencilRuler, UserCheck, ChevronRight, ArrowLeftRight, BellRing, MessageSquareText } from 'lucide-react';
 import { View, Player } from '../types';
 import { dataService } from '../services/dataService';
 import { TacticalWhiteboard } from './TacticalWhiteboard';
+import { SupportModal } from './SupportModal';
 
 interface CoachToolsProps {
   onNavigate?: (view: View) => void;
@@ -11,6 +12,7 @@ interface CoachToolsProps {
 
 export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
   const [activeTool, setActiveTool] = useState<'scoreboard' | 'timer' | null>('scoreboard');
+  const [showSupport, setShowSupport] = useState(false);
 
   // Scoreboard State
   const [homeScore, setHomeScore] = useState(0);
@@ -91,6 +93,7 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24">
+      {showSupport && <SupportModal userRole="coach" onClose={() => setShowSupport(false)} />}
       <div className="flex items-center justify-between px-1">
         <div>
           <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2">
@@ -100,7 +103,7 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
          <button onClick={() => onNavigate?.(View.VIDEO_ANALYSIS)} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-orange-500/50 flex flex-col gap-2 items-start transition-all group shadow-lg">
             <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform"><MonitorPlay size={20} /></div>
             <div className="text-left"><div className="text-xs font-black text-white uppercase tracking-tight">Videoanalys</div><div className="text-[9px] text-slate-500 font-bold uppercase">Filmrummet</div></div>
@@ -108,6 +111,10 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
          <button onClick={() => onNavigate?.(View.AI_COACH)} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-blue-500/50 flex flex-col gap-2 items-start transition-all group shadow-lg">
             <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform"><Bot size={20} /></div>
             <div className="text-left"><div className="text-xs font-black text-white uppercase tracking-tight">AI Assistent</div><div className="text-[9px] text-slate-500 font-bold uppercase">Din mentor</div></div>
+         </button>
+         <button onClick={() => setShowSupport(true)} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 flex flex-col gap-2 items-start transition-all group shadow-lg">
+            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform"><MessageSquareText size={20} /></div>
+            <div className="text-left"><div className="text-xs font-black text-white uppercase tracking-tight">Feedback</div><div className="text-[9px] text-slate-500 font-bold uppercase">Support</div></div>
          </button>
       </div>
 

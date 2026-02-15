@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [isDenied, setIsDenied] = useState(false);
   
-  const [loginError, setLoginError] = useState<{ message: string, isSyncIssue?: boolean, isRuleIssue?: boolean, isIndexIssue?: boolean, isBuilding?: boolean } | null>(null);
+  const [loginError, setLoginError] = useState<{ message: string, isSyncIssue?: boolean, isRuleIssue?: boolean, isIndexIssue?: boolean, isBuilding?: boolean, isAuthDisabled?: boolean } | null>(null);
   const [showPlayerLogin, setShowPlayerLogin] = useState(false);
   const [playerCode, setPlayerCode] = useState("");
   const [loggedInPlayer, setLoggedInPlayer] = useState<Player | null>(null);
@@ -103,17 +103,22 @@ const App: React.FC = () => {
         if (result) {
             // Viktigt: Logga in anonymt i Firebase Auth för att få behörighet till Firestore
             if (isFirebaseConfigured) {
-                await signInAnonymously(auth);
+                try {
+                    await signInAnonymously(auth);
+                } catch (authErr: any) {
+                    if (authErr.code === 'auth/operation-not-allowed') {
+                        setLoginError({ message: "Anonym inloggning ej aktiv.", isAuthDisabled: true });
+                        setVerifyingCode(false);
+                        return;
+                    }
+                    throw authErr;
+                }
             }
             setLoggedInPlayer(result.player);
             setCurrentCoachId(result.coachId);
-            // Vi behåller lokalt state för UI-kontroll
             setCurrentView(View.PLAYER_PORTAL);
         } else {
-            setLoginError({ 
-                message: "Ogiltig kod.", 
-                isSyncIssue: true 
-            });
+            setLoginError({ message: "Ogiltig kod.", isSyncIssue: true });
         }
     } catch (err: any) {
         if (err.message === 'ACCESS_DENIED') {
@@ -267,33 +272,22 @@ const App: React.FC = () => {
                                     placeholder="T.ex. P-10-XY3Z" 
                                     value={playerCode} 
                                     onChange={(e) => setPlayerCode(e.target.value)} 
-                                    className={`w-full bg-slate-950 border ${loginError ? (loginError.isBuilding ? 'border-amber-500' : 'border-rose-500') : 'border-slate-800'} rounded-2xl p-4 text-center text-xl font-mono text-white tracking-widest uppercase focus:border-blue-500 outline-none`} 
+                                    className={`w-full bg-slate-950 border ${loginError ? 'border-rose-500' : 'border-slate-800'} rounded-2xl p-4 text-center text-xl font-mono text-white tracking-widest uppercase focus:border-blue-500 outline-none`} 
                                 />
                                 {loginError && (
-                                    <div className={`p-4 rounded-xl space-y-2 ${loginError.isIndexIssue ? (loginError.isBuilding ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-purple-500/10 border border-purple-500/20') : loginError.isRuleIssue ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
-                                        <div className={`flex items-center gap-2 text-[10px] font-black uppercase ${loginError.isIndexIssue ? (loginError.isBuilding ? 'text-amber-500' : 'text-purple-400') : loginError.isRuleIssue ? 'text-amber-500' : 'text-rose-500'}`}>
-                                            {loginError.isBuilding ? <Clock size={14} className="animate-spin" /> : loginError.isIndexIssue ? <DatabaseZap size={14} /> : loginError.isRuleIssue ? <Shield size={14} /> : <AlertTriangle size={14} />} 
+                                    <div className={`p-4 rounded-xl space-y-2 ${loginError.isIndexIssue ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
+                                        <div className={`flex items-center gap-2 text-[10px] font-black uppercase ${loginError.isIndexIssue ? 'text-purple-400' : 'text-rose-500'}`}>
+                                            {loginError.isBuilding ? <Clock size={14} className="animate-spin" /> : loginError.isIndexIssue ? <DatabaseZap size={14} /> : <AlertTriangle size={14} />} 
                                             {loginError.message}
                                         </div>
-                                        {loginError.isBuilding && (
+                                        {loginError.isAuthDisabled && (
                                             <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
-                                                Firebase bygger just nu indexet. Detta tar normalt 2-5 minuter. Försök igen snart!
-                                            </p>
-                                        )}
-                                        {loginError.isSyncIssue && !loginError.isRuleIssue && !loginError.isIndexIssue && (
-                                            <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
-                                                <WifiOff size={10} className="inline mr-1" /> 
-                                                Tips: Coachen måste vara inloggad (ej gäst) för att koden ska fungera.
-                                            </p>
-                                        )}
-                                        {loginError.isRuleIssue && (
-                                            <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
-                                                Be din coach uppdatera reglerna i Firebase Console. En guide finns under Inställningar i coachens app.
+                                                Gå till Firebase Console -> Authentication -> Sign-in method och aktivera "Anonymous".
                                             </p>
                                         )}
                                         {loginError.isIndexIssue && !loginError.isBuilding && (
                                             <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
-                                                Be din coach öppna webbläsarens konsol (F12) och klicka på Firebase-länken för att skapa indexet som krävs.
+                                                Be din coach öppna webbläsarens konsol (F12) och klicka på Firebase-länken för att skapa indexet.
                                             </p>
                                         )}
                                     </div>
@@ -316,12 +310,9 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#020617] overflow-hidden text-slate-200 font-sans selection:bg-orange-500/30">
       {!hasApiKey && <KeySelectionOverlay onKeySelected={handleKeySelected} />}
-      
-      {/* Visa Sidebar endast om spelare INTE är inloggad */}
       {!loggedInPlayer && <Sidebar activeView={currentView} onNavigate={setCurrentView} user={user} />}
       
       <main className="flex-1 flex flex-col overflow-x-hidden relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] w-full max-w-[100vw]">
-        {/* Visa Coach Header endast om spelare INTE är inloggad */}
         {!loggedInPlayer && (
           <header className="h-20 flex items-center justify-between px-4 md:px-10 shrink-0 z-40">
             <div className="flex items-center gap-4">

@@ -26,10 +26,20 @@ import {
   FileCode,
   Search,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  LayoutGrid,
+  ClipboardList,
+  Bug,
+  Lightbulb,
+  MessageSquare,
+  Clock,
+  Trash2,
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
+import { AppTicket, TicketStatus } from '../types';
 
 interface AccountProps {
   user: User | null;
@@ -38,6 +48,7 @@ interface AccountProps {
 export const Account: React.FC<AccountProps> = ({ user }) => {
   const [localStats, setLocalStats] = useState({ players: 0, sessions: 0 });
   const [whitelist, setWhitelist] = useState<string[]>([]);
+  const [tickets, setTickets] = useState<AppTicket[]>([]);
   const [newEmail, setNewEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [copyStatus, setCopyStatus] = useState(false);
@@ -61,32 +72,56 @@ service cloud.firestore {
       allow write: if request.auth != null && !request.auth.token.anonymous;
     }
 
-    // 2. Spelardata (Tillåt sökning på kod för inloggning)
+    // 2. Tickets (Feedback Loop)
+    match /app_tickets/{ticketId} {
+      allow create: if true; // Alla får skicka
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email == "Ibrahim.qallaki@gmail.com");
+      allow update, delete: if request.auth != null && request.auth.token.email == "Ibrahim.qallaki@gmail.com";
+    }
+
+    // 3. Spelardata (Tillåt sökning på kod för inloggning)
     match /{path=**}/players/{playerId} {
       allow read: if true; 
     }
 
-    // 3. Användardata (Privat mapp för coachen + läsåtkomst för spelare)
+    // 4. Användardata
     match /users/{userId}/{document=**} {
-      // Coachen får läsa/skriva allt i sin mapp
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Spelare (inloggade anonymt) får läsa matcher och träningar
       allow read: if request.auth != null;
     }
   }
 }`;
 
+  const loadAdminData = async () => {
+      if (isSuperAdmin && !isGuest) {
+          const [w, t] = await Promise.all([
+              dataService.getWhitelistedEmails(),
+              dataService.getTickets()
+          ]);
+          setWhitelist(w);
+          setTickets(t);
+      }
+  };
+
   useEffect(() => {
     setLocalStats(dataService.getLocalDataStats());
-    if (isSuperAdmin && !isGuest) {
-        dataService.getWhitelistedEmails().then(setWhitelist);
-    }
+    loadAdminData();
   }, [isSuperAdmin, isGuest]);
 
   const handleLogout = async () => {
     await signOut(auth);
     window.location.reload();
+  };
+
+  const handleUpdateTicket = async (id: string, status: TicketStatus) => {
+      await dataService.updateTicketStatus(id, status);
+      setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+  };
+
+  const handleDeleteTicket = async (id: string) => {
+      if (!confirm("Radera ticket?")) return;
+      await dataService.deleteTicket(id);
+      setTickets(prev => prev.filter(t => t.id !== id));
   };
 
   const handleAddToWhitelist = async () => {
@@ -144,6 +179,37 @@ service cloud.firestore {
       }
   };
 
+  const TicketCard = ({ ticket }: { ticket: AppTicket }) => (
+      <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 group relative overflow-hidden">
+          <div className={`absolute top-0 left-0 w-1 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+          <div className="flex justify-between items-start pl-2">
+              <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                          {ticket.type}
+                      </span>
+                      <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">{ticket.role} • {ticket.userName}</span>
+                  </div>
+                  <h5 className="text-sm font-black text-white uppercase truncate">{ticket.title}</h5>
+              </div>
+              <button onClick={() => handleDeleteTicket(ticket.id)} className="p-2 text-slate-700 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14}/></button>
+          </div>
+          <p className="text-[10px] text-slate-400 font-medium leading-relaxed italic pl-2">"{ticket.description}"</p>
+          
+          <div className="flex gap-1 pl-2">
+              {(['backlog', 'todo', 'in_progress', 'done'] as TicketStatus[]).map(s => (
+                  <button 
+                    key={s} 
+                    onClick={() => handleUpdateTicket(ticket.id, s)}
+                    className={`flex-1 py-1.5 rounded-lg text-[7px] font-black uppercase transition-all ${ticket.status === s ? 'bg-white text-black' : 'bg-slate-900 text-slate-600 hover:text-slate-400'}`}
+                  >
+                      {s.replace('_', ' ')}
+                  </button>
+              ))}
+          </div>
+      </div>
+  );
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24 px-2">
       {/* Profil Header */}
@@ -175,6 +241,49 @@ service cloud.firestore {
           </button>
         </div>
       </div>
+
+      {/* ADMIN TICKETS (FEEDBACK LOOP) */}
+      {isSuperAdmin && !isGuest && (
+          <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-3">
+                    <LayoutGrid size={20} className="text-indigo-400" />
+                    <h3 className="text-xs font-black text-white uppercase tracking-widest">Feedback Kanban</h3>
+                </div>
+                <div className="flex gap-4">
+                    <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Bugg</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Förslag</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Allmänt</span></div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                  {[
+                      { id: 'backlog', label: 'Backlog', color: 'text-slate-500' },
+                      { id: 'todo', label: 'Att Göra', color: 'text-blue-400' },
+                      { id: 'in_progress', label: 'Pågår', color: 'text-amber-400' },
+                      { id: 'done', label: 'Färdigt', color: 'text-emerald-400' }
+                  ].map(column => (
+                      <div key={column.id} className="space-y-3">
+                          <div className="flex items-center justify-between px-2 mb-2">
+                              <span className={`text-[10px] font-black uppercase tracking-widest ${column.color}`}>{column.label}</span>
+                              <span className="text-[10px] font-black text-slate-800">{tickets.filter(t => t.status === column.id).length}</span>
+                          </div>
+                          <div className="space-y-3 min-h-[100px]">
+                              {tickets.filter(t => t.status === column.id).map(ticket => (
+                                  <TicketCard key={ticket.id} ticket={ticket} />
+                              ))}
+                              {tickets.filter(t => t.status === column.id).length === 0 && (
+                                  <div className="p-8 border-2 border-dashed border-slate-900 rounded-2xl flex flex-col items-center justify-center opacity-20">
+                                      <ClipboardList size={20} className="text-slate-600" />
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      )}
 
       {/* Lagstatistik */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -290,12 +399,12 @@ service cloud.firestore {
             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-emerald-500/20 shadow-2xl relative overflow-hidden">
                 <div className="flex items-center gap-3 text-emerald-400 mb-4">
                     <FileCode size={24} />
-                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Databas-regler (Fungerande version)</h3>
+                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Databas-regler (Ticket-ready)</h3>
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
                     <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
                     <p className="text-slate-300 text-xs font-bold leading-relaxed">
-                        Kopiera koden nedan och ersätt reglerna i Firebase Console. Dessa regler tillåter anonyma spelare att läsa data men inte ändra något.
+                        Kopiera koden nedan och ersätt reglerna i Firebase Console. Detta inkluderar nu regler för Ticket-systemet.
                     </p>
                 </div>
                 <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">

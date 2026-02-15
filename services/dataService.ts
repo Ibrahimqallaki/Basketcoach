@@ -1,5 +1,5 @@
 
-import { Player, TrainingSession, MatchRecord, Homework, Phase, Exercise } from '../types';
+import { Player, TrainingSession, MatchRecord, Homework, Phase, Exercise, AppTicket, TicketStatus } from '../types';
 import { mockPlayers, mockPhases } from './mockData';
 import { db, auth, isFirebaseConfigured } from './firebase';
 import { 
@@ -15,7 +15,8 @@ import {
   getDoc,
   setDoc,
   where,
-  collectionGroup
+  collectionGroup,
+  limit
 } from 'firebase/firestore';
 
 const PLAYERS_KEY = 'basket_coach_players_v4';
@@ -85,7 +86,6 @@ export const dataService = {
   getUserPath: () => {
     if (!isFirebaseConfigured || !db) return null;
     const user = auth.currentUser;
-    // Anonyma användare (spelare) har ingen egen "user path", de läser från coachen
     if (!user || user.uid === 'guest' || user.isAnonymous) return null;
     return `users/${user.uid}`;
   },
@@ -217,6 +217,58 @@ export const dataService = {
     }
   },
 
+  // TICKET SYSTEM (FEEDBACK LOOP)
+  createTicket: async (ticket: Omit<AppTicket, 'id' | 'status' | 'createdAt' | 'appVersion' | 'technicalInfo'>): Promise<void> => {
+    if (!isFirebaseConfigured || !db) return;
+    const colRef = collection(db, 'app_tickets');
+    await addDoc(colRef, {
+      ...ticket,
+      status: 'backlog',
+      createdAt: new Date().toISOString(),
+      appVersion: '5.7.0',
+      technicalInfo: {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform
+      }
+    });
+  },
+
+  getTickets: async (): Promise<AppTicket[]> => {
+    if (!isFirebaseConfigured || !db) return [];
+    try {
+      const user = auth.currentUser;
+      const colRef = collection(db, 'app_tickets');
+      
+      let q;
+      if (dataService.isSuperAdmin()) {
+          // Admin ser allt
+          q = query(colRef, orderBy('createdAt', 'desc'), limit(100));
+      } else if (user) {
+          // Vanliga användare ser bara sina egna
+          q = query(colRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+      } else {
+          return [];
+      }
+
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as AppTicket));
+    } catch (err) {
+      console.warn("Ticket fetch error:", err);
+      return [];
+    }
+  },
+
+  updateTicketStatus: async (ticketId: string, status: TicketStatus): Promise<void> => {
+    if (!isFirebaseConfigured || !db || !dataService.isSuperAdmin()) return;
+    const docRef = doc(db, 'app_tickets', ticketId);
+    await updateDoc(docRef, { status });
+  },
+
+  deleteTicket: async (ticketId: string): Promise<void> => {
+    if (!isFirebaseConfigured || !db || !dataService.isSuperAdmin()) return;
+    await deleteDoc(doc(db, 'app_tickets', ticketId));
+  },
+
   getCustomExercises: async (): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
@@ -299,7 +351,6 @@ export const dataService = {
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
           const d = snapshot.docs[0];
-          // Extrahera coachId genom att titta på dokumentets path: users/COACH_ID/players/PLAYER_ID
           const pathParts = d.ref.path.split('/');
           const coachId = pathParts[1]; 
           return { 
@@ -386,7 +437,7 @@ export const dataService = {
   getAppContextSnapshot: async () => {
     const players = await dataService.getPlayers();
     return {
-      version: "5.6.1",
+      version: "5.7.0",
       playerCount: players.length,
       timestamp: new Date().toISOString()
     };

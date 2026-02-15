@@ -4,9 +4,10 @@ import { Player, MatchRecord, TrainingSession, Badge, Exercise, Phase, Homework 
 import { dataService } from '../services/dataService';
 import { SKILL_COLORS } from './Roster';
 import { 
-  Trophy, Target, CheckCircle2, Zap, Heart, BrainCircuit, LogOut, Dumbbell, Eye, Star, Award, Lock, Play, Youtube, X, Info, Lightbulb, Egg, GlassWater, Moon, Carrot, Send, Bot, Loader2, Maximize2, Minimize2, ChevronRight, BookOpen, ExternalLink, Search, Flame, Sparkles, Circle, Medal, ClipboardList, Activity, Calendar
+  Trophy, Target, CheckCircle2, Zap, Heart, BrainCircuit, LogOut, Dumbbell, Eye, Star, Award, Lock, Play, Youtube, X, Info, Lightbulb, Egg, GlassWater, Moon, Carrot, Send, Bot, Loader2, Maximize2, Minimize2, ChevronRight, BookOpen, ExternalLink, Search, Flame, Sparkles, Circle, Medal, ClipboardList, Activity, Calendar, MessageSquareText
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
+import { SupportModal } from './SupportModal';
 
 interface PlayerPortalProps {
   player: Player;
@@ -81,7 +82,7 @@ const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
 };
 
 export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onLogout, isPreview = false }) => {
-  const [activeTab, setActiveTab] = useState<'career' | 'training' | 'fuel' | 'matches'>('career');
+  const [activeTab, setActiveTab] = useState<'career' | 'training' | 'fuel' | 'matches']('career');
   const [matches, setMatches] = useState<MatchRecord[]>([]);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
@@ -90,6 +91,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
   const [loading, setLoading] = useState(true);
   const [myPlayer, setMyPlayer] = useState<Player>(player);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
   
   const [fuelChecks, setFuelChecks] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem(`fuel_${player.id}_${new Date().toISOString().split('T')[0]}`);
@@ -162,6 +164,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-24 relative overflow-x-hidden">
+       {showSupport && <SupportModal userRole="player" onClose={() => setShowSupport(false)} />}
        {/* PROFILE HEADER */}
        <header className="relative pt-12 pb-16 px-6 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-[#020617] to-[#020617]"></div>
@@ -172,9 +175,9 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
                         <div className="text-6xl font-black text-orange-500 leading-none tracking-tighter drop-shadow-[0_0_15px_rgba(249,115,22,0.4)]">{gamification.ovr}</div>
                         <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-2">OVR RATING</div>
                     </div>
-                    <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center border border-slate-700 shadow-inner">
-                        <Trophy size={20} className="text-orange-500" />
-                    </div>
+                    <button onClick={() => setShowSupport(true)} className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center border border-slate-700 shadow-inner hover:border-blue-500 transition-all text-blue-500">
+                        <MessageSquareText size={20} />
+                    </button>
                 </div>
 
                 <div className="relative flex flex-col items-center">
