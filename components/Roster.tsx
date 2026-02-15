@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { dataService } from '../services/dataService';
-import { User, Plus, X, Trash2, Star, PenTool, Target, Check, Save, Loader2, Eye, BookPlus, BrainCircuit, Trophy, Dumbbell, ChevronRight, BookOpen, Search, Copy, Key, RefreshCcw, CloudCheck, CloudUpload } from 'lucide-react';
+import { User, Plus, X, Trash2, Star, PenTool, Target, Check, Save, Loader2, Eye, BookPlus, BrainCircuit, Trophy, Dumbbell, ChevronRight, BookOpen, Search, Copy, Key, RefreshCcw, Cloud, CloudUpload } from 'lucide-react';
 import { Player, Phase, MatchRecord, Exercise } from '../types';
 
 interface RosterProps {
@@ -104,7 +104,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
     setCodeSyncStatus('saving');
     try {
         const newCode = dataService.generateSecureCode(player.number);
-        // Vänta explicit på att databasen bekräftar skrivningen
         const updated = await dataService.updatePlayer(player.id, { accessCode: newCode });
         setPlayers(updated);
         setCodeSyncStatus('synced');
@@ -176,7 +175,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
             <div className="space-y-6 animate-in slide-in-from-bottom">
               <button onClick={() => setMobileDetailOpen(false)} className="lg:hidden flex items-center gap-2 text-slate-500 text-[10px] font-black uppercase mb-4"><X size={14}/> Tillbaka</button>
               
-              {/* Header Card */}
               <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-6">
                    <div className="flex items-center gap-6">
                       <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-3xl font-black text-orange-500 shadow-inner">{player.number}</div>
@@ -192,7 +190,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                    </div>
               </div>
 
-              {/* INLOGGNINGSKOD - MED SYNK-STATUS */}
               <div className="p-6 md:p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-blue-900/10 border border-blue-500/20 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
                 <div className="flex items-center gap-4 relative z-10">
                   <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
@@ -213,10 +210,9 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                             </button>
                         )}
                     </div>
-                    {/* STATUS INDIKATOR */}
                     <div className="mt-2 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 h-4">
                         {codeSyncStatus === 'saving' && <><Loader2 size={10} className="animate-spin text-blue-400"/> <span className="text-blue-400">Sparar i databas...</span></>}
-                        {codeSyncStatus === 'synced' && <><CloudCheck size={12} className="text-emerald-500"/> <span className="text-emerald-500">Synkad till molnet</span></>}
+                        {codeSyncStatus === 'synced' && <><Cloud size={12} className="text-emerald-500"/> <span className="text-emerald-500">Synkad till molnet</span></>}
                         {codeSyncStatus === 'error' && <span className="text-rose-500">Kunde inte spara. Kontrollera nätverk.</span>}
                         {codeSyncStatus === 'idle' && player.accessCode && <span className="text-slate-600">Aktiv</span>}
                     </div>
@@ -246,7 +242,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
-                {/* Hemläxor */}
                 <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl">
                    <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Dumbbell size={14} className="text-blue-400" /> Aktiva Uppdrag</h3>
                    <div className="flex gap-2">
@@ -264,7 +259,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                    </div>
                 </div>
 
-                {/* INDIVIDUELL PLAN */}
                 <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl">
                     <div className="flex justify-between items-center">
                         <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Target size={14} className="text-purple-400" /> Individuell Utvecklingsplan</h3>
@@ -290,7 +284,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                 </div>
               </div>
 
-              {/* Utveckling Chart */}
               <div className="p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-8 relative overflow-hidden shadow-2xl">
                   <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Star size={14} className="text-yellow-500" /> Färdighetsbedömning</h3>
                   <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -332,7 +325,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
         </div>
       </div>
 
-      {/* EXERCISE PICKER MODAL */}
       {showExercisePicker && (
           <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
               <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95">
@@ -397,7 +389,6 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
           </div>
       )}
 
-      {/* MODAL FÖR SPELARE INFO */}
       {modalState.show && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95">
