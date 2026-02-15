@@ -85,6 +85,7 @@ export const dataService = {
   getUserPath: () => {
     if (!isFirebaseConfigured || !db) return null;
     const user = auth.currentUser;
+    // Anonyma användare (spelare) har ingen egen "user path", de läser från coachen
     if (!user || user.uid === 'guest' || user.isAnonymous) return null;
     return `users/${user.uid}`;
   },
@@ -97,6 +98,7 @@ export const dataService = {
         const snapshot = await getDocs(q);
         return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Player));
       } catch (err) {
+        console.error("Firestore read error (players):", err);
         return [];
       }
     }
@@ -147,9 +149,14 @@ export const dataService = {
   getSessions: async (coachId?: string): Promise<TrainingSession[]> => {
     const path = coachId ? `users/${coachId}` : dataService.getUserPath();
     if (path && db) {
-      const q = query(collection(db, `${path}/sessions`), orderBy('date', 'desc'));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as TrainingSession));
+      try {
+        const q = query(collection(db, `${path}/sessions`), orderBy('date', 'desc'));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as TrainingSession));
+      } catch (err) {
+          console.error("Firestore read error (sessions):", err);
+          return [];
+      }
     }
     const stored = localStorage.getItem(SESSIONS_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -171,9 +178,14 @@ export const dataService = {
   getMatches: async (coachId?: string): Promise<MatchRecord[]> => {
     const path = coachId ? `users/${coachId}` : dataService.getUserPath();
     if (path && db) {
-      const q = query(collection(db, `${path}/matches`), orderBy('date', 'desc'));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as MatchRecord));
+      try {
+        const q = query(collection(db, `${path}/matches`), orderBy('date', 'desc'));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as MatchRecord));
+      } catch (err) {
+        console.error("Firestore read error (matches):", err);
+        return [];
+      }
     }
     const stored = localStorage.getItem(MATCHES_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -287,7 +299,9 @@ export const dataService = {
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
           const d = snapshot.docs[0];
-          const coachId = d.ref.parent.parent?.id || "";
+          // Extrahera coachId genom att titta på dokumentets path: users/COACH_ID/players/PLAYER_ID
+          const pathParts = d.ref.path.split('/');
+          const coachId = pathParts[1]; 
           return { 
             player: { id: d.id, ...d.data() } as Player, 
             coachId 

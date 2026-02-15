@@ -66,12 +66,12 @@ service cloud.firestore {
       allow read: if true; 
     }
 
-    // 3. Användardata (Tillåt både coachen och anonyma spelare att läsa)
+    // 3. Användardata (Privat mapp för coachen + läsåtkomst för spelare)
     match /users/{userId}/{document=**} {
       // Coachen får läsa/skriva allt i sin mapp
       allow read, write: if request.auth != null && request.auth.uid == userId;
       
-      // Spelare får läsa matcher och träningar (men inte skriva)
+      // Spelare (inloggade anonymt) får läsa matcher och träningar
       allow read: if request.auth != null;
     }
   }
@@ -176,7 +176,7 @@ service cloud.firestore {
         </div>
       </div>
 
-      {/* Lagstatistik - Alltid synlig */}
+      {/* Lagstatistik */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-6 rounded-[2rem] bg-slate-900 border border-slate-800 flex flex-col gap-1 shadow-lg">
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ditt Lag</span>
@@ -192,7 +192,7 @@ service cloud.firestore {
           </div>
       </div>
 
-      {/* Systemdiagnostik - Alltid synlig för inloggade coacher */}
+      {/* Systemdiagnostik */}
       {!isGuest && (
           <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-xl space-y-6">
               <div className="flex items-center gap-3">
@@ -227,7 +227,7 @@ service cloud.firestore {
           </div>
       )}
 
-      {/* ADMIN-VERKTYG: ENDAST FÖR IBRAHIM */}
+      {/* ADMIN-VERKTYG */}
       {isSuperAdmin && !isGuest ? (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-700">
             <div className="flex items-center gap-2 px-2">
@@ -290,12 +290,12 @@ service cloud.firestore {
             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-emerald-500/20 shadow-2xl relative overflow-hidden">
                 <div className="flex items-center gap-3 text-emerald-400 mb-4">
                     <FileCode size={24} />
-                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Databas-regler (Krävs för inbjudningar)</h3>
+                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Databas-regler (Fungerande version)</h3>
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
                     <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
                     <p className="text-slate-300 text-xs font-bold leading-relaxed">
-                        VIKTIGT: För att spelare ska kunna se sin data måste du kopiera koden nedan och ersätta reglerna i Firebase Console. De tillåter nu Anonyma inloggningar att läsa.
+                        Kopiera koden nedan och ersätt reglerna i Firebase Console. Dessa regler tillåter anonyma spelare att läsa data men inte ändra något.
                     </p>
                 </div>
                 <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">
@@ -342,7 +342,7 @@ service cloud.firestore {
             </div>
           </div>
       ) : (
-          /* COACH VIEW - SIMPLIFIED */
+          /* COACH VIEW */
           <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
              <div className="p-8 rounded-[2.5rem] bg-blue-500/5 border border-blue-500/20 shadow-xl flex items-start gap-6">
                 <div className="w-16 h-16 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-400 shrink-0">
@@ -351,7 +351,7 @@ service cloud.firestore {
                 <div className="space-y-2">
                     <h4 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">Coach Silo Aktiv</h4>
                     <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                        Du är inloggad på din personliga coach-yta. All data du skapar (spelare, träningar, analyser) är helt privat och lagras i ditt eget lag-moln kopplat till ditt ID. Endast du har åtkomst till denna information.
+                        Din data lagras i ditt eget lag-moln kopplat till ditt ID. Endast du och dina inloggade spelare (läsläge) har åtkomst.
                     </p>
                 </div>
              </div>
@@ -370,7 +370,6 @@ service cloud.firestore {
           </div>
       )}
 
-      {/* Footer Branding */}
       <div className="text-center pt-8 opacity-20">
           <p className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-500">Basketcoach Pro • Ibrahim Qallaki Edition</p>
       </div>
