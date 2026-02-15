@@ -292,9 +292,11 @@ export const dataService = {
         }
       } catch (err: any) {
         console.error("Global player search failed:", err);
-        // Om vi får permission-denied här vet vi att reglerna i Firebase är fel
         if (err.code === 'permission-denied') {
             throw new Error("ACCESS_DENIED");
+        }
+        if (err.code === 'failed-precondition') {
+            throw new Error("MISSING_INDEX");
         }
       }
     }
