@@ -1,3 +1,4 @@
+
 import { Player, TrainingSession, MatchRecord, Homework, Phase, Exercise } from '../types';
 import { mockPlayers, mockPhases } from './mockData';
 import { db, auth, isFirebaseConfigured } from './firebase';
@@ -192,7 +193,6 @@ export const dataService = {
     }
   },
 
-  // FIX: Added deleteMatch method
   deleteMatch: async (id: string): Promise<MatchRecord[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
@@ -206,7 +206,6 @@ export const dataService = {
     }
   },
 
-  // FIX: Added getCustomExercises method
   getCustomExercises: async (): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
@@ -222,7 +221,6 @@ export const dataService = {
     return stored ? JSON.parse(stored) : [];
   },
 
-  // FIX: Added saveCustomExercise method
   saveCustomExercise: async (exercise: Exercise): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
@@ -236,7 +234,6 @@ export const dataService = {
     }
   },
 
-  // FIX: Added deleteCustomExercise method
   deleteCustomExercise: async (id: string): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
@@ -284,7 +281,6 @@ export const dataService = {
   loginPlayer: async (accessCode: string): Promise<Player | null> => {
     const cleanCode = accessCode.trim().toUpperCase();
     
-    // 1. Sök i molnet (Global sökning över alla coacher)
     if (isFirebaseConfigured && db) {
       try {
         const playersRef = collectionGroup(db, 'players');
@@ -294,12 +290,15 @@ export const dataService = {
           const doc = snapshot.docs[0];
           return { id: doc.id, ...doc.data() } as Player;
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Global player search failed:", err);
+        // Om vi får permission-denied här vet vi att reglerna i Firebase är fel
+        if (err.code === 'permission-denied') {
+            throw new Error("ACCESS_DENIED");
+        }
       }
     }
 
-    // 2. Sök lokalt (Fallback för gäst-läge på samma enhet)
     const players = await dataService.getPlayers();
     return players.find(p => p.accessCode?.trim().toUpperCase() === cleanCode) || null;
   },
@@ -360,7 +359,7 @@ export const dataService = {
   getAppContextSnapshot: async () => {
     const players = await dataService.getPlayers();
     return {
-      version: "5.6.0",
+      version: "5.6.1",
       playerCount: players.length,
       timestamp: new Date().toISOString()
     };

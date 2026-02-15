@@ -18,7 +18,7 @@ import { dataService } from './services/dataService';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 // @ts-ignore
 import type { User } from 'firebase/auth';
-import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff } from 'lucide-react';
+import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff, Shield } from 'lucide-react';
 import { View, Player } from './types';
 
 const App: React.FC = () => {
@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [isDenied, setIsDenied] = useState(false);
   
-  const [loginError, setLoginError] = useState<{ message: string, domain?: string, isSyncIssue?: boolean } | null>(null);
+  const [loginError, setLoginError] = useState<{ message: string, domain?: string, isSyncIssue?: boolean, isRuleIssue?: boolean } | null>(null);
   const [showPlayerLogin, setShowPlayerLogin] = useState(false);
   const [playerCode, setPlayerCode] = useState("");
   const [loggedInPlayer, setLoggedInPlayer] = useState<Player | null>(null);
@@ -109,8 +109,15 @@ const App: React.FC = () => {
                 isSyncIssue: true 
             });
         }
-    } catch (err) {
-        setLoginError({ message: "Ett fel uppstod vid inloggning." });
+    } catch (err: any) {
+        if (err.message === 'ACCESS_DENIED') {
+            setLoginError({ 
+                message: "Säkerhetsblockering i Firebase.", 
+                isRuleIssue: true 
+            });
+        } else {
+            setLoginError({ message: "Ett fel uppstod vid inloggning." });
+        }
     } finally {
         setVerifyingCode(false);
     }
@@ -246,14 +253,19 @@ const App: React.FC = () => {
                                     className={`w-full bg-slate-950 border ${loginError ? 'border-rose-500' : 'border-slate-800'} rounded-2xl p-4 text-center text-xl font-mono text-white tracking-widest uppercase focus:border-blue-500 outline-none`} 
                                 />
                                 {loginError && (
-                                    <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-2">
-                                        <div className="flex items-center gap-2 text-rose-500 text-[10px] font-black uppercase">
-                                            <AlertTriangle size={14} /> {loginError.message}
+                                    <div className={`p-4 rounded-xl space-y-2 ${loginError.isRuleIssue ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
+                                        <div className={`flex items-center gap-2 text-[10px] font-black uppercase ${loginError.isRuleIssue ? 'text-amber-500' : 'text-rose-500'}`}>
+                                            {loginError.isRuleIssue ? <Shield size={14} /> : <AlertTriangle size={14} />} {loginError.message}
                                         </div>
-                                        {loginError.isSyncIssue && (
+                                        {loginError.isSyncIssue && !loginError.isRuleIssue && (
                                             <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
                                                 <WifiOff size={10} className="inline mr-1" /> 
                                                 Tips: Coachen måste ha "Molnsync" aktivt under Inställningar för att du ska kunna logga in från din enhet.
+                                            </p>
+                                        )}
+                                        {loginError.isRuleIssue && (
+                                            <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
+                                                Be din coach uppdatera reglerna i Firebase Console. En guide finns under Inställningar i coachens app.
                                             </p>
                                         )}
                                     </div>
