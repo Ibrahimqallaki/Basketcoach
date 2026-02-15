@@ -18,7 +18,7 @@ import { dataService } from './services/dataService';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 // @ts-ignore
 import type { User } from 'firebase/auth';
-import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff, Shield, DatabaseZap } from 'lucide-react';
+import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff, Shield, DatabaseZap, Clock } from 'lucide-react';
 import { View, Player } from './types';
 
 const App: React.FC = () => {
@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [isDenied, setIsDenied] = useState(false);
   
-  const [loginError, setLoginError] = useState<{ message: string, domain?: string, isSyncIssue?: boolean, isRuleIssue?: boolean, isIndexIssue?: boolean } | null>(null);
+  const [loginError, setLoginError] = useState<{ message: string, isSyncIssue?: boolean, isRuleIssue?: boolean, isIndexIssue?: boolean, isBuilding?: boolean } | null>(null);
   const [showPlayerLogin, setShowPlayerLogin] = useState(false);
   const [playerCode, setPlayerCode] = useState("");
   const [loggedInPlayer, setLoggedInPlayer] = useState<Player | null>(null);
@@ -111,15 +111,11 @@ const App: React.FC = () => {
         }
     } catch (err: any) {
         if (err.message === 'ACCESS_DENIED') {
-            setLoginError({ 
-                message: "Säkerhetsblockering i Firebase.", 
-                isRuleIssue: true 
-            });
+            setLoginError({ message: "Säkerhetsblockering i Firebase.", isRuleIssue: true });
+        } else if (err.message === 'INDEX_BUILDING') {
+            setLoginError({ message: "Databasen optimeras...", isIndexIssue: true, isBuilding: true });
         } else if (err.message === 'MISSING_INDEX') {
-            setLoginError({
-                message: "Databas-index saknas.",
-                isIndexIssue: true
-            });
+            setLoginError({ message: "Databas-index saknas.", isIndexIssue: true });
         } else {
             setLoginError({ message: "Ett fel uppstod vid inloggning." });
         }
@@ -255,13 +251,19 @@ const App: React.FC = () => {
                                     placeholder="T.ex. P-10-XY3Z" 
                                     value={playerCode} 
                                     onChange={(e) => setPlayerCode(e.target.value)} 
-                                    className={`w-full bg-slate-950 border ${loginError ? 'border-rose-500' : 'border-slate-800'} rounded-2xl p-4 text-center text-xl font-mono text-white tracking-widest uppercase focus:border-blue-500 outline-none`} 
+                                    className={`w-full bg-slate-950 border ${loginError ? (loginError.isBuilding ? 'border-amber-500' : 'border-rose-500') : 'border-slate-800'} rounded-2xl p-4 text-center text-xl font-mono text-white tracking-widest uppercase focus:border-blue-500 outline-none`} 
                                 />
                                 {loginError && (
-                                    <div className={`p-4 rounded-xl space-y-2 ${loginError.isIndexIssue ? 'bg-purple-500/10 border border-purple-500/20' : loginError.isRuleIssue ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
-                                        <div className={`flex items-center gap-2 text-[10px] font-black uppercase ${loginError.isIndexIssue ? 'text-purple-400' : loginError.isRuleIssue ? 'text-amber-500' : 'text-rose-500'}`}>
-                                            {loginError.isIndexIssue ? <DatabaseZap size={14} /> : loginError.isRuleIssue ? <Shield size={14} /> : <AlertTriangle size={14} />} {loginError.message}
+                                    <div className={`p-4 rounded-xl space-y-2 ${loginError.isIndexIssue ? (loginError.isBuilding ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-purple-500/10 border border-purple-500/20') : loginError.isRuleIssue ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
+                                        <div className={`flex items-center gap-2 text-[10px] font-black uppercase ${loginError.isIndexIssue ? (loginError.isBuilding ? 'text-amber-500' : 'text-purple-400') : loginError.isRuleIssue ? 'text-amber-500' : 'text-rose-500'}`}>
+                                            {loginError.isBuilding ? <Clock size={14} className="animate-spin" /> : loginError.isIndexIssue ? <DatabaseZap size={14} /> : loginError.isRuleIssue ? <Shield size={14} /> : <AlertTriangle size={14} />} 
+                                            {loginError.message}
                                         </div>
+                                        {loginError.isBuilding && (
+                                            <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
+                                                Firebase bygger just nu indexet. Detta tar normalt 2-5 minuter. Försök igen snart!
+                                            </p>
+                                        )}
                                         {loginError.isSyncIssue && !loginError.isRuleIssue && !loginError.isIndexIssue && (
                                             <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
                                                 <WifiOff size={10} className="inline mr-1" /> 
@@ -273,7 +275,7 @@ const App: React.FC = () => {
                                                 Be din coach uppdatera reglerna i Firebase Console. En guide finns under Inställningar i coachens app.
                                             </p>
                                         )}
-                                        {loginError.isIndexIssue && (
+                                        {loginError.isIndexIssue && !loginError.isBuilding && (
                                             <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
                                                 Be din coach öppna webbläsarens konsol (F12) och klicka på Firebase-länken för att skapa indexet som krävs.
                                             </p>

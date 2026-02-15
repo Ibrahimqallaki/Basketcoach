@@ -24,7 +24,6 @@ const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
-// SYSTEMETS ÄGARE - ENDAST DENNA PERSON KAN HANTERA ANDRA COACHER
 const SUPER_ADMIN_EMAIL = "Ibrahim.qallaki@gmail.com"; 
 
 export const dataService = {
@@ -291,16 +290,21 @@ export const dataService = {
           return { id: doc.id, ...doc.data() } as Player;
         }
       } catch (err: any) {
-        console.error("Global player search failed:", err);
+        console.warn("Player search index status:", err.code, err.message);
         if (err.code === 'permission-denied') {
             throw new Error("ACCESS_DENIED");
         }
         if (err.code === 'failed-precondition') {
+            if (err.message.includes('index is not ready yet')) {
+                throw new Error("INDEX_BUILDING");
+            }
             throw new Error("MISSING_INDEX");
         }
+        throw err;
       }
     }
 
+    // Fallback till lokal data om Firebase inte är inloggat eller koden inte hittas globalt
     const players = await dataService.getPlayers();
     return players.find(p => p.accessCode?.trim().toUpperCase() === cleanCode) || null;
   },
