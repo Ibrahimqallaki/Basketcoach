@@ -33,13 +33,22 @@ export const dataService = {
     return 'CLOUD';
   },
 
+  // Hjälpmetod för att generera koder utan förvirrande tecken (0, O, 1, I, L)
+  generateSecureCode: (playerNumber: number | string) => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let randomPart = "";
+    for (let i = 0; i < 4; i++) {
+      randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `P-${playerNumber}-${randomPart}`;
+  },
+
   // --- BEHÖRIGHETSKONTROLL ---
   
   isEmailWhitelisted: async (email: string): Promise<boolean> => {
     if (!db || !isFirebaseConfigured) return true;
     try {
       const lowerEmail = email.toLowerCase().trim();
-      // Ibrahim har alltid tillgång
       if (lowerEmail === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
 
       const docRef = doc(db, 'app_settings', 'whitelist');
@@ -68,14 +77,12 @@ export const dataService = {
   updateWhitelist: async (emails: string[]): Promise<void> => {
     if (!db || !dataService.isSuperAdmin()) return;
     const docRef = doc(db, 'app_settings', 'whitelist');
-    // Använd merge: true för att inte skriva över andra fält om de finns
     await setDoc(docRef, { emails, updated_at: serverTimestamp() }, { merge: true });
   },
 
   isSuperAdmin: () => {
     const user = auth.currentUser;
     if (!user) return false;
-    // Ibrahim är ägare
     return user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
   },
 
@@ -86,7 +93,7 @@ export const dataService = {
     return `users/${user.uid}`;
   },
 
-  // --- DATAOPERATIONER (Varje coach har sin egen mapp) ---
+  // --- DATAOPERATIONER ---
 
   getPlayers: async (): Promise<Player[]> => {
     const path = dataService.getUserPath();
@@ -271,8 +278,10 @@ export const dataService = {
   },
 
   loginPlayer: async (accessCode: string): Promise<Player | null> => {
+    // Tvätta koden för att undvika enkla fel
+    const cleanCode = accessCode.trim().toUpperCase();
     const players = await dataService.getPlayers();
-    return players.find(p => p.accessCode === accessCode) || null;
+    return players.find(p => p.accessCode?.trim().toUpperCase() === cleanCode) || null;
   },
 
   toggleHomework: async (playerId: string, homeworkId: string): Promise<void> => {

@@ -18,7 +18,7 @@ import { dataService } from './services/dataService';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 // @ts-ignore
 import type { User } from 'firebase/auth';
-import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock } from 'lucide-react';
+import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff } from 'lucide-react';
 import { View, Player } from './types';
 
 const App: React.FC = () => {
@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [isDenied, setIsDenied] = useState(false);
   
-  const [loginError, setLoginError] = useState<{ message: string, domain?: string } | null>(null);
+  const [loginError, setLoginError] = useState<{ message: string, domain?: string, isSyncIssue?: boolean } | null>(null);
   const [showPlayerLogin, setShowPlayerLogin] = useState(false);
   const [playerCode, setPlayerCode] = useState("");
   const [loggedInPlayer, setLoggedInPlayer] = useState<Player | null>(null);
@@ -38,7 +38,6 @@ const App: React.FC = () => {
     if (isFirebaseConfigured && auth) {
       const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
         if (currentUser && !currentUser.uid.startsWith('player_')) {
-            // Kolla om denna person får använda appen
             const isAllowed = await dataService.isEmailWhitelisted(currentUser.email);
             if (!isAllowed) {
                 setIsDenied(true);
@@ -99,13 +98,16 @@ const App: React.FC = () => {
     setVerifyingCode(true);
     setLoginError(null);
     try {
-        const player = await dataService.loginPlayer(playerCode.toUpperCase());
+        const player = await dataService.loginPlayer(playerCode);
         if (player) {
             setLoggedInPlayer(player);
             setUser(createDemoUser(player.name, `player_${player.id}`));
             setCurrentView(View.PLAYER_PORTAL);
         } else {
-            setLoginError({ message: "Ogiltig kod. Kontrollera med din coach." });
+            setLoginError({ 
+                message: "Ogiltig kod.", 
+                isSyncIssue: true 
+            });
         }
     } catch (err) {
         setLoginError({ message: "Ett fel uppstod vid inloggning." });
@@ -161,7 +163,6 @@ const App: React.FC = () => {
     );
   }
 
-  // DENIED ACCESS VIEW
   if (isDenied) {
       return (
           <div className="min-h-screen w-full bg-[#020617] flex items-center justify-center p-6 text-center">
@@ -236,12 +237,32 @@ const App: React.FC = () => {
                         <form onSubmit={handlePlayerLogin} className="space-y-4 animate-in slide-in-from-right duration-300">
                              <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ange din kod</label>
-                                <input autoFocus type="text" placeholder="T.ex. P-10-XY3Z" value={playerCode} onChange={(e) => setPlayerCode(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-center text-xl font-mono text-white tracking-widest uppercase focus:border-blue-500 outline-none" />
+                                <input 
+                                    autoFocus 
+                                    type="text" 
+                                    placeholder="T.ex. P-10-XY3Z" 
+                                    value={playerCode} 
+                                    onChange={(e) => setPlayerCode(e.target.value)} 
+                                    className={`w-full bg-slate-950 border ${loginError ? 'border-rose-500' : 'border-slate-800'} rounded-2xl p-4 text-center text-xl font-mono text-white tracking-widest uppercase focus:border-blue-500 outline-none`} 
+                                />
+                                {loginError && (
+                                    <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-2">
+                                        <div className="flex items-center gap-2 text-rose-500 text-[10px] font-black uppercase">
+                                            <AlertTriangle size={14} /> {loginError.message}
+                                        </div>
+                                        {loginError.isSyncIssue && (
+                                            <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
+                                                <WifiOff size={10} className="inline mr-1" /> 
+                                                Tips: Coachen måste ha "Molnsync" aktivt under Inställningar för att du ska kunna logga in från din enhet.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                              </div>
-                             <button type="submit" disabled={!playerCode || verifyingCode} className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">
+                             <button type="submit" disabled={!playerCode || verifyingCode} className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-900/20 active:scale-95 transition-all">
                                 {verifyingCode ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />} Logga in
                              </button>
-                             <button type="button" onClick={() => setShowPlayerLogin(false)} className="w-full py-2 text-[10px] font-bold text-slate-500 uppercase hover:text-white">Avbryt</button>
+                             <button type="button" onClick={() => { setShowPlayerLogin(false); setLoginError(null); }} className="w-full py-2 text-[10px] font-bold text-slate-500 uppercase hover:text-white">Avbryt</button>
                         </form>
                     )}
                  </div>

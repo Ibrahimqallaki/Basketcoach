@@ -101,7 +101,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
     if (!player) return;
     setIsGeneratingCode(true);
     try {
-        const newCode = `P-${player.number}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+        const newCode = dataService.generateSecureCode(player.number);
         const updated = await dataService.updatePlayer(player.id, { accessCode: newCode });
         setPlayers(updated);
     } finally {
@@ -119,7 +119,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
         position: formData.position,
         age: parseInt(formData.age) || 13,
         notes: formData.notes,
-        accessCode: player?.accessCode || `P-${formData.number}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
+        accessCode: player?.accessCode || dataService.generateSecureCode(formData.number)
       };
       if (modalState.mode === 'add') await dataService.addPlayer(payload);
       else if (modalState.player) await dataService.updatePlayer(modalState.player.id, payload);
