@@ -282,7 +282,7 @@ const App: React.FC = () => {
                                         </div>
                                         {loginError.isAuthDisabled && (
                                             <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
-                                                Gå till Firebase Console -> Authentication -> Sign-in method och aktivera "Anonymous".
+                                                Gå till Firebase Console {'->'} Authentication {'->'} Sign-in method och aktivera &quot;Anonymous&quot;.
                                             </p>
                                         )}
                                         {loginError.isIndexIssue && !loginError.isBuilding && (

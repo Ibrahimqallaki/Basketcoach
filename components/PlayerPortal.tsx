@@ -82,7 +82,7 @@ const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
 };
 
 export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onLogout, isPreview = false }) => {
-  const [activeTab, setActiveTab] = useState<'career' | 'training' | 'fuel' | 'matches']('career');
+  const [activeTab, setActiveTab] = useState<'career' | 'training' | 'fuel' | 'matches'>('career');
   const [matches, setMatches] = useState<MatchRecord[]>([]);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
