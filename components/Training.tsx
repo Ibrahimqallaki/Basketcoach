@@ -1,14 +1,32 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { dataService } from '../services/dataService';
-import { SKILL_COLORS } from './Roster';
 import { 
-  Play, Pause, RotateCcw, X, ChevronRight, Save, Check, Trophy, Loader2, MessageSquare, Dumbbell, Layout, ChevronLeft, UserCheck, Activity, BrainCircuit
+  Play, Pause, RotateCcw, X, ChevronRight, Save, Check, Trophy, Loader2, 
+  Dumbbell, Layout, ChevronLeft, UserCheck, Activity, BrainCircuit, 
+  Target, Zap, MessageSquare, Mic, Eye, Shield, Flame, Timer, Star, 
+  ArrowUpCircle, Scaling
 } from 'lucide-react';
 import { Exercise, Player, Evaluation, Phase, TrainingSession } from '../types';
 
 type TrainingStep = 'selection' | 'checkin' | 'live';
-const DRAFT_KEY = 'basket_coach_training_draft_v2';
+
+// Unika bedömningskriterier för de två lägena
+const BASKET_CRITERIA = [
+  { label: 'Teknik', icon: Target, desc: 'Precision & utförande' },
+  { label: 'Intensitet', icon: Flame, desc: 'Tempo & närkamp' },
+  { label: 'Beslut', icon: BrainCircuit, desc: 'Spelförståelse/IQ' },
+  { label: 'Kommunikation', icon: Mic, desc: 'Röst & lagstöd' },
+  { label: 'Fokus', icon: Eye, desc: 'Koncentration' }
+];
+
+const FYS_CRITERIA = [
+  { label: 'Hållning', icon: Shield, desc: 'Form & säkerhet' },
+  { label: 'Kraft', icon: Zap, desc: 'Explosivitet & push' },
+  { label: 'Uthållighet', icon: Timer, desc: 'Rytm & energi' },
+  { label: 'Stabilitet', icon: Scaling, desc: 'Balans & kontroll' },
+  { label: 'Vilja', icon: ArrowUpCircle, desc: 'Mental inställning' }
+];
 
 export const Training: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'sessions' | 'active'>('sessions');
@@ -46,7 +64,6 @@ export const Training: React.FC = () => {
       setPhases(ph);
       if (ph.length > 0 && !selectedPhase) setSelectedPhase(ph[0]);
       
-      // Default närvaro till alla närvarande för snabbhet
       const initialAttendance: any = {};
       p.forEach(player => initialAttendance[player.id] = 'närvarande');
       setAttendance(initialAttendance);
@@ -65,16 +82,18 @@ export const Training: React.FC = () => {
     return () => clearInterval(interval);
   }, [step, isPaused]);
 
+  const activeCriteria = viewMode === 'basket' ? BASKET_CRITERIA : FYS_CRITERIA;
+
   const handleStartGradingPlayer = (p: Player) => {
     if(!selectedExercise) return;
     setGradingPlayer(p);
     const existing = evaluations.find(e => e.playerId === p.id);
-    const targetLength = selectedExercise.criteria.length;
     if (existing) {
       setCurrentScores([...existing.scores]);
       setCurrentNote(existing.note || "");
     } else {
-      setCurrentScores(new Array(targetLength).fill(3));
+      // Skapa alltid 5 poäng oavsett övningens egna kriterier för enhetlighet i DB
+      setCurrentScores(new Array(5).fill(3));
       setCurrentNote("");
     }
   };
@@ -138,7 +157,7 @@ export const Training: React.FC = () => {
       {activeTab === 'sessions' ? (
           <div className="grid lg:grid-cols-12 gap-6 animate-in slide-in-from-right duration-500">
               <div className={`${selectedSession ? 'hidden lg:block' : ''} lg:col-span-4 space-y-2`}>
-                {allSessions.map(s => (
+                {allSessions.length > 0 ? allSessions.map(s => (
                   <div key={s.id} onClick={() => setSelectedSession(s)} className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${selectedSession?.id === s.id ? 'bg-orange-600/10 border-orange-500' : 'bg-slate-900 border-slate-800 hover:border-slate-600'}`}>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-slate-950 flex items-center justify-center font-black text-xs text-white border border-slate-800">{s.date.split('-')[2]}</div>
@@ -146,12 +165,15 @@ export const Training: React.FC = () => {
                     </div>
                     <ChevronRight size={14} className="text-slate-700" />
                   </div>
-                ))}
+                )) : <p className="text-slate-600 p-8 text-center text-xs font-bold uppercase tracking-widest border-2 border-dashed border-slate-900 rounded-3xl">Inga sparade pass än.</p>}
               </div>
               {selectedSession && (
                   <div className="lg:col-span-8 p-6 md:p-10 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-2xl space-y-8 animate-in slide-in-from-right relative overflow-hidden">
                       <button onClick={() => setSelectedSession(null)} className="lg:hidden absolute top-6 right-6 text-slate-500"><X size={20}/></button>
-                      <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3"><Activity className="text-orange-500" /> {selectedSession.date}</h3>
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3"><Activity className="text-orange-500" /> {selectedSession.date}</h3>
+                        <span className="text-[10px] font-black text-slate-500 uppercase">Fas {selectedSession.phaseId}</span>
+                      </div>
                       <div className="space-y-3">
                           {selectedSession.attendance.map(a => {
                               const p = players.find(player => player.id === a.playerId);
@@ -162,12 +184,15 @@ export const Training: React.FC = () => {
                                           <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center font-black text-[10px] text-slate-400">#{p?.number}</div>
                                           <span className="text-xs font-black text-white uppercase">{p?.name}</span>
                                       </div>
-                                      <div className="flex items-center gap-4">
+                                      <div className="flex items-center gap-6">
                                           <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${a.status === 'närvarande' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{a.status}</span>
                                           {ev && (
-                                              <div className="flex gap-1">
-                                                  {ev.scores.map((s, i) => (
-                                                      <div key={i} className="w-4 h-1 rounded-full bg-slate-800 overflow-hidden"><div className="h-full bg-orange-500" style={{ width: `${(s/5)*100}%` }}></div></div>
+                                              <div className="flex gap-1.5 bg-slate-900 p-2 rounded-xl border border-slate-800">
+                                                  {ev.scores.slice(0,5).map((s, i) => (
+                                                      <div key={i} className="flex flex-col items-center gap-1">
+                                                          <div className="w-4 h-1.5 rounded-full bg-slate-800 overflow-hidden"><div className="h-full bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.5)]" style={{ width: `${(s/5)*100}%` }}></div></div>
+                                                          <span className="text-[6px] font-black text-slate-600">{s}</span>
+                                                      </div>
                                                   ))}
                                               </div>
                                           )}
@@ -181,7 +206,6 @@ export const Training: React.FC = () => {
           </div>
       ) : (
           <div className="space-y-6">
-              {/* STEG 1: ÖVNINGSVAL */}
               {step === 'selection' && (
                   <div className="p-8 md:p-12 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-10 shadow-2xl animate-in slide-in-from-bottom relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-8 opacity-5"><BrainCircuit size={120} /></div>
@@ -214,7 +238,6 @@ export const Training: React.FC = () => {
                   </div>
               )}
 
-              {/* STEG 2: NÄRVARO-CHECK */}
               {step === 'checkin' && selectedExercise && (
                   <div className="p-8 md:p-12 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-8 shadow-2xl animate-in slide-in-from-right">
                       <div className="flex justify-between items-center border-b border-slate-800 pb-6">
@@ -246,7 +269,6 @@ export const Training: React.FC = () => {
                   </div>
               )}
 
-              {/* STEG 3: LIVE ANALYS */}
               {step === 'live' && selectedExercise && (
                   <div className="space-y-4">
                       <div className="p-8 rounded-[3rem] bg-slate-900 border border-slate-800 shadow-2xl relative overflow-hidden">
@@ -256,9 +278,14 @@ export const Training: React.FC = () => {
                                       <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`}></div>
                                       {isPaused ? 'Pausad' : 'Träning Pågår'}
                                   </div>
-                                  <h3 className="text-3xl md:text-4xl font-black text-white italic uppercase tracking-tighter">{selectedExercise.title}</h3>
-                                  <div className="flex gap-3 mt-4 justify-center md:justify-start">
-                                      {selectedExercise.criteria.map((c, i) => <span key={i} className="px-2 py-1 rounded bg-slate-950 text-slate-500 border border-slate-800 text-[8px] font-black uppercase tracking-widest">{c}</span>)}
+                                  <h3 className="text-3xl md:text-4xl font-black text-white italic uppercase tracking-tighter leading-none">{selectedExercise.title}</h3>
+                                  <div className="flex gap-2 mt-4 justify-center md:justify-start overflow-x-auto hide-scrollbar pb-1">
+                                      {activeCriteria.map((c, i) => (
+                                          <div key={i} className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2 shrink-0">
+                                              <c.icon size={10} className={viewMode === 'basket' ? 'text-orange-500' : 'text-blue-500'} />
+                                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{c.label}</span>
+                                          </div>
+                                      ))}
                                   </div>
                               </div>
                               <div className="flex flex-col items-center gap-4">
@@ -275,17 +302,25 @@ export const Training: React.FC = () => {
 
                       <div className="grid md:grid-cols-12 gap-6 items-start">
                         <div className="md:col-span-8 p-8 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-6 shadow-2xl relative overflow-hidden">
-                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 px-2"><UserCheck size={14} /> Bedömning per spelare</h4>
+                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 px-2"><UserCheck size={14} /> Spelarbedömning</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {players.filter(p => attendance[p.id] === 'närvarande' || attendance[p.id] === 'delvis').map(p => {
                                     const isGraded = evaluations.some(e => e.playerId === p.id);
+                                    const scoreAvg = isGraded ? (evaluations.find(e => e.playerId === p.id)?.scores.reduce((a,b)=>a+b,0)! / 5).toFixed(1) : null;
                                     return (
-                                        <button key={p.id} onClick={() => handleStartGradingPlayer(p)} className={`p-5 rounded-[1.5rem] border flex items-center justify-between transition-all group ${isGraded ? 'border-emerald-500/50 bg-emerald-500/5' : 'bg-slate-950 border-slate-800 hover:border-orange-500/50'}`}>
+                                        <button key={p.id} onClick={() => handleStartGradingPlayer(p)} className={`p-4 rounded-[1.5rem] border flex items-center justify-between transition-all group ${isGraded ? 'border-emerald-500/50 bg-emerald-500/5 shadow-inner' : 'bg-slate-950 border-slate-800 hover:border-orange-500/50'}`}>
                                             <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${isGraded ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-500'}`}>#{p.number}</div>
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${isGraded ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-900 text-slate-500'}`}>#{p.number}</div>
                                                 <div className="text-left">
                                                     <div className={`text-xs font-black uppercase ${isGraded ? 'text-emerald-400' : 'text-white'}`}>{p.name}</div>
-                                                    <div className="text-[8px] text-slate-600 font-bold uppercase">{isGraded ? 'Bedömd' : 'Ej bedömd än'}</div>
+                                                    {isGraded ? (
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            <div className="flex gap-0.5">
+                                                                {[1,2,3,4,5].map(v => <div key={v} className={`w-1.5 h-1.5 rounded-full ${v <= Math.round(parseFloat(scoreAvg!)) ? 'bg-emerald-500' : 'bg-slate-800'}`}></div>)}
+                                                            </div>
+                                                            <span className="text-[8px] font-black text-emerald-500">{scoreAvg} snitt</span>
+                                                        </div>
+                                                    ) : <div className="text-[8px] text-slate-700 font-bold uppercase">Klicka för betyg</div>}
                                                 </div>
                                             </div>
                                             {isGraded ? <Check size={18} className="text-emerald-500 animate-in zoom-in" /> : <ChevronRight size={18} className="text-slate-800 group-hover:text-white" />}
@@ -295,52 +330,78 @@ export const Training: React.FC = () => {
                             </div>
                         </div>
                         <div className="md:col-span-4 p-8 rounded-[3rem] bg-slate-900 border border-slate-800 shadow-2xl space-y-6 text-center">
-                            <div className="w-16 h-16 bg-emerald-600/10 rounded-2xl flex items-center justify-center mx-auto text-emerald-500"><Save size={32}/></div>
+                            <div className="w-16 h-16 bg-emerald-600/10 rounded-2xl flex items-center justify-center mx-auto text-emerald-500 border border-emerald-500/20 shadow-inner"><Save size={32}/></div>
                             <h4 className="text-xl font-black text-white italic uppercase leading-none">Avsluta Träning</h4>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase leading-relaxed">När du sparar passet loggas all närvaro och bedömningar permanent.</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase leading-relaxed">Sparar närvaro och {evaluations.length} bedömningar till spelarnas arkiv.</p>
                             <button disabled={isSaving} onClick={handleFinalizeSession} className="w-full py-5 rounded-[2rem] bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-xs flex items-center justify-center gap-3 shadow-xl shadow-emerald-900/20 active:scale-95 transition-all">
                                 {isSaving ? <Loader2 className="animate-spin" /> : <Trophy size={18} />} 
-                                Spara & Avsluta
+                                Spara & Arkivera
                             </button>
                         </div>
                       </div>
                   </div>
               )}
 
-              {/* MODAL: INDIVIDUELL BETYGSSÄTTNING */}
+              {/* MODAL: KOMPAKT SMART ASSESSMENT GRID */}
               {gradingPlayer && selectedExercise && (
-                  <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-                      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95">
-                          <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
-                              <div>
-                                  <div className="text-[8px] font-black text-orange-500 uppercase tracking-widest mb-1">Bedömer just nu</div>
-                                  <h4 className="text-2xl font-black text-white uppercase italic leading-none">#{gradingPlayer.number} {gradingPlayer.name}</h4>
-                                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mt-1 block">{selectedExercise.title}</span>
-                              </div>
-                              <button onClick={() => setGradingPlayer(null)} className="p-3 rounded-full hover:bg-slate-800 text-slate-500"><X size={24}/></button>
-                          </div>
-                          <div className="p-8 space-y-10 overflow-y-auto max-h-[60vh] custom-scrollbar">
-                              {selectedExercise.criteria.map((c, i) => (
-                                  <div key={i} className="space-y-5">
-                                      <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
-                                          <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div> {c}</span>
-                                          <span className="text-white bg-slate-800 px-2 py-0.5 rounded">Nivå {currentScores[i]}</span>
-                                      </div>
-                                      <div className="flex gap-2">
-                                          {[1, 2, 3, 4, 5].map(v => (
-                                              <button key={v} onClick={() => { const next = [...currentScores]; next[i] = v; setCurrentScores(next); }} className={`flex-1 h-12 rounded-xl font-black text-sm transition-all border ${currentScores[i] === v ? 'bg-orange-600 border-orange-400 text-white shadow-[0_0_15px_rgba(249,115,22,0.3)] scale-105' : 'bg-slate-950 border-slate-800 text-slate-600 hover:text-slate-400'}`}>{v}</button>
-                                          ))}
-                                      </div>
+                  <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md">
+                      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                          <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/40 shrink-0">
+                              <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-2xl bg-orange-600 flex items-center justify-center font-black text-xl text-white shadow-xl italic">#{gradingPlayer.number}</div>
+                                  <div>
+                                      <h4 className="text-xl font-black text-white uppercase italic leading-none">{gradingPlayer.name}</h4>
+                                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">{selectedExercise.title}</p>
                                   </div>
-                              ))}
+                              </div>
+                              <button onClick={() => setGradingPlayer(null)} className="p-2.5 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-400 transition-colors"><X size={20}/></button>
+                          </div>
+
+                          <div className="p-6 md:p-8 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                              <div className="grid grid-cols-1 gap-4">
+                                  {activeCriteria.map((c, i) => (
+                                      <div key={i} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 shadow-inner">
+                                          <div className="flex justify-between items-center px-1">
+                                              <div className="flex items-center gap-2">
+                                                  <div className={`p-1.5 rounded-lg ${viewMode === 'basket' ? 'bg-orange-600/10 text-orange-500' : 'bg-blue-600/10 text-blue-500'}`}>
+                                                      <c.icon size={14} />
+                                                  </div>
+                                                  <div>
+                                                      <span className="text-[10px] font-black text-white uppercase tracking-wider">{c.label}</span>
+                                                      <p className="text-[7px] font-bold text-slate-600 uppercase tracking-tighter leading-none">{c.desc}</p>
+                                                  </div>
+                                              </div>
+                                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 ${currentScores[i] >= 4 ? 'text-emerald-500' : currentScores[i] <= 2 ? 'text-rose-500' : 'text-orange-500'}`}>NIVÅ {currentScores[i]}</span>
+                                          </div>
+                                          <div className="flex gap-1">
+                                              {[1, 2, 3, 4, 5].map(v => (
+                                                  <button 
+                                                    key={v} 
+                                                    onClick={() => { const next = [...currentScores]; next[i] = v; setCurrentScores(next); }} 
+                                                    className={`flex-1 h-10 rounded-xl font-black text-xs transition-all border ${currentScores[i] === v ? (viewMode === 'basket' ? 'bg-orange-600 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.3)]' : 'bg-blue-600 border-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.3)]') + ' text-white scale-[1.05] z-10' : 'bg-slate-900 border-slate-800 text-slate-600 hover:text-slate-400'}`}
+                                                  >
+                                                      {v}
+                                                  </button>
+                                              ))}
+                                          </div>
+                                      </div>
+                                  ))}
+                              </div>
+
                               <div className="space-y-2">
-                                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Coach-notering</label>
-                                  <textarea value={currentNote} onChange={e => setCurrentNote(e.target.value)} placeholder="Skriv något uppmuntrande eller vad spelaren kan förbättra..." className="w-full bg-slate-950 border border-slate-800 rounded-[1.5rem] p-4 text-xs text-white outline-none focus:border-orange-500 h-32 resize-none transition-all" />
+                                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-2 flex items-center gap-2"><MessageSquare size={12}/> Coach-notering</label>
+                                  <textarea 
+                                    value={currentNote} 
+                                    onChange={e => setCurrentNote(e.target.value)} 
+                                    placeholder="Extra pepp eller tips..." 
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs text-white outline-none focus:border-orange-500 h-24 resize-none transition-all shadow-inner" 
+                                  />
                               </div>
                           </div>
-                          <div className="p-8 bg-slate-950/50 border-t border-slate-800">
-                              <button onClick={savePlayerEvaluation} className="w-full py-5 rounded-[2rem] bg-orange-600 text-white font-black uppercase text-xs shadow-xl shadow-orange-900/20 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                  <Check size={20}/> Spara Spelare
+
+                          <div className="p-6 md:p-8 bg-slate-950/60 border-t border-slate-800 shrink-0">
+                              <button onClick={savePlayerEvaluation} className="w-full py-5 rounded-[2rem] bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-xs shadow-xl shadow-emerald-900/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                  <Check size={20}/> Spara Bedömning
                               </button>
                           </div>
                       </div>

@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Player, MatchRecord, TrainingSession, Badge, Exercise, Phase } from '../types';
+import { Player, MatchRecord, TrainingSession, Badge, Exercise, Phase, Homework } from '../types';
 import { dataService } from '../services/dataService';
 import { SKILL_COLORS } from './Roster';
 import { 
-  Trophy, Target, CheckCircle2, Zap, Heart, BrainCircuit, LogOut, Dumbbell, Eye, Star, Award, Lock, Play, Youtube, X, Info, Lightbulb, Egg, GlassWater, Moon, Carrot, Send, Bot, Loader2, Maximize2, Minimize2, ChevronRight, BookOpen
+  Trophy, Target, CheckCircle2, Zap, Heart, BrainCircuit, LogOut, Dumbbell, Eye, Star, Award, Lock, Play, Youtube, X, Info, Lightbulb, Egg, GlassWater, Moon, Carrot, Send, Bot, Loader2, Maximize2, Minimize2, ChevronRight, BookOpen, ExternalLink, Search, Flame, Sparkles, Circle, Medal, ClipboardList, Activity
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -19,87 +19,60 @@ interface ChatMessage {
     text: string;
 }
 
+const SKILL_THEMES: Record<string, string> = {
+    'DRIBBLING': 'bg-orange-500',
+    'SPELFÖRSTÅELSE': 'bg-purple-500',
+    'SKYTTE': 'bg-red-500',
+    'FÖRSVAR': 'bg-emerald-500',
+    'FYSIK': 'bg-indigo-500',
+    'PASSNING': 'bg-blue-500',
+    'KONDITION': 'bg-cyan-500'
+};
+
 const getVideoId = (url: string) => {
   if (!url) return null;
-  const cleanUrl = url.trim();
-  const match = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
-  return match ? match[1] : null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2].length === 11) return match[2];
+  if (url.includes('youtu.be/')) {
+    const id = url.split('youtu.be/')[1]?.split(/[?#]/)[0];
+    if (id && id.length === 11) return id;
+  }
+  return null;
 };
 
-const isShortsVideo = (url: string) => {
-    if (!url) return false;
-    return url.includes('shorts/');
-};
-
-// Radar Chart Helper
-const RadarChart = ({ skills, colors }: { skills: Record<string, number>, colors: Record<string, string> }) => {
-    const entries = Object.entries(skills);
-    const numPoints = entries.length;
-    const radius = 80;
+const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
+    const labels = ['DRIBBLING', 'SPELFÖRSTÅELSE', 'SKYTTE', 'FÖRSVAR', 'FYSIK', 'PASSNING', 'KONDITION'];
+    const numPoints = labels.length;
+    const radius = 75;
     const center = 100;
-
-    const points = entries.map(([name, value], i) => {
+    const points = labels.map((label, i) => {
+        const value = skills[label] || 5;
         const angle = (Math.PI * 2 * i) / numPoints - Math.PI / 2;
         const r = (value / 10) * radius;
-        return {
-            x: center + r * Math.cos(angle),
-            y: center + r * Math.sin(angle),
-            label: name,
-            value
-        };
+        return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
     });
-
     const pathData = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
 
     return (
-        <div className="relative w-full aspect-square max-w-[280px] mx-auto animate-in zoom-in duration-1000">
+        <div className="relative w-full aspect-square max-w-[280px] mx-auto">
+            <div className="absolute top-0 right-0 opacity-5 -mr-10 -mt-10"><Star size={120} /></div>
             <svg viewBox="0 0 200 200" className="w-full h-full overflow-visible">
-                {/* Background Circles */}
                 {[0.2, 0.4, 0.6, 0.8, 1.0].map((scale, idx) => (
-                    <circle 
-                        key={idx} 
-                        cx={center} cy={center} r={radius * scale} 
-                        fill="none" stroke="white" strokeWidth="0.5" strokeOpacity="0.05" 
-                    />
+                    <circle key={idx} cx={center} cy={center} r={radius * scale} fill="none" stroke="white" strokeWidth="0.5" strokeOpacity="0.1" />
                 ))}
-                
-                {/* Spikes */}
-                {points.map((p, i) => {
+                {labels.map((_, i) => {
                     const angle = (Math.PI * 2 * i) / numPoints - Math.PI / 2;
-                    const endX = center + radius * Math.cos(angle);
-                    const endY = center + radius * Math.sin(angle);
-                    return <line key={i} x1={center} y1={center} x2={endX} y2={endY} stroke="white" strokeWidth="0.5" strokeOpacity="0.1" />;
+                    return <line key={i} x1={center} y1={center} x2={center + radius * Math.cos(angle)} y2={center + radius * Math.sin(angle)} stroke="white" strokeWidth="0.5" strokeOpacity="0.1" />;
                 })}
-
-                {/* Data Polygon */}
-                <path 
-                    d={pathData} 
-                    fill="rgba(249, 115, 22, 0.15)" 
-                    stroke="#f97316" 
-                    strokeWidth="2.5" 
-                    className="drop-shadow-[0_0_8px_rgba(249,115,22,0.5)] transition-all duration-1000 ease-out"
-                />
-
-                {/* Labels and Value Dots */}
-                {points.map((p, i) => {
+                <path d={pathData} fill="rgba(249, 115, 22, 0.2)" stroke="#f97316" strokeWidth="3" className="drop-shadow-[0_0_12px_rgba(249,115,22,0.6)]" />
+                {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="white" className="drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" />)}
+                {labels.map((label, i) => {
                     const angle = (Math.PI * 2 * i) / numPoints - Math.PI / 2;
-                    const labelRadius = radius + 25;
-                    const lx = center + labelRadius * Math.cos(angle);
-                    const ly = center + labelRadius * Math.sin(angle);
-                    return (
-                        <g key={i}>
-                            <circle cx={p.x} cy={p.y} r="3" fill="#fff" className="drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]" />
-                            <text 
-                                x={lx} y={ly} 
-                                textAnchor="middle" 
-                                className="text-[7px] font-black uppercase tracking-tighter" 
-                                fill="white" 
-                                style={{ opacity: 0.6 }}
-                            >
-                                {p.label}
-                            </text>
-                        </g>
-                    );
+                    const r = radius + 20;
+                    const x = center + r * Math.cos(angle);
+                    const y = center + r * Math.sin(angle);
+                    return <text key={i} x={x} y={y} fill="#94a3b8" fontSize="8" fontWeight="900" textAnchor="middle" dominantBaseline="middle" className="uppercase tracking-widest">{label}</text>;
                 })}
             </svg>
         </div>
@@ -112,32 +85,32 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [exerciseViewMode, setExerciseViewMode] = useState<'video' | 'info'>('video');
   const [loading, setLoading] = useState(true);
   const [myPlayer, setMyPlayer] = useState<Player>(player);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   
-  // AI Coach State
+  const [fuelChecks, setFuelChecks] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem(`fuel_${player.id}_${new Date().toISOString().split('T')[0]}`);
+    return saved ? JSON.parse(saved) : { protein: false, water: false, greens: false, sleep: false };
+  });
+
   const [showAiChat, setShowAiChat] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
-  
-  const [fuelTasks, setFuelTasks] = useState(
-      [{ id: 'protein', label: 'Ägg/Protein Frukost', type: 'protein' as const, completed: false },
-       { id: 'water', label: 'Drick 1.5L Vatten', type: 'hydration' as const, completed: false },
-       { id: 'greens', label: 'Frukt/Grönt Snack', type: 'greens' as const, completed: false },
-       { id: 'sleep', label: '8h Sömn inatt', type: 'recovery' as const, completed: false }]
-  );
 
   useEffect(() => {
     const loadData = async () => {
-      const [allMatches, allSessions, phases] = await Promise.all([
+      const [allMatches, allSessions, phases, currentPlayers] = await Promise.all([
           dataService.getMatches(),
           dataService.getSessions(),
-          dataService.getUnifiedPhases()
+          dataService.getUnifiedPhases(),
+          dataService.getPlayers()
       ]);
+      const updatedMe = currentPlayers.find(p => p.id === player.id);
+      if (updatedMe) setMyPlayer(updatedMe);
       const myMatches = allMatches.filter(m => m.feedbacks.some(f => f.playerId === player.id));
       setMatches(myMatches);
       setSessions(allSessions);
@@ -145,13 +118,24 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
       setLoading(false);
     };
     loadData();
-  }, [player.id]);
+  }, [player.id, activeTab]);
 
   useEffect(() => {
-    if (chatScrollRef.current) {
-        chatScrollRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [chatMessages, showAiChat]);
+    localStorage.setItem(`fuel_${player.id}_${new Date().toISOString().split('T')[0]}`, JSON.stringify(fuelChecks));
+  }, [fuelChecks, player.id]);
+
+  const toggleFuel = (key: string) => setFuelChecks(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const gamification = useMemo(() => {
+      const skills = Object.values(myPlayer.skillAssessment || {}) as number[];
+      const avgSkill = skills.length > 0 ? skills.reduce((a, b) => a + b, 0) / skills.length : 5;
+      const ovr = Math.min(99, Math.round(50 + (avgSkill * 5)));
+      return { ovr, level: 4, progressToNext: 25 }; 
+  }, [myPlayer]);
+
+  const myTrainingPlan = useMemo(() => (myPlayer.individualPlan || [])
+    .map(id => allExercises.find(e => e.id === id))
+    .filter((e): e is Exercise => !!e), [myPlayer.individualPlan, allExercises]);
 
   const handleAiAsk = async (e?: React.FormEvent) => {
       e?.preventDefault();
@@ -164,325 +148,344 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
           const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
           const response = await ai.models.generateContent({ 
               model: 'gemini-3-flash-preview', 
-              contents: `Du är AI Coachen. Fråga om: "${selectedExercise.title}". "${chatInput}". Svara kort på svenska.` 
+              contents: `Du är en peppande basketcoach. Spelaren frågar om övningen "${selectedExercise.title}". Fråga: "${chatInput}". Svara kort, pedagogiskt och uppmuntrande på svenska.` 
           });
-          setChatMessages(prev => [...prev, { role: 'model', text: response.text || "Problem." }]);
+          setChatMessages(prev => [...prev, { role: 'model', text: response.text || "Jag kunde inte svara just nu, träna på!" }]);
       } catch (err) {
-          setChatMessages(prev => [...prev, { role: 'model', text: "Nätverksfel." }]);
+          setChatMessages(prev => [...prev, { role: 'model', text: "Kunde inte nå coachen just nu." }]);
       } finally { setIsAiLoading(false); }
   };
-
-  const gamification = useMemo(() => {
-      let xp = 0;
-      const myAttendance = sessions.filter(s => s.attendance.some(a => a.playerId === player.id && a.status === 'närvarande'));
-      xp += myAttendance.length * 50;
-      xp += matches.length * 100;
-      xp += (myPlayer.homework || []).filter(h => h.completed).length * 25;
-      xp += fuelTasks.filter(t => t.completed).length * 10;
-
-      const level = Math.floor(Math.sqrt(xp / 100)) + 1;
-      const nextLevelXp = Math.pow(level, 2) * 100;
-      const currentLevelBaseXp = Math.pow(level - 1, 2) * 100;
-      const progressToNext = Math.min(100, Math.max(0, ((xp - currentLevelBaseXp) / (nextLevelXp - currentLevelBaseXp)) * 100));
-
-      const skills = Object.values(myPlayer.skillAssessment || {}) as number[];
-      const avgSkill = skills.length > 0 ? skills.reduce((a, b) => a + b, 0) / skills.length : 5;
-      const ovr = Math.min(99, Math.round(50 + (avgSkill * 5)));
-
-      const hasDoneAllHomework = myPlayer.homework && myPlayer.homework.length > 0 && myPlayer.homework.every(h => h.completed);
-
-      const badges: Badge[] = [
-          { id: 'sniper', label: 'Sniper', icon: 'crosshair', description: 'Skytte-betyg över 8', color: 'text-rose-500', unlocked: (myPlayer.skillAssessment?.['Skytte'] || 0) >= 8 },
-          { id: 'professor', label: 'The Professor', icon: 'book', description: 'Gjort alla uppdrag', color: 'text-indigo-400', unlocked: !!hasDoneAllHomework },
-          { id: 'gymrat', label: 'Gym Rat', icon: 'dumbbell', description: 'Hög närvaro', color: 'text-blue-500', unlocked: dataService.calculateAttendanceRate(sessions) > 80 },
-          { id: 'mvp', label: 'Heart & Soul', icon: 'heart', description: 'Matchinsatser', color: 'text-orange-500', unlocked: matches.length > 0 }
-      ];
-
-      return { xp, level, progressToNext, badges, ovr };
-  }, [sessions, matches, myPlayer, fuelTasks]);
-
-  const myTrainingPlan = useMemo(() => (myPlayer.individualPlan || [])
-    .map(id => allExercises.find(e => e.id === id))
-    .filter((e): e is Exercise => !!e), [myPlayer.individualPlan, allExercises]);
 
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-24 relative overflow-x-hidden">
-       <header className="relative pt-12 pb-24 px-6 overflow-hidden">
+       {/* PROFILE HEADER - IMAGE 1 STYLE */}
+       <header className="relative pt-12 pb-16 px-6 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-[#020617] to-[#020617]"></div>
-          <div className="relative z-10 max-w-sm mx-auto">
-             <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-[3rem] border-4 border-slate-800 shadow-2xl overflow-hidden">
-                <div className="flex justify-between items-start p-6 relative z-10">
-                    <div className="flex flex-col items-center">
-                        <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-orange-400 to-orange-600 leading-none tracking-tighter drop-shadow-[0_0_15px_rgba(249,115,22,0.3)]">{gamification.ovr}</div>
-                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">OVR Rating</div>
+          <div className="relative z-10 max-w-md mx-auto">
+             <div className="bg-[#0a0f1d] rounded-[3rem] border border-slate-800 shadow-2xl overflow-hidden p-8 pt-10">
+                <div className="flex justify-between items-start mb-6">
+                    <div className="flex flex-col">
+                        <div className="text-6xl font-black text-orange-500 leading-none tracking-tighter drop-shadow-[0_0_15px_rgba(249,115,22,0.4)]">{gamification.ovr}</div>
+                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-2">OVR RATING</div>
                     </div>
-                    <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center border border-slate-700 shadow-inner"><Trophy size={20} className="text-orange-500" /></div>
-                </div>
-
-                <div className="relative h-44 flex items-end justify-center -mt-8">
-                    <div className="w-36 h-36 bg-slate-950 rounded-full border-4 border-slate-800 flex items-center justify-center relative overflow-hidden shadow-2xl group">
-                        <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 to-transparent"></div>
-                        <span className="text-5xl font-black text-slate-800 group-hover:text-slate-700 transition-colors">#{player.number}</span>
-                    </div>
-                    <div className="absolute bottom-0 right-1/2 translate-x-16 translate-y-2 bg-gradient-to-r from-orange-600 to-orange-400 px-4 py-1.5 rounded-full border-2 border-slate-900 shadow-xl z-20">
-                        <span className="text-[11px] font-black text-white uppercase italic tracking-widest">Lvl {gamification.level}</span>
+                    <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center border border-slate-700 shadow-inner">
+                        <Trophy size={20} className="text-orange-500" />
                     </div>
                 </div>
 
-                <div className="bg-slate-900/90 backdrop-blur-md p-6 pt-8 text-center border-t border-slate-800/50">
-                    <h1 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none mb-4">{player.name}</h1>
-                    <div className="relative h-2 bg-slate-950 rounded-full overflow-hidden shadow-inner">
-                        <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.5)]" style={{ width: `${gamification.progressToNext}%` }}></div>
+                <div className="relative flex flex-col items-center">
+                    <div className="w-32 h-32 bg-slate-950 rounded-full border-4 border-slate-800 flex items-center justify-center relative overflow-hidden shadow-2xl mb-6">
+                        <span className="text-5xl font-black text-slate-800 italic">#{myPlayer.number}</span>
+                        <div className="absolute bottom-0 bg-orange-600 px-3 py-1 rounded-full border-2 border-slate-900 translate-y-1 shadow-xl z-20">
+                            <span className="text-[10px] font-black text-white uppercase italic tracking-widest">LVL {gamification.level}</span>
+                        </div>
                     </div>
-                    <div className="flex justify-between text-[8px] font-black text-slate-500 uppercase mt-2 tracking-widest"><span>Nivå {gamification.level}</span><span>{Math.round(gamification.progressToNext)}% till nästa</span></div>
+                    
+                    <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-6">{myPlayer.name}</h1>
+                    
+                    <div className="w-full space-y-2">
+                        <div className="h-2 bg-slate-950 rounded-full overflow-hidden shadow-inner border border-white/5 relative">
+                            <div className="absolute top-0 left-0 h-full bg-orange-600 shadow-[0_0_10px_rgba(234,88,12,0.5)] transition-all duration-1000" style={{ width: `${gamification.progressToNext}%` }}></div>
+                        </div>
+                        <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">
+                            <span>Nivå {gamification.level}</span>
+                            <span>{gamification.progressToNext}% till nästa</span>
+                        </div>
+                    </div>
                 </div>
              </div>
           </div>
           <button onClick={onLogout} className="absolute top-6 right-6 p-2.5 bg-slate-800/50 rounded-full text-slate-500 hover:text-white backdrop-blur-sm z-50"><LogOut size={16} /></button>
        </header>
 
-       <main className="max-w-lg mx-auto px-4 -mt-12 relative z-20 space-y-6">
-          <div className="flex p-1.5 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl overflow-x-auto gap-1">
-             {['career', 'training', 'fuel', 'matches'].map((tab) => (
-                 <button key={tab} onClick={() => setActiveTab(tab as any)} className={`flex-1 min-w-[70px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500'}`}>{tab === 'career' ? 'Profil' : tab === 'fuel' ? 'Kost' : tab === 'matches' ? 'Match' : 'Träning'}</button>
+       <main className="max-w-lg mx-auto px-4 -mt-6 relative z-20 space-y-6">
+          <div className="flex p-1 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl">
+             {(['career', 'training', 'fuel', 'matches'] as const).map((tab) => (
+                 <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500'}`}>
+                    {tab === 'career' ? 'Profil' : tab === 'fuel' ? 'Kost' : tab === 'matches' ? 'Match' : 'Träning'}
+                 </button>
              ))}
           </div>
 
-          {activeTab === 'career' && (
-             <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
-                <div className="p-8 rounded-[3rem] bg-slate-900 border border-slate-800 shadow-2xl relative overflow-hidden group">
-                   <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Star size={120} /></div>
-                   <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-8"><Star size={14} className="text-yellow-500" /> Din Spelarprofil</h3>
-                   <RadarChart skills={myPlayer.skillAssessment || {}} colors={SKILL_COLORS} />
-                   <div className="mt-8 space-y-3">
-                       {Object.entries(myPlayer.skillAssessment || {}).map(([skill, val]) => (
-                           <div key={skill} className="flex items-center gap-4">
-                               <span className="text-[9px] font-black uppercase text-slate-400 w-24 truncate">{skill}</span>
-                               <div className="flex-1 h-1.5 bg-slate-950 rounded-full overflow-hidden">
-                                   <div className={`h-full rounded-full ${SKILL_COLORS[skill] || 'bg-orange-500'}`} style={{ width: `${(val as number) * 10}%` }}></div>
-                               </div>
-                               <span className="text-[10px] font-black text-white w-4">{val}</span>
-                           </div>
-                       ))}
-                   </div>
-                </div>
-
-                <div className="space-y-3">
-                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 flex items-center gap-2"><Award size={14} /> Trofésamling</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        {gamification.badges.map(badge => (
-                            <div key={badge.id} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all ${badge.unlocked ? 'bg-slate-900 border-slate-800 shadow-xl' : 'bg-slate-900/50 border-slate-800/50 opacity-60'}`}>
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${badge.unlocked ? 'bg-slate-950 shadow-inner' : 'bg-slate-900'}`}>
-                                    {badge.unlocked ? (
-                                        badge.id === 'professor' ? <BookOpen size={20} className={badge.color} /> : 
-                                        badge.id === 'sniper' ? <Target size={20} className={badge.color} /> :
-                                        badge.id === 'gymrat' ? <Dumbbell size={20} className={badge.color} /> :
-                                        <Heart size={20} className={badge.color} />
-                                    ) : <Lock size={16} className="text-slate-600" />}
+          {activeTab === 'training' && (
+             <div className="space-y-10 animate-in slide-in-from-right duration-300 pb-20">
+                {/* COACHUPPDRAG - IMAGE 1 STYLE */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 px-2">
+                        <ClipboardList size={16} className="text-slate-500" />
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">COACHUPPDRAG</h3>
+                    </div>
+                    <div className="space-y-3">
+                        {(myPlayer.homework || []).map((hw) => (
+                            <div key={hw.id} className="p-5 rounded-[2rem] bg-[#0a0f1d] border border-slate-800/50 flex items-center gap-5 group shadow-lg">
+                                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${hw.completed ? 'bg-blue-600 border-blue-600' : 'border-slate-800'}`}>
+                                    {hw.completed ? <CheckCircle2 size={16} className="text-white" /> : <Circle size={16} className="text-slate-800" />}
                                 </div>
-                                <div className="min-w-0">
-                                    <div className={`text-[10px] font-black uppercase truncate ${badge.unlocked ? 'text-white' : 'text-slate-500'}`}>{badge.label}</div>
-                                    <div className="text-[8px] text-slate-500 font-bold leading-tight line-clamp-2">{badge.description}</div>
-                                </div>
+                                <span className={`text-[11px] font-black uppercase tracking-tight ${hw.completed ? 'text-slate-600 line-through' : 'text-white'}`}>{hw.title}</span>
                             </div>
                         ))}
+                        {(myPlayer.homework || []).length === 0 && (
+                            <div className="p-8 text-center border-2 border-dashed border-slate-800 rounded-[2rem] opacity-30">
+                                <p className="text-[10px] font-black uppercase tracking-widest">Inga aktiva uppdrag just nu.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* DIN UTVECKLINGSPLAN - IMAGE 1 STYLE */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 px-2">
+                        <Target size={16} className="text-slate-500" />
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DIN UTVECKLINGSPLAN</h3>
+                    </div>
+                    <div className="space-y-3">
+                        {myTrainingPlan.length > 0 ? myTrainingPlan.map((ex, index) => (
+                            <div key={ex.id} onClick={() => { setSelectedExercise(ex); setIsPlaying(false); setExerciseViewMode('video'); }} className="p-4 rounded-[1.5rem] bg-[#0a0f1d] border border-slate-800/50 flex items-center gap-5 transition-all cursor-pointer shadow-lg active:scale-[0.98]">
+                                <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 text-xl font-black text-slate-700">{index + 1}</div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="mb-1">
+                                        <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${ex.category === 'Skott' ? 'bg-purple-600/20 text-purple-400' : 'bg-orange-600/20 text-orange-400'}`}>{ex.category}</span>
+                                    </div>
+                                    <h4 className="text-sm font-black text-white italic uppercase tracking-tight truncate">{ex.title}</h4>
+                                    <p className="text-[8px] font-bold text-slate-500 uppercase mt-1 flex items-center gap-1"><Eye size={10} /> Video & instruktioner</p>
+                                </div>
+                                <ChevronRight size={18} className="text-slate-800" />
+                            </div>
+                        )) : (
+                            <div className="p-12 text-center border-2 border-dashed border-slate-800 rounded-[2rem] opacity-30">
+                                <p className="text-[10px] font-black uppercase tracking-widest">Planen är tom. Prata med coachen!</p>
+                            </div>
+                        )}
                     </div>
                 </div>
              </div>
           )}
 
-          {activeTab === 'training' && (
-             <div className="space-y-6 animate-in slide-in-from-right duration-300">
-                <div className="space-y-3">
-                   <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 flex items-center gap-2"><Dumbbell size={14} /> Coachuppdrag</h3>
-                   {(myPlayer.homework || []).map(hw => (
-                      <div key={hw.id} onClick={async () => {
-                          const updated = (myPlayer.homework || []).map(h => h.id === hw.id ? {...h, completed: !h.completed} : h);
-                          setMyPlayer({...myPlayer, homework: updated});
-                          await dataService.toggleHomework(player.id, hw.id);
-                      }} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all cursor-pointer ${hw.completed ? 'bg-blue-900/10 border-blue-500/30' : 'bg-slate-900 border-slate-800'}`}>
-                         <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 ${hw.completed ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'border-slate-700'}`}><CheckCircle2 size={16} /></div>
-                         <div className="flex-1"><h4 className={`text-xs font-black uppercase ${hw.completed ? 'text-slate-500 line-through' : 'text-white'}`}>{hw.title}</h4></div>
+          {activeTab === 'matches' && (
+              <div className="space-y-6 animate-in slide-in-from-right duration-300 pb-20">
+                  <div className="flex items-center gap-2 px-2">
+                        <Trophy size={16} className="text-slate-500" />
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DIN MATCHANALYS</h3>
+                  </div>
+                  
+                  {matches.map((m) => {
+                      const feedback = m.feedbacks.find(f => f.playerId === player.id);
+                      return (
+                          <div key={m.id} className="p-6 rounded-[2.5rem] bg-[#0a0f1d] border border-slate-800/50 space-y-6 shadow-xl relative overflow-hidden">
+                              <div className="flex justify-between items-start">
+                                  <div>
+                                      <h4 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">{m.opponent}</h4>
+                                      <p className="text-[9px] font-bold text-slate-500 uppercase mt-2 tracking-widest">{m.date}</p>
+                                  </div>
+                                  <div className="w-10 h-10 bg-emerald-600/10 border border-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-500 font-black text-sm shadow-inner">W</div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2">
+                                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col items-center gap-2">
+                                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em]">EFFORT</span>
+                                      <div className="flex items-center gap-1.5 text-yellow-500 font-black italic">
+                                          <Zap size={14} fill="currentColor" /> {feedback?.effort || 3}
+                                      </div>
+                                  </div>
+                                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col items-center gap-2">
+                                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em]">LAGANDA</span>
+                                      <div className="flex items-center gap-1.5 text-rose-500 font-black italic">
+                                          <Heart size={14} fill="currentColor" /> {feedback?.teamwork || 3}
+                                      </div>
+                                  </div>
+                                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col items-center gap-2">
+                                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em]">UTV.</span>
+                                      <div className="flex items-center gap-1.5 text-emerald-500 font-black italic">
+                                          <Target size={14} fill="currentColor" /> {feedback?.learning || 3}
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      );
+                  })}
+                  {matches.length === 0 && (
+                      <div className="p-20 text-center border-2 border-dashed border-slate-800 rounded-[2.5rem] opacity-30">
+                          <p className="text-[10px] font-black uppercase tracking-widest">Ingen matchdata registrerad än.</p>
                       </div>
-                   ))}
-                </div>
-                
-                {/* INDIVIDUAL PLAN SECTION */}
-                <div className="space-y-3">
-                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 flex items-center gap-2"><Target size={14} /> Din Utvecklingsplan</h3>
-                    {myTrainingPlan.map((ex, index) => (
-                        <div key={ex.id} onClick={() => setSelectedExercise(ex)} className="group relative p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/50 transition-all cursor-pointer">
-                            <div className="relative z-10 flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 shadow-inner">
-                                    <span className="text-lg font-black text-slate-700 group-hover:text-purple-500 transition-colors">{index + 1}</span>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1"><span className="text-[8px] font-bold uppercase tracking-widest text-purple-400 bg-purple-900/20 px-2 py-0.5 rounded">{ex.category}</span></div>
-                                    <h4 className="text-sm font-black text-white italic uppercase tracking-tight leading-none mb-1">{ex.title}</h4>
-                                    <div className="flex items-center gap-1 text-[9px] text-slate-500 font-bold uppercase"><Youtube size={10} /> <span>Video & Instruktioner</span></div>
-                                </div>
-                                <ChevronRight size={16} className="text-slate-700 mt-2" />
-                            </div>
-                        </div>
-                    ))}
-                    {myTrainingPlan.length === 0 && (
-                        <div className="py-8 text-center border-2 border-dashed border-slate-800 rounded-[2rem]">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Inga övningar tilldelade än</p>
-                        </div>
-                    )}
-                </div>
-             </div>
+                  )}
+              </div>
           )}
 
           {activeTab === 'fuel' && (
-             <div className="space-y-6 animate-in slide-in-from-right duration-300">
-                <div className="p-10 rounded-[3rem] bg-gradient-to-br from-emerald-900/20 to-slate-900 border border-emerald-500/20 text-center shadow-2xl relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/5 via-transparent to-transparent"></div>
-                    <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter mb-1 relative z-10">Fuel Station</h2>
-                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest relative z-10">Optimera din återhämtning</p>
-                </div>
-                <div className="space-y-3">
-                    {fuelTasks.map(task => {
-                        const Icon = task.type === 'protein' ? Egg : task.type === 'hydration' ? GlassWater : task.type === 'recovery' ? Moon : Carrot;
-                        return (
-                            <div key={task.id} onClick={() => setFuelTasks(prev => prev.map(t => t.id === task.id ? {...t, completed: !t.completed} : t))} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all cursor-pointer ${task.completed ? 'bg-emerald-900/10 border-emerald-500/30 shadow-lg' : 'bg-slate-900 border-slate-800'}`}>
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${task.completed ? 'bg-emerald-600 text-white' : 'bg-slate-950 text-slate-600'}`}><Icon size={20} /></div>
-                                <div className="flex-1"><h4 className={`text-xs font-black uppercase ${task.completed ? 'text-emerald-400' : 'text-white'}`}>{task.label}</h4></div>
-                                {task.completed && <CheckCircle2 size={20} className="text-emerald-500" />}
+              <div className="space-y-8 animate-in slide-in-from-bottom duration-500 pb-20">
+                  <div className="p-10 rounded-[3rem] bg-gradient-to-br from-[#0a191f] to-[#050c0e] border-2 border-[#162d35] text-center space-y-2 shadow-2xl relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-500 via-transparent to-transparent"></div>
+                      <h2 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">FUEL STATION</h2>
+                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">OPTIMERA DIN ÅTERHÄMTNING</p>
+                  </div>
+                  <div className="space-y-3">
+                      {[
+                        { key: 'protein', icon: Egg, label: 'ÄGG/PROTEIN FRUKOST', color: 'text-orange-400' },
+                        { key: 'water', icon: GlassWater, label: 'DRICK 1.5L VATTEN', color: 'text-blue-400' },
+                        { key: 'greens', icon: Carrot, label: 'FRUKT/GRÖNT SNACK', color: 'text-emerald-400' },
+                        { key: 'sleep', icon: Moon, label: '8H SÖMN INATT', color: 'text-purple-400' }
+                      ].map((item) => (
+                        <button key={item.key} onClick={() => toggleFuel(item.key)} className={`w-full p-5 rounded-[2rem] bg-[#0a0f1d] border border-slate-800/50 flex items-center gap-6 transition-all group active:scale-[0.98] ${fuelChecks[item.key] ? 'border-emerald-500/30 bg-emerald-500/5' : 'hover:border-slate-700'}`}>
+                            <div className={`w-12 h-12 rounded-2xl bg-slate-950 border-2 flex items-center justify-center transition-colors ${fuelChecks[item.key] ? 'border-emerald-500 bg-emerald-500' : 'border-slate-800'}`}>{fuelChecks[item.key] ? <CheckCircle2 size={24} className="text-white" /> : <Circle size={24} className="text-slate-800" />}</div>
+                            <div className="flex items-center gap-4 flex-1">
+                                <div className={`w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center ${item.color}`}><item.icon size={20} /></div>
+                                <span className={`text-xs md:text-sm font-black italic uppercase tracking-tight text-left ${fuelChecks[item.key] ? 'text-white' : 'text-slate-400'}`}>{item.label}</span>
                             </div>
-                        );
-                    })}
-                </div>
-             </div>
+                        </button>
+                      ))}
+                  </div>
+              </div>
           )}
-          
-          {activeTab === 'matches' && (
-             <div className="space-y-4 animate-in slide-in-from-right duration-300">
-                {matches.map(m => {
-                    const feedback = m.feedbacks.find(f => f.playerId === player.id);
-                    const isWin = m.score > m.opponentScore;
-                    return (
-                        <div key={m.id} className="p-6 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-4 shadow-lg">
-                           <div className="flex justify-between items-center pb-4 border-b border-slate-800/50">
-                              <div>
-                                  <h3 className="text-lg font-black text-white italic uppercase truncate">{m.opponent}</h3>
-                                  <span className="text-[9px] font-bold text-slate-500 uppercase">{m.date}</span>
+
+          {activeTab === 'career' && (
+              <div className="space-y-8 animate-in slide-in-from-left duration-300 pb-20">
+                  <div className="p-8 rounded-[3rem] bg-[#0a0f1d] border border-slate-800 shadow-2xl flex flex-col items-center">
+                      <div className="w-full flex items-center gap-2 mb-8 px-2">
+                        <Star size={16} className="text-yellow-500" fill="currentColor" />
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">DIN SPELARPROFIL</h3>
+                      </div>
+                      <RadarChart skills={myPlayer.skillAssessment || {}} />
+                      <div className="w-full space-y-5 mt-12 px-2">
+                          {[
+                              { label: 'DRIBBLING', val: (myPlayer.skillAssessment?.['Dribbling'] || 5), color: SKILL_THEMES['DRIBBLING'] },
+                              { label: 'SPELFÖRSTÅELSE', val: (myPlayer.skillAssessment?.['Spelförståelse'] || 5), color: SKILL_THEMES['SPELFÖRSTÅELSE'] },
+                              { label: 'SKYTTE', val: (myPlayer.skillAssessment?.['Skytte'] || 5), color: SKILL_THEMES['SKYTTE'] },
+                              { label: 'FÖRSVAR', val: (myPlayer.skillAssessment?.['Försvar'] || 5), color: SKILL_THEMES['FÖRSVAR'] },
+                              { label: 'FYSIK', val: (myPlayer.skillAssessment?.['Fysik'] || 5), color: SKILL_THEMES['FYSIK'] },
+                              { label: 'PASSNING', val: (myPlayer.skillAssessment?.['Passning'] || 5), color: SKILL_THEMES['PASSNING'] },
+                              { label: 'KONDITION', val: (myPlayer.skillAssessment?.['Kondition'] || 5), color: SKILL_THEMES['KONDITION'] }
+                          ].map((skill) => (
+                              <div key={skill.label} className="flex items-center justify-between gap-6">
+                                  <div className="text-[10px] font-black text-slate-400 tracking-widest w-28 uppercase">{skill.label}</div>
+                                  <div className="flex-1 h-1.5 bg-slate-900 rounded-full overflow-hidden relative border border-white/5"><div className={`h-full ${skill.color} rounded-full transition-all duration-1000`} style={{ width: `${(skill.val / 10) * 100}%` }}></div></div>
+                                  <div className="text-sm font-black text-white italic w-4 text-right tabular-nums">{skill.val}</div>
                               </div>
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${isWin ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{isWin ? 'W' : 'L'}</div>
-                           </div>
-                           {feedback && (
-                              <div className="grid grid-cols-3 gap-2">
-                                     <div className="p-2 bg-slate-950 rounded-xl text-center border border-slate-800">
-                                         <div className="text-[7px] font-bold text-slate-500 uppercase mb-1">Effort</div>
-                                         <div className="text-sm font-black text-yellow-500 flex justify-center items-center gap-1"><Zap size={10} fill="currentColor"/> {feedback.effort}</div>
-                                     </div>
-                                     <div className="p-2 bg-slate-950 rounded-xl text-center border border-slate-800">
-                                         <div className="text-[7px] font-bold text-slate-500 uppercase mb-1">Laganda</div>
-                                         <div className="text-sm font-black text-rose-500 flex justify-center items-center gap-1"><Heart size={10} fill="currentColor"/> {feedback.teamwork}</div>
-                                     </div>
-                                     <div className="p-2 bg-slate-950 rounded-xl text-center border border-slate-800">
-                                         <div className="text-[7px] font-bold text-slate-500 uppercase mb-1">Utv.</div>
-                                         <div className="text-sm font-black text-emerald-500 flex justify-center items-center gap-1"><BrainCircuit size={10} /> {feedback.learning}</div>
-                                     </div>
-                              </div>
-                           )}
-                        </div>
-                    );
-                })}
-             </div>
+                          ))}
+                      </div>
+                  </div>
+
+                  <div className="space-y-4">
+                      <div className="flex items-center gap-2 px-2"><Medal size={16} className="text-slate-500" /><h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TROFÉSAMLING</h3></div>
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="p-6 rounded-[2.5rem] bg-slate-900/40 border border-slate-800/50 flex flex-col items-center justify-center text-center opacity-40 grayscale"><div className="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center mb-4"><Lock size={20} className="text-slate-600" /></div><h4 className="text-[10px] font-black text-white uppercase tracking-widest">SNIPER</h4><p className="text-[8px] font-bold text-slate-500 uppercase mt-1">Skytte-betyg över 8</p></div>
+                          <div className="p-6 rounded-[2.5rem] bg-slate-900/40 border border-slate-800/50 flex flex-col items-center justify-center text-center opacity-40 grayscale"><div className="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center mb-4"><Lock size={20} className="text-slate-600" /></div><h4 className="text-[10px] font-black text-white uppercase tracking-widest">THE PROFESSOR</h4><p className="text-[8px] font-bold text-slate-500 uppercase mt-1">Gjort alla uppdrag</p></div>
+                          <div className="p-6 rounded-[2.5rem] bg-[#0a1125] border border-blue-500/20 flex flex-col items-center justify-center text-center"><div className="w-14 h-14 rounded-2xl bg-slate-950 border border-blue-500/30 flex items-center justify-center mb-4 text-blue-500 shadow-inner"><Dumbbell size={24} /></div><h4 className="text-[10px] font-black text-white uppercase tracking-widest">GYM RAT</h4><p className="text-[8px] font-bold text-slate-400 uppercase mt-1">Hög närvaro</p></div>
+                          <div className="p-6 rounded-[2.5rem] bg-[#1a0f0a] border border-orange-500/20 flex flex-col items-center justify-center text-center"><div className="w-14 h-14 rounded-2xl bg-slate-950 border border-orange-500/30 flex items-center justify-center mb-4 text-orange-500 shadow-inner"><Heart size={24} /></div><h4 className="text-[10px] font-black text-white uppercase tracking-widest">HEART & SOUL</h4><p className="text-[8px] font-bold text-slate-400 uppercase mt-1">Matchinsatser</p></div>
+                      </div>
+                  </div>
+              </div>
           )}
        </main>
 
        {/* EXERCISE DETAIL MODAL */}
        {selectedExercise && (
-           <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col animate-in slide-in-from-bottom duration-300">
-               <button onClick={() => setSelectedExercise(null)} className="absolute top-4 right-4 p-2 bg-slate-800/80 rounded-full text-white z-[120] shadow-lg"><X size={24} /></button>
-
-               <div className={`w-full bg-black relative shrink-0 transition-all duration-500 flex items-center justify-center border-b border-slate-800 overflow-hidden ${isVideoExpanded ? 'h-[60vh] md:h-[70vh]' : 'h-[30vh] md:h-[35vh]'}`}>
-                    {(() => {
-                        const vId = getVideoId(selectedExercise.videoUrl || '');
-                        if (vId) {
-                            return (
-                                <div className="relative w-full h-full">
-                                    {!isPlaying ? (
-                                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center cursor-pointer group" onClick={() => setIsPlaying(true)}>
-                                            <img src={`https://img.youtube.com/vi/${vId}/hqdefault.jpg`} alt="Thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60" />
-                                            <div className="relative z-20 w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform"><Play size={24} fill="white" className="text-white ml-1" /></div>
-                                        </div>
-                                    ) : (
-                                        <iframe src={`https://www.youtube.com/embed/${vId}?autoplay=1&rel=0&modestbranding=1`} title={selectedExercise.title} className="w-full h-full absolute inset-0 z-10" allow="autoplay; fullscreen" />
-                                    )}
-                                    <div className="absolute bottom-4 right-4 z-20">
-                                        <button onClick={(e) => { e.stopPropagation(); setIsVideoExpanded(!isVideoExpanded); }} className="p-2 bg-black/60 backdrop-blur-md rounded-xl text-white hover:bg-black/90 border border-white/10">
-                                            {isVideoExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        }
-                        return <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900/50"><Youtube size={48} className="opacity-20 mb-2" /><p className="text-[10px] font-bold uppercase tracking-widest">Ingen video</p></div>;
-                    })()}
+           <div className="fixed inset-0 z-[100] bg-slate-950/98 backdrop-blur-xl flex flex-col animate-in slide-in-from-bottom duration-300">
+               <div className="flex items-center justify-between p-4 px-6 border-b border-slate-800 shrink-0">
+                  <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-orange-600/10 border border-orange-500/20 flex items-center justify-center text-orange-500"><Flame size={20} /></div>
+                      <div><h3 className="text-sm font-black text-white italic uppercase tracking-tighter leading-none">{selectedExercise.title}</h3><p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">{selectedExercise.category} • Utveckling</p></div>
+                  </div>
+                  <button onClick={() => { setSelectedExercise(null); setIsPlaying(false); }} className="p-2.5 bg-slate-800 rounded-full text-white shadow-lg"><X size={20} /></button>
                </div>
+               <div className="p-3 px-6 bg-slate-900/50 flex gap-2 shrink-0 overflow-x-auto">
+                    <button onClick={() => setExerciseViewMode('video')} className={`flex-1 min-w-[120px] py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${exerciseViewMode === 'video' ? 'bg-red-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400'}`}><Youtube size={14} /> Video</button>
+                    <button onClick={() => setExerciseViewMode('info')} className={`flex-1 min-w-[120px] py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${exerciseViewMode === 'info' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400'}`}><BookOpen size={14} /> Instruktion</button>
+                    <button onClick={() => setShowAiChat(true)} className="p-3 px-5 rounded-xl bg-indigo-600 text-white shadow-lg flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest"><Bot size={14} /> Fråga AI</button>
+               </div>
+               <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+                    {exerciseViewMode === 'video' ? (
+                        <div className="flex-1 flex flex-col p-6 gap-6">
+                            <div className="w-full aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl border border-white/5 relative">
+                                {(() => {
+                                    const vId = getVideoId(selectedExercise.videoUrl || '');
+                                    if (vId) {
+                                        return (
+                                            <div className="w-full h-full relative">
+                                                {!isPlaying ? (
+                                                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center cursor-pointer group" onClick={() => setIsPlaying(true)}>
+                                                        <img src={`https://img.youtube.com/vi/${vId}/hqdefault.jpg`} alt="Thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+                                                        <div className="relative z-20 w-20 h-20 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform shadow-red-600/50"><Play size={32} fill="white" className="text-white ml-1" /></div>
+                                                        <div className="mt-4 relative z-20 px-4 py-2 bg-black/80 rounded-xl border border-white/10 text-white text-[10px] font-black uppercase tracking-widest">Starta Träningsvideo</div>
+                                                    </div>
+                                                ) : (
+                                                    <iframe src={`https://www.youtube-nocookie.com/embed/${vId}?autoplay=1&mute=0&rel=0&modestbranding=1&playsinline=1`} title={selectedExercise.title} className="w-full h-full absolute inset-0 z-10" allow="autoplay; fullscreen; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                                                )}
+                                            </div>
+                                        );
+                                    }
+                                    return <div className="w-full h-full flex flex-col items-center justify-center text-slate-700 gap-3"><Youtube size={64} className="opacity-10" /><p className="text-[10px] font-black uppercase tracking-[0.2em]">Ingen video tillgänglig</p></div>;
+                                })()}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={() => window.open(selectedExercise.videoUrl, '_blank')} className="py-4 bg-slate-900 border border-slate-800 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 transition-all"><ExternalLink size={14} className="text-red-500" /> YouTube App</button>
+                                <button onClick={() => window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent('basketball ' + selectedExercise.title)}`, '_blank')} className="py-4 bg-slate-900 border border-slate-800 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 transition-all"><Search size={14} className="text-blue-500" /> Fler videor</button>
+                            </div>
+                            <div className="p-6 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-4">
+                                <div className="flex items-center gap-2 text-orange-500"><Zap size={18} /><h4 className="text-xs font-black uppercase tracking-widest">Coach-tips för dig</h4></div>
+                                <p className="text-sm text-slate-300 leading-relaxed font-medium italic">"{selectedExercise.overview.coachingPoint}"</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex-1 p-6 space-y-8 animate-in slide-in-from-right duration-300">
+                            <div className="space-y-6">
+                                <div className="p-6 rounded-[2rem] bg-blue-600/5 border border-blue-500/20 space-y-3">
+                                    <div className="flex items-center gap-3 text-blue-400"><div className="p-2 bg-blue-500/10 rounded-xl"><Target size={18} /></div><h4 className="text-xs font-black uppercase tracking-[0.2em]">VAD (Teknik)</h4></div>
+                                    <p className="text-sm text-slate-200 leading-relaxed font-medium">{selectedExercise.pedagogy?.what || "Grundläggande basketfärdighet."}</p>
+                                </div>
+                                <div className="p-6 rounded-[2rem] bg-emerald-600/5 border border-emerald-500/20 space-y-3">
+                                    <div className="flex items-center gap-3 text-emerald-400"><div className="p-2 bg-emerald-500/10 rounded-xl"><Info size={18} /></div><h4 className="text-xs font-black uppercase tracking-[0.2em]">HUR (Utförande)</h4></div>
+                                    <p className="text-sm text-slate-200 leading-relaxed font-medium">{selectedExercise.pedagogy?.how || selectedExercise.overview.action}</p>
+                                </div>
+                                <div className="p-6 rounded-[2rem] bg-purple-600/5 border border-purple-500/20 space-y-3">
+                                    <div className="flex items-center gap-3 text-purple-400"><div className="p-2 bg-purple-500/10 rounded-xl"><Lightbulb size={18} /></div><h4 className="text-xs font-black uppercase tracking-[0.2em]">VARFÖR (Syfte)</h4></div>
+                                    <p className="text-sm text-slate-200 leading-relaxed font-medium">{selectedExercise.pedagogy?.why || "För att bli en mer komplett spelare och hjälpa laget vinna."}</p>
+                                </div>
+                            </div>
+                            <div className="p-6 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 px-1">Checklista för succé</h4>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {(selectedExercise.criteria || []).map((c, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-3 bg-slate-950 rounded-xl border border-slate-800"><div className="w-5 h-5 rounded-full bg-orange-600/20 border border-orange-500/30 flex items-center justify-center text-orange-500"><CheckCircle2 size={12} /></div><span className="text-[11px] font-bold text-slate-300 uppercase">{c}</span></div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+               </div>
+           </div>
+       )}
 
-               <div className="flex-1 overflow-y-auto p-6 space-y-6 relative custom-scrollbar pb-10">
-                   {!showAiChat ? (
-                       <div className="animate-in fade-in duration-300">
-                           <div className="flex items-center justify-between gap-4 mb-6">
-                               <div className="flex-1">
-                                   <span className="text-[8px] font-black uppercase tracking-widest text-purple-400 bg-purple-900/20 px-2 py-0.5 rounded">{selectedExercise.category}</span>
-                                   <h2 className="text-xl font-black text-white italic uppercase tracking-tighter leading-tight mt-1">{selectedExercise.title}</h2>
-                               </div>
-                               <button onClick={() => setShowAiChat(true)} className="px-6 py-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest">
-                                   <Bot size={18} className="animate-pulse" /> <span>Coach</span>
-                               </button>
-                           </div>
-
-                           <div className="grid gap-4">
-                               <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-2">
-                                   <h4 className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2"><Info size={12} /> Utförande</h4>
-                                   <p className="text-sm text-slate-300 leading-relaxed">{selectedExercise.pedagogy?.how || selectedExercise.overview.action}</p>
-                               </div>
-                               <div className="p-4 rounded-2xl bg-indigo-900/10 border border-indigo-500/20 space-y-2">
-                                   <h4 className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Lightbulb size={12} /> Tips</h4>
-                                   <p className="text-sm text-slate-200 font-bold italic">"{selectedExercise.overview.coachingPoint}"</p>
-                               </div>
-                               <div className="space-y-2">
-                                   <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Fokusområden</h4>
-                                   {(selectedExercise.criteria || []).map((c, i) => (
-                                       <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
-                                           <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-700">{i + 1}</div>
-                                           <span className="text-xs font-bold text-white uppercase">{c}</span>
-                                       </div>
-                                   ))}
-                               </div>
-                           </div>
-                       </div>
-                   ) : (
-                       <div className="absolute inset-0 bg-slate-950 z-20 flex flex-col">
-                           <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md">
-                               <div className="flex items-center gap-3">
-                                   <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center"><Bot size={16} className="text-white" /></div>
-                                   <div><h4 className="text-xs font-black text-white uppercase">AI Coach</h4><p className="text-[8px] text-purple-400 font-bold uppercase tracking-widest">{selectedExercise.title}</p></div>
-                               </div>
-                               <button onClick={() => setShowAiChat(false)} className="text-slate-500 hover:text-white text-[9px] font-black uppercase p-2">Stäng</button>
-                           </div>
-                           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                               {chatMessages.map((msg, i) => (
-                                   <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                                       <div className={`p-4 rounded-[1.5rem] text-xs leading-relaxed max-w-[85%] ${msg.role === 'user' ? 'bg-slate-800 text-white rounded-tr-none' : 'bg-purple-900/20 border border-purple-500/30 text-purple-100 rounded-tl-none'}`}>{msg.text}</div>
-                                   </div>
-                               ))}
-                               {isAiLoading && <div className="flex gap-2 p-4"><span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce"></span><span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-100"></span></div>}
-                               <div ref={chatScrollRef} />
-                           </div>
-                           <form onSubmit={handleAiAsk} className="p-4 border-t border-slate-800 bg-slate-900 flex gap-2">
-                               <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Fråga coachen..." className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-purple-500 transition-colors" />
-                               <button type="submit" disabled={!chatInput.trim() || isAiLoading} className="p-3 bg-purple-600 rounded-xl text-white disabled:opacity-50"><Send size={18} /></button>
-                           </form>
-                       </div>
-                   )}
+       {/* AI CHAT OVERLAY */}
+       {showAiChat && selectedExercise && (
+           <div className="fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+               <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col h-[80vh] overflow-hidden">
+                    <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-indigo-600/10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg"><Bot size={24} /></div>
+                            <div><h4 className="text-xs font-black text-white uppercase italic tracking-tighter">Fråga AI Coachen</h4><p className="text-[9px] text-slate-400 font-bold uppercase">{selectedExercise.title}</p></div>
+                        </div>
+                        <button onClick={() => { setShowAiChat(false); setChatMessages([]); }} className="p-2 text-slate-500 hover:text-white"><X size={20}/></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                        {chatMessages.length === 0 && (
+                            <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-40"><Sparkles size={40} className="text-indigo-400 mb-4" /><p className="text-xs font-bold uppercase tracking-widest text-slate-300">Har du en fråga om övningen? Jag kan förklara tekniken eller ge dig extra tips!</p></div>
+                        )}
+                        {chatMessages.map((m, i) => (
+                            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] p-4 rounded-2xl text-xs font-medium leading-relaxed ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'}`}>{m.text}</div>
+                            </div>
+                        ))}
+                        {isAiLoading && (
+                            <div className="flex justify-start"><div className="bg-slate-800 p-4 rounded-2xl rounded-tl-none flex gap-1 items-center"><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"></div><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce delay-100"></div><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce delay-200"></div></div></div>
+                        )}
+                        <div ref={chatScrollRef} />
+                    </div>
+                    <form onSubmit={handleAiAsk} className="p-4 bg-slate-950 border-t border-slate-800 flex gap-2">
+                        <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Skriv din fråga..." className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-indigo-500" />
+                        <button type="submit" disabled={!chatInput.trim() || isAiLoading} className="p-3 bg-indigo-600 text-white rounded-xl disabled:opacity-50"><Send size={18}/></button>
+                    </form>
                </div>
            </div>
        )}

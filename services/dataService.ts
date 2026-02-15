@@ -191,6 +191,17 @@ export const dataService = {
     }
   },
 
+  deleteMatch: async (id: string): Promise<void> => {
+    const path = dataService.getUserPath();
+    if (path && db) {
+      await deleteDoc(doc(db, `${path}/matches`, id));
+    } else {
+      const matches = await dataService.getMatches();
+      const updated = matches.filter(m => m.id !== id);
+      dataService.saveLocal(MATCHES_KEY, updated);
+    }
+  },
+
   getCustomExercises: async (): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {

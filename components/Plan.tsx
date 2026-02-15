@@ -28,18 +28,12 @@ import { TacticalWhiteboard } from './TacticalWhiteboard';
 
 const PHASE_STORAGE_KEY = 'basket_coach_plan_phase_v1';
 
-// Robust helper to get YouTube ID from any valid URL
+// Super-robust YouTube ID extractor for all formats
 const getVideoId = (url: string) => {
   if (!url) return null;
-  const cleanUrl = url.trim();
-  const match = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
-  return match ? match[1] : null;
-};
-
-// Check if the URL is a YouTube Shorts URL
-const isShortsVideo = (url: string) => {
-    if (!url) return false;
-    return url.includes('shorts/');
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
 };
 
 export const Plan: React.FC = () => {
@@ -98,8 +92,9 @@ export const Plan: React.FC = () => {
     setPlayingVideos(prev => ({ ...prev, [exId]: true }));
   };
 
-  const handleSearchYoutube = (title: string) => {
-    window.open(`https://www.youtube.com/results?search_query=basketball+drill+${encodeURIComponent(title)}`, '_blank');
+  const handleOpenExternalYoutube = (url: string) => {
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleDeleteCustomDrill = async (id: string, e: React.MouseEvent) => {
@@ -167,8 +162,6 @@ export const Plan: React.FC = () => {
         </div>
       );
   }
-
-  const drillVideoId = customDrill.videoUrl ? getVideoId(customDrill.videoUrl) : null;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
@@ -258,9 +251,8 @@ export const Plan: React.FC = () => {
                   {filteredExercises.length > 0 ? filteredExercises.map(ex => {
                     const currentMode = activeVisual[ex.id] || 'video';
                     const isCustom = ex.id.startsWith('custom_');
-                    const videoId = ex.videoUrl ? getVideoId(ex.videoUrl) : null;
+                    const videoId = getVideoId(ex.videoUrl || '');
                     const isPlaying = playingVideos[ex.id] || false;
-                    const isShort = isShortsVideo(ex.videoUrl || '');
                     
                     return (
                       <div key={ex.id} className={`p-4 md:p-8 rounded-2xl md:rounded-[2rem] bg-slate-950 border space-y-6 animate-in slide-in-from-bottom duration-300 transition-colors w-full overflow-hidden relative ${viewMode === 'fys' ? 'border-blue-500/20' : 'border-slate-800'}`}>
@@ -307,8 +299,7 @@ export const Plan: React.FC = () => {
                         </div>
 
                         <div className="space-y-4">
-                            {/* SMART VIDEO CONTAINER */}
-                            <div className={`relative rounded-2xl md:rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl w-full transition-all duration-500 ${isShort && currentMode === 'video' ? 'aspect-[9/16] max-w-[280px] mx-auto' : 'aspect-video'}`}>
+                            <div className="relative rounded-2xl md:rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl w-full aspect-video">
                             {currentMode === 'pedagogy' ? (
                                 <div className="w-full h-full p-6 md:p-10 bg-slate-900/95 backdrop-blur-sm overflow-y-auto custom-scrollbar flex flex-col space-y-6 absolute inset-0">
                                 <div className="flex items-start gap-4">
@@ -316,7 +307,7 @@ export const Plan: React.FC = () => {
                                         <Info size={18} />
                                     </div>
                                     <div className="space-y-1">
-                                        <div className="text-emerald-500 text-[9px] font-black uppercase tracking-[0.2em]">Vad (Tekniken)</div>
+                                        <div className="text-emerald-500 text-[9px] font-black uppercase tracking-[0.2em]">Vad (Teknik)</div>
                                         <p className="text-xs md:text-sm text-slate-200 leading-relaxed font-medium italic">"{ex.pedagogy?.what}"</p>
                                     </div>
                                 </div>
@@ -325,17 +316,8 @@ export const Plan: React.FC = () => {
                                         <Lightbulb size={18} />
                                     </div>
                                     <div className="space-y-1">
-                                        <div className="text-blue-400 text-[9px] font-black uppercase tracking-[0.2em]">Hur (Pedagogiken)</div>
+                                        <div className="text-blue-400 text-[9px] font-black uppercase tracking-[0.2em]">Hur (Utförande)</div>
                                         <p className="text-xs md:text-sm text-slate-200 leading-relaxed font-medium italic">"{ex.pedagogy?.how}"</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-4">
-                                    <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0 mt-1">
-                                        <Zap size={18} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="text-orange-500 text-[9px] font-black uppercase tracking-[0.2em]">Varför (Förståelsen)</div>
-                                        <p className="text-xs md:text-sm text-slate-200 leading-relaxed font-medium italic">"{ex.pedagogy?.why}"</p>
                                     </div>
                                 </div>
                                 </div>
@@ -344,52 +326,57 @@ export const Plan: React.FC = () => {
                                     <TacticalWhiteboard id={ex.id} />
                                 </div>
                             ) : (
-                                <div className="w-full h-full relative group/diag flex items-center justify-center bg-slate-900 absolute inset-0">
+                                <div className="w-full h-full relative group/diag flex flex-col items-center justify-center bg-slate-900 absolute inset-0">
                                 {videoId ? (
-                                    <div className="relative w-full h-full">
+                                    <div className="relative w-full h-full flex flex-col">
                                         {!isPlaying ? (
                                             <div 
-                                                className="absolute inset-0 z-10 flex items-center justify-center bg-black cursor-pointer group/play" 
+                                                className="flex-1 relative z-10 flex flex-col items-center justify-center bg-black cursor-pointer group/play" 
                                                 onClick={() => handlePlayVideo(ex.id)}
                                             >
                                                 <img 
-                                                    src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`} 
-                                                    onError={(e) => { e.currentTarget.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
+                                                    src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`} 
                                                     alt="Thumbnail" 
-                                                    className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover/play:opacity-60 transition-opacity"
+                                                    className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover/play:opacity-40 transition-opacity"
                                                 />
                                                 <div className="relative z-20 w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-2xl group-hover/play:scale-110 transition-transform">
                                                     <Play size={28} fill="white" className="text-white ml-1" />
                                                 </div>
-                                                <div className="absolute bottom-4 left-4 z-20 bg-black/60 px-3 py-1 rounded-lg text-white text-[10px] font-bold">
-                                                    Klicka för att spela {isShort && '(Shorts)'}
+                                                <div className="mt-4 relative z-20 px-4 py-2 bg-black/80 rounded-xl border border-white/10 text-white font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                                   <Youtube size={14} className="text-red-500" /> Starta Video
                                                 </div>
                                             </div>
                                         ) : (
-                                            <iframe 
-                                                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
-                                                title={ex.title}
-                                                className="w-full h-full absolute inset-0 z-10" 
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                                referrerPolicy="strict-origin-when-cross-origin"
-                                                allowFullScreen
-                                            />
+                                            <div className="flex-1 relative">
+                                                <iframe 
+                                                    src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1`}
+                                                    title={ex.title}
+                                                    className="w-full h-full absolute inset-0 z-10" 
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowFullScreen
+                                                />
+                                            </div>
                                         )}
+                                        {/* FAILSAFE LINK - DESSA KNAPPAR GÅR ALLTID TILL YOUTUBE */}
+                                        <div className="grid grid-cols-2 w-full shrink-0">
+                                          <button 
+                                              onClick={() => handleOpenExternalYoutube(ex.videoUrl || '')}
+                                              className="py-3 bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[10px] tracking-[0.15em] flex items-center justify-center gap-2 transition-all"
+                                          >
+                                              <Youtube size={14} /> SE PÅ YOUTUBE
+                                          </button>
+                                          <button 
+                                              onClick={() => window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent('basketball ' + ex.title)}`, '_blank')}
+                                              className="py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black uppercase text-[10px] tracking-[0.15em] flex items-center justify-center gap-2 transition-all border-l border-slate-700"
+                                          >
+                                              <Search size={14} /> SÖK ALTERNATIV
+                                          </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="text-center space-y-4 p-8">
-                                        <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto">
-                                        <Youtube size={32} className="text-slate-600" />
-                                        </div>
-                                        <div className="space-y-2">
-                                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Ingen video länkad än.</p>
-                                        <button 
-                                            onClick={() => handleSearchYoutube(ex.title)}
-                                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black uppercase text-[10px] tracking-widest transition-all shadow-lg"
-                                        >
-                                            <Search size={14} /> Sök på YouTube <ExternalLink size={12}/>
-                                        </button>
-                                        </div>
+                                        <Youtube size={32} className="text-slate-700 mx-auto" />
+                                        <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest">Ingen video länkad.</p>
                                     </div>
                                 )}
                                 </div>
@@ -440,21 +427,6 @@ export const Plan: React.FC = () => {
                   </div>
                   
                   <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                      {/* Video Preview In Modal */}
-                      {drillVideoId && (
-                        <div className="relative group rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 aspect-video mb-4 animate-in fade-in">
-                            <img 
-                                src={`https://img.youtube.com/vi/${drillVideoId}/hqdefault.jpg`} 
-                                className="w-full h-full object-cover opacity-60" 
-                                alt="Video preview" 
-                            />
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                                <div className="p-3 bg-red-600 rounded-full text-white shadow-xl"><Youtube size={24} /></div>
-                                <span className="text-[10px] font-black text-white uppercase tracking-widest bg-black/60 px-2 py-1 rounded">Video hittad!</span>
-                            </div>
-                        </div>
-                      )}
-
                       <div className="grid md:grid-cols-2 gap-6">
                           <div className="space-y-2">
                               <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Titel</label>
@@ -492,57 +464,6 @@ export const Plan: React.FC = () => {
                               placeholder="t.ex. https://www.youtube.com/watch?v=..."
                               className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-mono"
                           />
-                      </div>
-
-                      <div className="grid md:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Vad (Teknik)</label>
-                              <textarea 
-                                  value={customDrill.pedagogy?.what}
-                                  onChange={e => setCustomDrill({...customDrill, pedagogy: {...customDrill.pedagogy!, what: e.target.value}})}
-                                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm h-24 resize-none"
-                              />
-                          </div>
-                          <div className="space-y-2">
-                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Hur (Utförande)</label>
-                              <textarea 
-                                  value={customDrill.pedagogy?.how}
-                                  onChange={e => setCustomDrill({...customDrill, pedagogy: {...customDrill.pedagogy!, how: e.target.value}})}
-                                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm h-24 resize-none"
-                              />
-                          </div>
-                          <div className="space-y-2">
-                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Varför (Syfte)</label>
-                              <textarea 
-                                  value={customDrill.pedagogy?.why}
-                                  onChange={e => setCustomDrill({...customDrill, pedagogy: {...customDrill.pedagogy!, why: e.target.value}})}
-                                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm h-24 resize-none"
-                              />
-                          </div>
-                      </div>
-
-                      <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
-                          <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Översikt</h4>
-                          <div className="space-y-2">
-                              <input 
-                                  placeholder="Organisation (t.ex. 3 led, 2 bollar)"
-                                  value={customDrill.overview?.setup}
-                                  onChange={e => setCustomDrill({...customDrill, overview: {...customDrill.overview!, setup: e.target.value}})}
-                                  className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs"
-                              />
-                              <input 
-                                  placeholder="Action (t.ex. Spring runt konen, passa bollen)"
-                                  value={customDrill.overview?.action}
-                                  onChange={e => setCustomDrill({...customDrill, overview: {...customDrill.overview!, action: e.target.value}})}
-                                  className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs"
-                              />
-                              <input 
-                                  placeholder="Coaching Tip (t.ex. Håll blicken högt)"
-                                  value={customDrill.overview?.coachingPoint}
-                                  onChange={e => setCustomDrill({...customDrill, overview: {...customDrill.overview!, coachingPoint: e.target.value}})}
-                                  className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs italic"
-                              />
-                          </div>
                       </div>
                   </div>
 
