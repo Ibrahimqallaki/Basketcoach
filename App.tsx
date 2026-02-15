@@ -15,7 +15,7 @@ import { CoachTools } from './components/CoachTools';
 import { auth, isFirebaseConfigured, googleProvider } from './services/firebase';
 import { dataService } from './services/dataService';
 // @ts-ignore
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, signOut, signInAnonymously } from 'firebase/auth';
 // @ts-ignore
 import type { User } from 'firebase/auth';
 import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff, Shield, DatabaseZap, Clock } from 'lucide-react';
@@ -38,7 +38,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isFirebaseConfigured && auth) {
       const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
-        if (currentUser && !currentUser.uid.startsWith('player_')) {
+        if (currentUser && !currentUser.isAnonymous) {
             const isAllowed = await dataService.isEmailWhitelisted(currentUser.email);
             if (!isAllowed) {
                 setIsDenied(true);
@@ -101,9 +101,13 @@ const App: React.FC = () => {
     try {
         const result = await dataService.loginPlayer(playerCode);
         if (result) {
+            // Viktigt: Logga in anonymt i Firebase Auth för att få behörighet till Firestore
+            if (isFirebaseConfigured) {
+                await signInAnonymously(auth);
+            }
             setLoggedInPlayer(result.player);
             setCurrentCoachId(result.coachId);
-            setUser(createDemoUser(result.player.name, `player_${result.player.id}`));
+            // Vi behåller lokalt state för UI-kontroll
             setCurrentView(View.PLAYER_PORTAL);
         } else {
             setLoginError({ 
@@ -128,7 +132,6 @@ const App: React.FC = () => {
 
   const handleSimulatePlayerLogin = (player: Player) => {
       setLoggedInPlayer(player);
-      // Hämta aktuell coach-path för simulering
       const coachPath = dataService.getUserPath();
       const coachId = coachPath ? coachPath.split('/')[1] : 'guest';
       setCurrentCoachId(coachId);
@@ -151,13 +154,14 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
       if (loggedInPlayer) {
-          const wasSimulated = user && !user.uid.startsWith('player_');
+          const wasSimulated = user && !user.isAnonymous && !user.uid.startsWith('demo');
           setLoggedInPlayer(null);
           setCurrentCoachId(null);
-          if (user?.uid.startsWith('player_')) {
-             setUser(null);
-             setShowPlayerLogin(false);
+          
+          if (user?.isAnonymous) {
+              await signOut(auth);
           }
+
           if (wasSimulated) {
              setCurrentView(View.ROSTER);
              return;
@@ -196,7 +200,7 @@ const App: React.FC = () => {
       );
   }
 
-  if (!user) {
+  if (!user || (user.isAnonymous && !loggedInPlayer)) {
     return (
       <div className="min-h-screen w-full bg-[#020617] flex items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] z-0"></div>
@@ -333,7 +337,7 @@ const App: React.FC = () => {
 
         <div className={`flex-1 overflow-y-auto ${!loggedInPlayer ? 'p-4 md:p-10' : ''} custom-scrollbar w-full`}>
             {loggedInPlayer ? (
-                <PlayerPortal player={loggedInPlayer} coachId={currentCoachId || undefined} onLogout={handleLogout} isPreview={!user.uid.startsWith('player_')} />
+                <PlayerPortal player={loggedInPlayer} coachId={currentCoachId || undefined} onLogout={handleLogout} isPreview={!user || !user.isAnonymous} />
             ) : (
                 (() => {
                     switch (currentView) {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 // @ts-ignore
 import { signOut } from 'firebase/auth';
@@ -57,17 +58,21 @@ service cloud.firestore {
     // 1. Inställningar (Whitelist)
     match /app_settings/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && !request.auth.token.anonymous;
     }
 
     // 2. Spelardata (Tillåt sökning på kod för inloggning)
     match /{path=**}/players/{playerId} {
-      allow read: if true; // Krävs för att hitta spelaren med kod
+      allow read: if true; 
     }
 
-    // 3. Användardata (Privat mapp för coachen)
+    // 3. Användardata (Tillåt både coachen och anonyma spelare att läsa)
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.uid.startsWith('player_'));
+      // Coachen får läsa/skriva allt i sin mapp
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Spelare får läsa matcher och träningar (men inte skriva)
+      allow read: if request.auth != null;
     }
   }
 }`;
@@ -125,7 +130,6 @@ service cloud.firestore {
       try {
           const result = await dataService.loginPlayer(testCode);
           if (result) {
-              // Fix: Access name and number from the nested player object in the result
               setTestResult({ status: 'success', message: `Hittade: ${result.player.name} (#${result.player.number})` });
           } else {
               setTestResult({ status: 'error', message: 'Ingen spelare hittades med denna kod.' });
@@ -291,7 +295,7 @@ service cloud.firestore {
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
                     <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
                     <p className="text-slate-300 text-xs font-bold leading-relaxed">
-                        VIKTIGT: För att spelare ska kunna logga in från olika enheter måste du kopiera koden nedan och ersätta reglerna i Firebase Console.
+                        VIKTIGT: För att spelare ska kunna se sin data måste du kopiera koden nedan och ersätta reglerna i Firebase Console. De tillåter nu Anonyma inloggningar att läsa.
                     </p>
                 </div>
                 <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">

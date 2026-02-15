@@ -85,12 +85,12 @@ export const dataService = {
   getUserPath: () => {
     if (!isFirebaseConfigured || !db) return null;
     const user = auth.currentUser;
-    if (!user || user.uid === 'guest' || user.uid.startsWith('player_')) return null;
+    if (!user || user.uid === 'guest' || user.isAnonymous) return null;
     return `users/${user.uid}`;
   },
 
-  getPlayers: async (): Promise<Player[]> => {
-    const path = dataService.getUserPath();
+  getPlayers: async (coachId?: string): Promise<Player[]> => {
+    const path = coachId ? `users/${coachId}` : dataService.getUserPath();
     if (path && db) {
       try {
         const q = query(collection(db, `${path}/players`), orderBy('number', 'asc'));
@@ -287,7 +287,6 @@ export const dataService = {
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
           const d = snapshot.docs[0];
-          // Extrahera coachens UID från sökvägen users/COACH_ID/players/PLAYER_ID
           const coachId = d.ref.parent.parent?.id || "";
           return { 
             player: { id: d.id, ...d.data() } as Player, 
@@ -309,7 +308,6 @@ export const dataService = {
       }
     }
 
-    // Fallback till lokal data
     const players = await dataService.getPlayers();
     const localPlayer = players.find(p => p.accessCode?.trim().toUpperCase() === cleanCode);
     if (localPlayer) {
