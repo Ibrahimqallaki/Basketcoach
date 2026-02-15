@@ -23,7 +23,10 @@ import {
   ShieldAlert,
   Crown,
   Copy,
-  FileCode
+  FileCode,
+  Search,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
@@ -40,6 +43,11 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
   const [copyStatus, setCopyStatus] = useState(false);
   const [rulesCopied, setRulesCopied] = useState(false);
   
+  // Test code state
+  const [testCode, setTestCode] = useState("");
+  const [testResult, setTestResult] = useState<{status: 'success' | 'error' | 'idle', message: string}>({ status: 'idle', message: '' });
+  const [isTesting, setIsTesting] = useState(false);
+
   const isGuest = !user || user.uid === 'guest';
   const isSuperAdmin = dataService.isSuperAdmin();
 
@@ -111,6 +119,27 @@ service cloud.firestore {
     setTimeout(() => setRulesCopied(false), 2000);
   };
 
+  const handleTestCode = async () => {
+      if(!testCode.trim()) return;
+      setIsTesting(true);
+      setTestResult({ status: 'idle', message: '' });
+      try {
+          const player = await dataService.loginPlayer(testCode);
+          if (player) {
+              setTestResult({ status: 'success', message: `Hittade: ${player.name} (#${player.number})` });
+          } else {
+              setTestResult({ status: 'error', message: 'Ingen spelare hittades med denna kod.' });
+          }
+      } catch (err: any) {
+          let msg = "Ett fel uppstod.";
+          if (err.message === 'ACCESS_DENIED') msg = "Behörighetsfel (Regler saknas).";
+          if (err.message === 'MISSING_INDEX') msg = "Databasindex saknas.";
+          setTestResult({ status: 'error', message: msg });
+      } finally {
+          setIsTesting(false);
+      }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24 px-2">
       {/* Profil Header */}
@@ -158,6 +187,41 @@ service cloud.firestore {
               <div className="text-xl font-black text-emerald-500 uppercase italic">Privat Lagmoln</div>
           </div>
       </div>
+
+      {/* Systemdiagnostik - Alltid synlig för inloggade coacher */}
+      {!isGuest && (
+          <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-xl space-y-6">
+              <div className="flex items-center gap-3">
+                  <Search size={18} className="text-blue-400" />
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest">Systemdiagnostik</h3>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                  Använd detta verktyg för att verifiera att en spelarkod finns i databasen och kan hittas. Detta simulerar en spelarinloggning.
+              </p>
+              <div className="flex gap-3">
+                  <input 
+                      type="text" 
+                      placeholder="Ange kod (t.ex. P-10-XY3Z)"
+                      value={testCode}
+                      onChange={(e) => setTestCode(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-blue-500 uppercase tracking-widest font-mono"
+                  />
+                  <button 
+                      onClick={handleTestCode}
+                      disabled={isTesting || !testCode}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
+                  >
+                      {isTesting ? <Loader2 size={14} className="animate-spin" /> : 'Kontrollera'}
+                  </button>
+              </div>
+              {testResult.status !== 'idle' && (
+                  <div className={`p-4 rounded-xl border flex items-center gap-3 ${testResult.status === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
+                      {testResult.status === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                      <span className="text-xs font-bold">{testResult.message}</span>
+                  </div>
+              )}
+          </div>
+      )}
 
       {/* ADMIN-VERKTYG: ENDAST FÖR IBRAHIM */}
       {isSuperAdmin && !isGuest ? (

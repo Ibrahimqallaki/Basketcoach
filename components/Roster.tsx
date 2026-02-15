@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { dataService } from '../services/dataService';
-import { User, Plus, X, Trash2, Star, PenTool, Target, Check, Save, Loader2, Eye, BookPlus, BrainCircuit, Trophy, Dumbbell, ChevronRight, BookOpen, Search, Copy, Key, RefreshCcw } from 'lucide-react';
+import { User, Plus, X, Trash2, Star, PenTool, Target, Check, Save, Loader2, Eye, BookPlus, BrainCircuit, Trophy, Dumbbell, ChevronRight, BookOpen, Search, Copy, Key, RefreshCcw, CloudCheck, CloudUpload } from 'lucide-react';
 import { Player, Phase, MatchRecord, Exercise } from '../types';
 
 interface RosterProps {
@@ -47,6 +47,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   const [newHomework, setNewHomework] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [codeSyncStatus, setCodeSyncStatus] = useState<'idle' | 'saving' | 'synced' | 'error'>('idle');
 
   const [formData, setFormData] = useState({ name: '', number: '', position: 'Point Guard (1)', age: '13', notes: '' });
 
@@ -100,10 +101,17 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   const handleGenerateNewCode = async () => {
     if (!player) return;
     setIsGeneratingCode(true);
+    setCodeSyncStatus('saving');
     try {
         const newCode = dataService.generateSecureCode(player.number);
+        // Vänta explicit på att databasen bekräftar skrivningen
         const updated = await dataService.updatePlayer(player.id, { accessCode: newCode });
         setPlayers(updated);
+        setCodeSyncStatus('synced');
+        setTimeout(() => setCodeSyncStatus('idle'), 3000);
+    } catch (err) {
+        console.error("Code gen error", err);
+        setCodeSyncStatus('error');
     } finally {
         setIsGeneratingCode(false);
     }
@@ -184,9 +192,9 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                    </div>
               </div>
 
-              {/* INLOGGNINGSKOD - MED GENERERA-MÖJLIGHET */}
-              <div className="p-6 md:p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-blue-900/10 border border-blue-500/20 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
+              {/* INLOGGNINGSKOD - MED SYNK-STATUS */}
+              <div className="p-6 md:p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-blue-900/10 border border-blue-500/20 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                <div className="flex items-center gap-4 relative z-10">
                   <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                     <Key size={24} />
                   </div>
@@ -205,10 +213,17 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                             </button>
                         )}
                     </div>
+                    {/* STATUS INDIKATOR */}
+                    <div className="mt-2 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 h-4">
+                        {codeSyncStatus === 'saving' && <><Loader2 size={10} className="animate-spin text-blue-400"/> <span className="text-blue-400">Sparar i databas...</span></>}
+                        {codeSyncStatus === 'synced' && <><CloudCheck size={12} className="text-emerald-500"/> <span className="text-emerald-500">Synkad till molnet</span></>}
+                        {codeSyncStatus === 'error' && <span className="text-rose-500">Kunde inte spara. Kontrollera nätverk.</span>}
+                        {codeSyncStatus === 'idle' && player.accessCode && <span className="text-slate-600">Aktiv</span>}
+                    </div>
                   </div>
                 </div>
                 
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex gap-2 w-full md:w-auto relative z-10">
                     {!player.accessCode ? (
                         <button 
                             onClick={handleGenerateNewCode}

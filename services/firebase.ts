@@ -1,12 +1,16 @@
 
+// @ts-ignore
 import { initializeApp, getApps } from "firebase/app";
+// @ts-ignore
 import type { FirebaseApp } from "firebase/app";
 // Fix: Added @ts-ignore to bypass environment-specific resolution issues with Firebase exports
 // @ts-ignore
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 // @ts-ignore
 import type { Auth } from "firebase/auth";
+// @ts-ignore
 import { getFirestore } from "firebase/firestore";
+// @ts-ignore
 import type { Firestore } from "firebase/firestore";
 
 // Helper to get environment variables safely across Vite/Node environments
