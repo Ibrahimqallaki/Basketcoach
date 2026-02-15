@@ -48,16 +48,19 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // 1. Inställningar (Whitelist)
-    // Alla måste kunna läsa för att se om de får logga in.
     match /app_settings/{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // 2. Användardata
-    // Varje coach har bara tillgång till sin egen mapp
+    // 2. Spelardata (Tillåt sökning på kod för inloggning)
+    match /{path=**}/players/{playerId} {
+      allow read: if true; // Krävs för att hitta spelaren med kod
+    }
+
+    // 3. Användardata (Privat mapp för coachen)
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.uid.startsWith('player_'));
     }
   }
 }`;
@@ -215,7 +218,7 @@ service cloud.firestore {
                 </div>
             </div>
 
-            {/* Databasregler - FIXAT SÅ DU HITTAR DET! */}
+            {/* Databasregler */}
             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-emerald-500/20 shadow-2xl relative overflow-hidden">
                 <div className="flex items-center gap-3 text-emerald-400 mb-4">
                     <FileCode size={24} />
@@ -224,7 +227,7 @@ service cloud.firestore {
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
                     <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
                     <p className="text-slate-300 text-xs font-bold leading-relaxed">
-                        För att de coacher du bjudit in ovan ska kunna logga in, måste du kopiera koden nedan och klistra in den i Firebase Console &rarr; Firestore &rarr; Rules.
+                        VIKTIGT: För att spelare ska kunna logga in från olika enheter måste du kopiera koden nedan och ersätta reglerna i Firebase Console.
                     </p>
                 </div>
                 <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">

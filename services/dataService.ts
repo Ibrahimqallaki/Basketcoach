@@ -1,4 +1,3 @@
-
 import { Player, TrainingSession, MatchRecord, Homework, Phase, Exercise } from '../types';
 import { mockPlayers, mockPhases } from './mockData';
 import { db, auth, isFirebaseConfigured } from './firebase';
@@ -13,7 +12,9 @@ import {
   orderBy,
   serverTimestamp,
   getDoc,
-  setDoc
+  setDoc,
+  where,
+  collectionGroup
 } from 'firebase/firestore';
 
 const PLAYERS_KEY = 'basket_coach_players_v4';
@@ -33,7 +34,6 @@ export const dataService = {
     return 'CLOUD';
   },
 
-  // Hjälpmetod för att generera koder utan förvirrande tecken (0, O, 1, I, L)
   generateSecureCode: (playerNumber: number | string) => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let randomPart = "";
@@ -43,8 +43,6 @@ export const dataService = {
     return `P-${playerNumber}-${randomPart}`;
   },
 
-  // --- BEHÖRIGHETSKONTROLL ---
-  
   isEmailWhitelisted: async (email: string): Promise<boolean> => {
     if (!db || !isFirebaseConfigured) return true;
     try {
@@ -57,7 +55,6 @@ export const dataService = {
       const list = snap.data().emails || [];
       return list.includes(lowerEmail);
     } catch (err) {
-      console.error("Whitelist check failed. Check Firestore Rules.", err);
       return false; 
     }
   },
@@ -69,7 +66,6 @@ export const dataService = {
       const snap = await getDoc(docRef);
       return snap.exists() ? snap.data().emails || [] : [];
     } catch (err) {
-      console.error("Failed to get whitelist", err);
       return [];
     }
   },
@@ -89,11 +85,9 @@ export const dataService = {
   getUserPath: () => {
     if (!isFirebaseConfigured || !db) return null;
     const user = auth.currentUser;
-    if (!user || user.uid === 'guest') return null;
+    if (!user || user.uid === 'guest' || user.uid.startsWith('player_')) return null;
     return `users/${user.uid}`;
   },
-
-  // --- DATAOPERATIONER ---
 
   getPlayers: async (): Promise<Player[]> => {
     const path = dataService.getUserPath();
@@ -198,22 +192,26 @@ export const dataService = {
     }
   },
 
-  deleteMatch: async (id: string): Promise<void> => {
+  // FIX: Added deleteMatch method
+  deleteMatch: async (id: string): Promise<MatchRecord[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
       await deleteDoc(doc(db, `${path}/matches`, id));
+      return dataService.getMatches();
     } else {
       const matches = await dataService.getMatches();
       const updated = matches.filter(m => m.id !== id);
       dataService.saveLocal(MATCHES_KEY, updated);
+      return updated;
     }
   },
 
+  // FIX: Added getCustomExercises method
   getCustomExercises: async (): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
       try {
-        const q = query(collection(db, `${path}/custom_exercises`));
+        const q = query(collection(db, `${path}/custom_exercises`), orderBy('title', 'asc'));
         const snapshot = await getDocs(q);
         return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Exercise));
       } catch (err) {
@@ -224,25 +222,31 @@ export const dataService = {
     return stored ? JSON.parse(stored) : [];
   },
 
-  saveCustomExercise: async (exercise: Exercise): Promise<void> => {
+  // FIX: Added saveCustomExercise method
+  saveCustomExercise: async (exercise: Exercise): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
-      await setDoc(doc(db, `${path}/custom_exercises`, exercise.id), { ...exercise, created_at: new Date().toISOString() });
+      await setDoc(doc(db, `${path}/custom_exercises`, exercise.id), exercise);
+      return dataService.getCustomExercises();
     } else {
-      const exercises = await dataService.getCustomExercises();
-      const updated = [...exercises, { ...exercise, created_at: new Date().toISOString() }];
+      const current = await dataService.getCustomExercises();
+      const updated = [...current, exercise];
       dataService.saveLocal(CUSTOM_EXERCISES_KEY, updated);
+      return updated;
     }
   },
 
-  deleteCustomExercise: async (id: string): Promise<void> => {
+  // FIX: Added deleteCustomExercise method
+  deleteCustomExercise: async (id: string): Promise<Exercise[]> => {
     const path = dataService.getUserPath();
     if (path && db) {
       await deleteDoc(doc(db, `${path}/custom_exercises`, id));
+      return dataService.getCustomExercises();
     } else {
-      const exercises = await dataService.getCustomExercises();
-      const updated = exercises.filter(e => e.id !== id);
+      const current = await dataService.getCustomExercises();
+      const updated = current.filter(ex => ex.id !== id);
       dataService.saveLocal(CUSTOM_EXERCISES_KEY, updated);
+      return updated;
     }
   },
 
@@ -278,8 +282,24 @@ export const dataService = {
   },
 
   loginPlayer: async (accessCode: string): Promise<Player | null> => {
-    // Tvätta koden för att undvika enkla fel
     const cleanCode = accessCode.trim().toUpperCase();
+    
+    // 1. Sök i molnet (Global sökning över alla coacher)
+    if (isFirebaseConfigured && db) {
+      try {
+        const playersRef = collectionGroup(db, 'players');
+        const q = query(playersRef, where('accessCode', '==', cleanCode));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0];
+          return { id: doc.id, ...doc.data() } as Player;
+        }
+      } catch (err) {
+        console.error("Global player search failed:", err);
+      }
+    }
+
+    // 2. Sök lokalt (Fallback för gäst-läge på samma enhet)
     const players = await dataService.getPlayers();
     return players.find(p => p.accessCode?.trim().toUpperCase() === cleanCode) || null;
   },
@@ -340,7 +360,7 @@ export const dataService = {
   getAppContextSnapshot: async () => {
     const players = await dataService.getPlayers();
     return {
-      version: "5.5.0",
+      version: "5.6.0",
       playerCount: players.length,
       timestamp: new Date().toISOString()
     };
