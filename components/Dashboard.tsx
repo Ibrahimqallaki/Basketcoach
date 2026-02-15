@@ -5,6 +5,12 @@ import { dataService } from '../services/dataService';
 import { mockPhases } from '../services/mockData';
 import { Player, TrainingSession, MatchRecord, Exercise } from '../types';
 
+interface ChartDataPoint {
+  label: string;
+  avg: number;
+  rawDate?: string;
+}
+
 export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNavigateToHistory }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
@@ -50,119 +56,128 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
     return { winRate, wins, losses, draws, recent };
   }, [matches]);
 
-  // BERÄKNA INSIKTSFULL UTVECKLING
+  // SMART GRUPPERING AV UTVECKLINGSDATA
+  const aggregatedTimeline = useMemo(() => {
+    const rawTimeline = dataService.getTeamProgressTimeline(sessions);
+    if (rawTimeline.length === 0) return [];
+
+    const now = new Date();
+
+    if (chartTimeRange === 'Vecka') {
+      // Visa de senaste 7 dagarna med träning
+      return rawTimeline.slice(-7).map(d => ({
+        label: `${d.date.split('-')[2]}/${d.date.split('-')[1]}`,
+        avg: d.avg,
+        rawDate: d.date
+      }));
+    }
+
+    if (chartTimeRange === 'Månad') {
+      // Gruppera per vecka för de senaste 30 dagarna
+      const cutoff = new Date();
+      cutoff.setDate(now.getDate() - 30);
+      
+      const weeks: Record<string, { sum: number, count: number }> = {};
+      
+      rawTimeline.forEach(d => {
+        const date = new Date(d.date);
+        if (date >= cutoff) {
+          // Beräkna veckonummer (enkel version)
+          const startOfYear = new Date(date.getFullYear(), 0, 1);
+          const weekNum = Math.ceil((((date.getTime() - startOfYear.getTime()) / 86400000) + startOfYear.getDay() + 1) / 7);
+          const key = `V.${weekNum}`;
+          if (!weeks[key]) weeks[key] = { sum: 0, count: 0 };
+          weeks[key].sum += d.avg;
+          weeks[key].count += 1;
+        }
+      });
+
+      return Object.entries(weeks).map(([label, data]) => ({
+        label,
+        avg: parseFloat((data.sum / data.count).toFixed(1))
+      }));
+    }
+
+    if (chartTimeRange === 'Säsong') {
+      // Gruppera per månad för hela säsongen
+      const months: Record<string, { sum: number, count: number }> = {};
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+      
+      rawTimeline.forEach(d => {
+        const date = new Date(d.date);
+        const key = monthNames[date.getMonth()];
+        if (!months[key]) months[key] = { sum: 0, count: 0 };
+        months[key].sum += d.avg;
+        months[key].count += 1;
+      });
+
+      // Sortera månaderna kronologiskt baserat på sista träningen i månaden
+      return Object.entries(months).map(([label, data]) => ({
+        label,
+        avg: parseFloat((data.sum / data.count).toFixed(1))
+      }));
+    }
+
+    return [];
+  }, [sessions, chartTimeRange]);
+
   const developmentInsights = useMemo(() => {
     if (sessions.length < 2) return { index: '0.0', trend: 0, topCategory: 'Starta träning' };
-
-    const sortedSessions = [...sessions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    // Beräkna genomsnittsbetyg för alla utvärderingar
     const allEvals = sessions.flatMap(s => s.evaluations);
     if (allEvals.length === 0) return { index: '0.0', trend: 0, topCategory: 'Ingen data' };
 
-    const totalScore = allEvals.reduce((acc, ev) => {
-        const avg = ev.scores.reduce((a, b) => a + b, 0) / ev.scores.length;
-        return acc + avg;
-    }, 0);
+    const totalScore = allEvals.reduce((acc, ev) => acc + (ev.scores.reduce((a, b) => a + b, 0) / ev.scores.length), 0);
     const avgIndex = (totalScore / allEvals.length).toFixed(1);
 
-    // Hitta trend (senaste 3 passen vs pass innan dess)
-    const recentEvals = sortedSessions.slice(-3).flatMap(s => s.evaluations);
-    const previousEvals = sortedSessions.slice(0, -3).flatMap(s => s.evaluations);
-    
+    // Enkel trendberäkning (senaste 3 vs tidigare)
+    const sorted = [...sessions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const recent = sorted.slice(-3).flatMap(s => s.evaluations);
+    const prev = sorted.slice(0, -3).flatMap(s => s.evaluations);
     let trend = 0;
-    if (previousEvals.length > 0 && recentEvals.length > 0) {
-        const recentAvg = recentEvals.reduce((acc, ev) => acc + (ev.scores.reduce((a,b)=>a+b,0)/ev.scores.length), 0) / recentEvals.length;
-        const prevAvg = previousEvals.reduce((acc, ev) => acc + (ev.scores.reduce((a,b)=>a+b,0)/ev.scores.length), 0) / previousEvals.length;
-        trend = Math.round(((recentAvg - prevAvg) / prevAvg) * 100);
+    if (prev.length > 0 && recent.length > 0) {
+        const rAvg = recent.reduce((acc, ev) => acc + (ev.scores.reduce((a,b)=>a+b,0)/ev.scores.length), 0) / recent.length;
+        const pAvg = prev.reduce((acc, ev) => acc + (ev.scores.reduce((a,b)=>a+b,0)/ev.scores.length), 0) / prev.length;
+        trend = Math.round(((rAvg - pAvg) / pAvg) * 100);
     }
 
-    // Hitta kategori med mest framsteg
-    const categoryStats: Record<string, { total: number, count: number }> = {};
-    allEvals.forEach(ev => {
-        const ex = allExercises.find(e => e.id === ev.exerciseId);
-        if (ex) {
-            const cat = ex.category;
-            const avg = ev.scores.reduce((a, b) => a + b, 0) / ev.scores.length;
-            if (!categoryStats[cat]) categoryStats[cat] = { total: 0, count: 0 };
-            categoryStats[cat].total += avg;
-            categoryStats[cat].count += 1;
-        }
-    });
-
-    let topCategory = 'Fokusera på grunderna';
-    let maxAvg = 0;
-    Object.entries(categoryStats).forEach(([cat, data]) => {
-        const avg = data.total / data.count;
-        if (avg > maxAvg) {
-            maxAvg = avg;
-            topCategory = `Starkast inom: ${cat}`;
-        }
-    });
-
-    return { index: avgIndex, trend, topCategory };
-  }, [sessions, allExercises]);
-
-  const fysStats = useMemo(() => {
-    const fysExerciseIds = new Set(
-        mockPhases.flatMap(p => p.exercises)
-        .filter(e => e.category === 'Fysik' || e.category === 'Kondition')
-        .map(e => e.id)
-    );
-    let totalEvaluations = 0;
-    let fysEvaluations = 0;
-    sessions.forEach(s => {
-        s.evaluations.forEach(e => {
-            totalEvaluations++;
-            if (fysExerciseIds.has(e.exerciseId)) fysEvaluations++;
-        });
-    });
-    const ratio = totalEvaluations > 0 ? Math.round((fysEvaluations / totalEvaluations) * 100) : 0;
-    return { count: fysEvaluations, ratio };
+    return { index: avgIndex, trend, topCategory: 'Analys aktiv' };
   }, [sessions]);
 
-  const teamTimeline = useMemo(() => dataService.getTeamProgressTimeline(sessions), [sessions]);
-  
-  const filteredTimeline = useMemo(() => {
-    if (chartTimeRange === 'Säsong') return teamTimeline;
-    const now = new Date();
-    const cutoffDate = new Date();
-    if (chartTimeRange === 'Vecka') cutoffDate.setDate(now.getDate() - 7);
-    else if (chartTimeRange === 'Månad') cutoffDate.setDate(now.getDate() - 30);
-    return teamTimeline.filter(item => new Date(item.date) >= cutoffDate);
-  }, [teamTimeline, chartTimeRange]);
+  const fysStats = useMemo(() => {
+    const fysIds = new Set(mockPhases.flatMap(p => p.exercises).filter(e => e.category === 'Fysik' || e.category === 'Kondition').map(e => e.id));
+    let total = 0, fys = 0;
+    sessions.forEach(s => s.evaluations.forEach(e => { total++; if (fysIds.has(e.exerciseId)) fys++; }));
+    return { count: fys, ratio: total > 0 ? Math.round((fys / total) * 100) : 0 };
+  }, [sessions]);
 
-  const currentPhaseId = useMemo(() => sessions.length > 0 ? sessions[0].phaseId : 1, [sessions]);
-
+  // Fix: Added missing sisuStats useMemo to calculate aggregate match feedback data
   const sisuStats = useMemo(() => {
     if (matches.length === 0) return null;
-    const recentMatches = [...matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-    let totalEffort = 0, totalTeamwork = 0, totalLearning = 0, count = 0;
-    recentMatches.forEach(m => {
-        m.feedbacks.forEach(f => {
-            totalEffort += f.effort;
-            totalTeamwork += f.teamwork;
-            totalLearning += f.learning;
-            count++;
-        });
-    });
-    return count > 0 ? { effort: (totalEffort / count).toFixed(1), teamwork: (totalTeamwork / count).toFixed(1), learning: (totalLearning / count).toFixed(1), latestSummary: matches[0].teamSummary } : null;
+    
+    const allFeedbacks = matches.flatMap(m => m.feedbacks);
+    if (allFeedbacks.length === 0) return null;
+
+    const totalEffort = allFeedbacks.reduce((acc, f) => acc + f.effort, 0);
+    const totalTeamwork = allFeedbacks.reduce((acc, f) => acc + f.teamwork, 0);
+    const totalLearning = allFeedbacks.reduce((acc, f) => acc + f.learning, 0);
+    const count = allFeedbacks.length;
+
+    const sortedMatches = [...matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const latestSummary = sortedMatches[0]?.teamSummary;
+
+    return {
+      effort: (totalEffort / count).toFixed(1),
+      teamwork: (totalTeamwork / count).toFixed(1),
+      learning: (totalLearning / count).toFixed(1),
+      latestSummary
+    };
   }, [matches]);
 
   const stats = [
-    { label: 'Närvaro', value: `${attendanceRate}%`, subtext: 'Snitt över säsongen', icon: Activity, gradient: 'from-emerald-600 to-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/10' },
-    { label: 'Matchform', value: matches.length > 0 ? `${matchStats.winRate}%` : '-', subtext: matches.length > 0 ? `${matchStats.wins}V - ${matchStats.losses}F - ${matchStats.draws}O` : 'Inga matcher', icon: Trophy, gradient: 'from-yellow-500 to-orange-500', border: 'border-yellow-500/20', bg: 'bg-yellow-500/10' },
-    { label: 'Fys-volym', value: `${fysStats.count} st`, subtext: `${fysStats.ratio}% av total träning`, icon: Dumbbell, gradient: 'from-blue-600 to-cyan-400', border: 'border-blue-500/20', bg: 'bg-blue-500/10' },
-    { 
-      label: 'Utvecklingsindex', 
-      value: developmentInsights.index, 
-      subtext: developmentInsights.topCategory,
-      trend: developmentInsights.trend,
-      icon: TrendingUp, 
-      gradient: 'from-purple-600 to-purple-400', 
-      border: 'border-purple-500/20', 
-      bg: 'bg-purple-500/10' 
-    },
+    { label: 'Närvaro', value: `${attendanceRate}%`, subtext: 'Snitt per pass', icon: Activity, gradient: 'from-emerald-600 to-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/10' },
+    { label: 'Matchform', value: matches.length > 0 ? `${matchStats.winRate}%` : '-', subtext: `${matchStats.wins}V - ${matchStats.losses}F`, icon: Trophy, gradient: 'from-yellow-500 to-orange-500', border: 'border-yellow-500/20', bg: 'bg-yellow-500/10' },
+    { label: 'Fys-volym', value: `${fysStats.count} st`, subtext: `${fysStats.ratio}% av fokus`, icon: Dumbbell, gradient: 'from-blue-600 to-cyan-400', border: 'border-blue-500/20', bg: 'bg-blue-500/10' },
+    { label: 'Utvecklingsindex', value: developmentInsights.index, subtext: 'Genomsnittlig nivå', trend: developmentInsights.trend, icon: TrendingUp, gradient: 'from-purple-600 to-purple-400', border: 'border-purple-500/20', bg: 'bg-purple-500/10' },
   ];
 
   if (loading) return <div className="h-full w-full flex flex-col items-center justify-center space-y-4"><Loader2 className="w-12 h-12 text-orange-500 animate-spin" /><p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Laddar statistik...</p></div>;
@@ -172,17 +187,17 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
       <div className="flex items-center justify-between">
          <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-slate-900 border border-slate-800">
             <div className={`w-2 h-2 rounded-full ${storageMode === 'CLOUD' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`}></div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{storageMode === 'CLOUD' ? 'Moln-läge aktivt' : 'Lokalt läge'}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{storageMode === 'CLOUD' ? 'Moln-läge' : 'Lokal lagring'}</span>
          </div>
          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Säsongens Överblick</div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         {stats.map((s, i) => (
           <div key={i} className={`p-4 md:p-6 rounded-3xl border ${s.border} ${s.bg} backdrop-blur-sm relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300`}>
             <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-300 opacity-80 truncate">{s.label}</span>
+                <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-300 opacity-80">{s.label}</span>
                 {s.trend !== undefined && s.trend !== 0 && (
                     <div className={`flex items-center gap-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${s.trend > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
                         {s.trend > 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
@@ -205,12 +220,14 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6 md:gap-8">
-        <div className="lg:col-span-8 space-y-6 min-w-0">
+        <div className="lg:col-span-8 space-y-6">
           <div className="p-6 md:p-8 rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md relative overflow-hidden">
              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-4 relative z-10">
                 <div>
                   <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Utvecklingskurva</h3>
-                  <p className="text-xs text-slate-500 font-medium mt-1">Lagsnitt per träningsdag</p>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    {chartTimeRange === 'Vecka' ? 'Dagsform senaste passen' : chartTimeRange === 'Månad' ? 'Veckosnitt senaste 30 dagarna' : 'Månadssnitt över säsongen'}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                    {(['Vecka', 'Månad', 'Säsong'] as const).map(t => (
@@ -218,38 +235,57 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                    ))}
                 </div>
              </div>
-             <div className="relative h-64 flex items-end justify-between gap-1.5 md:gap-4 px-2">
-               {filteredTimeline.length > 0 ? filteredTimeline.map((item, i) => {
+             <div className="relative h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
+               {aggregatedTimeline.length > 0 ? aggregatedTimeline.map((item, i) => {
                  const height = (item.avg / 5) * 100;
                  return (
-                   <div key={i} className="relative flex-1 group flex flex-col items-center gap-2 h-full justify-end animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${i * 50}ms` }}>
-                     <div className="w-full bg-slate-800/50 rounded-t-lg h-full absolute bottom-0 z-0"></div>
-                     <div className="w-full max-w-[50px] bg-gradient-to-t from-orange-600 to-orange-400 rounded-t-lg transition-all duration-1000 shadow-[0_0_20px_rgba(249,115,22,0.3)] relative z-10 group-hover:bg-orange-300" style={{ height: `${height}%` }}>
-                        <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded border border-slate-700 pointer-events-none z-50 whitespace-nowrap">{item.avg} / 5</div>
+                   <div key={i} className="relative flex-1 group flex flex-col items-center gap-2 h-full justify-end">
+                     <div className="w-full bg-slate-800/30 rounded-t-xl h-full absolute bottom-0 z-0"></div>
+                     <div 
+                        className="w-full bg-gradient-to-t from-orange-600 to-orange-400 rounded-t-xl transition-all duration-700 shadow-[0_0_20px_rgba(249,115,22,0.2)] relative z-10 hover:brightness-125" 
+                        style={{ height: `${height}%` }}
+                     >
+                        <div className="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-black px-2 py-1.5 rounded-lg border border-slate-700 pointer-events-none z-50 whitespace-nowrap shadow-xl">
+                            {item.avg} / 5
+                        </div>
                      </div>
-                     <div className="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase h-4 truncate w-full text-center">{item.date.split('-')[2]}/{item.date.split('-')[1]}</div>
+                     <div className="text-[8px] md:text-[10px] font-black text-slate-600 uppercase h-4 truncate w-full text-center tracking-tighter">
+                        {item.label}
+                     </div>
                    </div>
                  );
-               }) : <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 space-y-2"><TrendingUp className="opacity-20" size={32} /><span className="text-xs font-bold uppercase tracking-widest">Ingen data för {chartTimeRange.toLowerCase()}</span></div>}
+               }) : (
+                 <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 space-y-2">
+                    <TrendingUp className="opacity-20" size={32} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Vänta på nästa träningspass...</span>
+                 </div>
+               )}
              </div>
           </div>
+          
+          {/* Season Roadmap */}
           <div className="p-6 md:p-8 rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md">
              <div className="flex justify-between items-center mb-6">
                 <h4 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2"><Trophy size={16} className="text-orange-500" /> Season Roadmap</h4>
-                <span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-950 px-3 py-1 rounded-full border border-slate-800">Fas {currentPhaseId} av 8</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-950 px-3 py-1 rounded-full border border-slate-800">Fas {sessions.length > 0 ? sessions[0].phaseId : 1} av 8</span>
              </div>
-             <div className="relative">
+             <div className="relative pt-4">
                 <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-800 -translate-y-1/2 rounded-full"></div>
                 <div className="flex justify-between relative z-10 overflow-x-auto pb-4 hide-scrollbar">
                    {mockPhases.map((phase) => (
-                      <div key={phase.id} className="flex flex-col items-center gap-3 min-w-[40px]"><div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-black text-xs transition-all border-4 ${phase.id === currentPhaseId ? 'bg-orange-500 border-slate-900 text-white scale-125 shadow-lg' : phase.id < currentPhaseId ? 'bg-emerald-500 border-slate-900 text-slate-900' : 'bg-slate-800 border-slate-900 text-slate-600'}`}>{phase.id}</div></div>
+                      <div key={phase.id} className="flex flex-col items-center gap-3 min-w-[45px]">
+                          <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-black text-xs transition-all border-4 ${phase.id === (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-orange-500 border-slate-900 text-white scale-125 shadow-[0_0_15px_rgba(249,115,22,0.4)]' : phase.id < (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-emerald-500 border-slate-900 text-slate-900' : 'bg-slate-800 border-slate-900 text-slate-600'}`}>
+                              {phase.id}
+                          </div>
+                      </div>
                    ))}
                 </div>
              </div>
           </div>
         </div>
 
-        <div className="lg:col-span-4 space-y-6 min-w-0">
+        {/* Sidebar Insights */}
+        <div className="lg:col-span-4 space-y-6">
           <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
              <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white mb-6 relative z-10"><BrainCircuit className="text-indigo-400" size={18} /> Match Intelligence</h3>
@@ -257,33 +293,75 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                 <div className="space-y-6 relative z-10">
                    <div className="space-y-4">
                       <div className="space-y-1">
-                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400"><span className="flex items-center gap-1"><Zap size={10} className="text-yellow-500" /> Ansträngning</span><span className="text-white">{sisuStats.effort}/5</span></div>
-                         <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-yellow-500" style={{ width: `${(parseFloat(sisuStats.effort)/5)*100}%` }}></div></div>
+                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400"><span><Zap size={10} className="text-yellow-500 inline mr-1" /> Ansträngning</span><span className="text-white">{sisuStats.effort}/5</span></div>
+                         <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]" style={{ width: `${(parseFloat(sisuStats.effort)/5)*100}%` }}></div></div>
                       </div>
                       <div className="space-y-1">
-                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400"><span className="flex items-center gap-1"><Heart size={10} className="text-rose-500" /> Laganda</span><span className="text-white">{sisuStats.teamwork}/5</span></div>
-                         <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-rose-500" style={{ width: `${(parseFloat(sisuStats.teamwork)/5)*100}%` }}></div></div>
+                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400"><span><Heart size={10} className="text-rose-500 inline mr-1" /> Laganda</span><span className="text-white">{sisuStats.teamwork}/5</span></div>
+                         <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" style={{ width: `${(parseFloat(sisuStats.teamwork)/5)*100}%` }}></div></div>
                       </div>
                       <div className="space-y-1">
-                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400"><span className="flex items-center gap-1"><Target size={10} className="text-emerald-500" /> Lärande</span><span className="text-white">{sisuStats.learning}/5</span></div>
-                         <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${(parseFloat(sisuStats.learning)/5)*100}%` }}></div></div>
+                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400"><span><Target size={10} className="text-emerald-500 inline mr-1" /> Lärande</span><span className="text-white">{sisuStats.learning}/5</span></div>
+                         <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" style={{ width: `${(parseFloat(sisuStats.learning)/5)*100}%` }}></div></div>
                       </div>
                    </div>
-                   {sisuStats.latestSummary && <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm"><div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Lightbulb size={10} /> Senaste Lärdom</div><p className="text-xs text-slate-300 leading-relaxed italic">"{sisuStats.latestSummary}"</p></div>}
+                   {sisuStats.latestSummary && (
+                       <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
+                           <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Lightbulb size={10} /> Senaste Lärdom</div>
+                           <p className="text-xs text-slate-300 leading-relaxed italic line-clamp-3">"{sisuStats.latestSummary}"</p>
+                       </div>
+                   )}
                 </div>
-             ) : <div className="py-8 text-center space-y-2"><Trophy className="mx-auto text-slate-800" size={32} /><p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Ingen matchdata än.</p></div>}
+             ) : (
+                <div className="py-12 text-center space-y-2 opacity-30">
+                    <Trophy className="mx-auto text-slate-700" size={32} />
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Ingen matchdata än.</p>
+                </div>
+             )}
           </div>
+
           <div className="p-6 md:p-8 rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md">
-            <div className="flex items-center justify-between mb-6"><h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white"><Calendar className="text-slate-400" size={18} /> Senaste Aktivitet</h3></div>
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white">
+                    <Calendar className="text-slate-400" size={18} /> Senaste Aktivitet
+                </h3>
+            </div>
             <div className="space-y-3">
-              {[...sessions.map(s => ({ type: 'session', date: s.date, data: s })), ...matches.map(m => ({ type: 'match', date: m.date, data: m }))].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).map((item, i) => {
+              {[...sessions.map(s => ({ type: 'session', date: s.date, data: s })), ...matches.map(m => ({ type: 'match', date: m.date, data: m }))]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 4).map((item, i) => {
                  if (item.type === 'session') {
                     const s = item.data as TrainingSession;
-                    return <div key={`s-${s.id}`} onClick={() => onNavigateToHistory?.()} className="p-3 md:p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 flex justify-between items-center group cursor-pointer hover:border-slate-600 hover:bg-slate-800 transition-all"><div className="flex items-center gap-4 min-w-0"><div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center group-hover:border-orange-500 transition-colors shrink-0"><span className="text-xs font-black text-white">{s.date.split('-')[2]}</span></div><div className="min-w-0"><div className="text-[10px] font-black text-slate-300 uppercase group-hover:text-white truncate">Fas {s.phaseId} Träning</div><div className="text-[9px] text-slate-600 font-bold uppercase truncate">{s.evaluations.length} bedömningar</div></div></div><ChevronRight size={14} className="text-slate-700 group-hover:text-white transition-all shrink-0" /></div>;
+                    return (
+                        <div key={`s-${s.id}`} onClick={() => onNavigateToHistory?.()} className="p-3 md:p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 flex justify-between items-center group cursor-pointer hover:border-slate-600 hover:bg-slate-800 transition-all">
+                            <div className="flex items-center gap-4 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center group-hover:border-orange-500 transition-colors shrink-0">
+                                    <span className="text-xs font-black text-white">{s.date.split('-')[2]}</span>
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-[10px] font-black text-slate-300 uppercase group-hover:text-white truncate">Fas {s.phaseId} Pass</div>
+                                    <div className="text-[9px] text-slate-600 font-bold uppercase truncate">{s.evaluations.length} bedömningar</div>
+                                </div>
+                            </div>
+                            <ChevronRight size={14} className="text-slate-700 group-hover:text-white transition-all shrink-0" />
+                        </div>
+                    );
                  } else {
                     const m = item.data as MatchRecord;
                     const isWin = m.score > m.opponentScore;
-                    return <div key={`m-${m.id}`} className="p-3 md:p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 flex justify-between items-center group hover:border-slate-600 hover:bg-slate-800 transition-all"><div className="flex items-center gap-4 min-w-0"><div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}><Trophy size={14} /></div><div className="min-w-0"><div className="text-[10px] font-black text-slate-300 uppercase group-hover:text-white truncate">Match vs {m.opponent}</div><div className="text-[9px] text-slate-600 font-bold uppercase truncate">{m.score} - {m.opponentScore}</div></div></div></div>;
+                    return (
+                        <div key={`m-${m.id}`} className="p-3 md:p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 flex justify-between items-center group hover:border-slate-600 hover:bg-slate-800 transition-all">
+                            <div className="flex items-center gap-4 min-w-0">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}>
+                                    <Trophy size={14} />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-[10px] font-black text-slate-300 uppercase group-hover:text-white truncate">Match vs {m.opponent}</div>
+                                    <div className="text-[9px] text-slate-600 font-bold uppercase truncate">{m.score} - {m.opponentScore}</div>
+                                </div>
+                            </div>
+                        </div>
+                    );
                  }
               })}
             </div>
