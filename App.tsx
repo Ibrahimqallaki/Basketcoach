@@ -145,12 +145,13 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
       if (loggedInPlayer) {
+          const wasSimulated = user && !user.uid.startsWith('player_');
           setLoggedInPlayer(null);
           if (user?.uid.startsWith('player_')) {
              setUser(null);
              setShowPlayerLogin(false);
           }
-          if (user && !user.uid.startsWith('player_')) {
+          if (wasSimulated) {
              setCurrentView(View.ROSTER);
              return;
           }
@@ -300,19 +301,26 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#020617] overflow-hidden text-slate-200 font-sans selection:bg-orange-500/30">
       {!hasApiKey && <KeySelectionOverlay onKeySelected={handleKeySelected} />}
-      <Sidebar activeView={currentView} onNavigate={setCurrentView} user={user} />
+      
+      {/* Visa Sidebar endast om spelare INTE är inloggad */}
+      {!loggedInPlayer && <Sidebar activeView={currentView} onNavigate={setCurrentView} user={user} />}
+      
       <main className="flex-1 flex flex-col overflow-x-hidden relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] w-full max-w-[100vw]">
-        <header className="h-20 flex items-center justify-between px-4 md:px-10 shrink-0 z-40">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-white">
-              {currentView === View.ACCOUNT ? 'Inställningar' : currentView.replace('_', ' ')}
-            </h2>
-          </div>
-          <button onClick={() => setCurrentView(View.ACCOUNT)} className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden hover:border-orange-500 transition-all">
-              {user?.photoURL ? <img src={user.photoURL} alt="P" className="w-full h-full object-cover" /> : <span className="text-sm font-black text-slate-400">{user.displayName?.charAt(0) || 'C'}</span>}
-          </button>
-        </header>
-        <div className="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar w-full">
+        {/* Visa Coach Header endast om spelare INTE är inloggad */}
+        {!loggedInPlayer && (
+          <header className="h-20 flex items-center justify-between px-4 md:px-10 shrink-0 z-40">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-white">
+                {currentView === View.ACCOUNT ? 'Inställningar' : currentView.replace('_', ' ')}
+              </h2>
+            </div>
+            <button onClick={() => setCurrentView(View.ACCOUNT)} className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden hover:border-orange-500 transition-all">
+                {user?.photoURL ? <img src={user.photoURL} alt="P" className="w-full h-full object-cover" /> : <span className="text-sm font-black text-slate-400">{user.displayName?.charAt(0) || 'C'}</span>}
+            </button>
+          </header>
+        )}
+
+        <div className={`flex-1 overflow-y-auto ${!loggedInPlayer ? 'p-4 md:p-10' : ''} custom-scrollbar w-full`}>
             {loggedInPlayer ? (
                 <PlayerPortal player={loggedInPlayer} onLogout={handleLogout} isPreview={!user.uid.startsWith('player_')} />
             ) : (

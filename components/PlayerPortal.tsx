@@ -4,7 +4,7 @@ import { Player, MatchRecord, TrainingSession, Badge, Exercise, Phase, Homework 
 import { dataService } from '../services/dataService';
 import { SKILL_COLORS } from './Roster';
 import { 
-  Trophy, Target, CheckCircle2, Zap, Heart, BrainCircuit, LogOut, Dumbbell, Eye, Star, Award, Lock, Play, Youtube, X, Info, Lightbulb, Egg, GlassWater, Moon, Carrot, Send, Bot, Loader2, Maximize2, Minimize2, ChevronRight, BookOpen, ExternalLink, Search, Flame, Sparkles, Circle, Medal, ClipboardList, Activity
+  Trophy, Target, CheckCircle2, Zap, Heart, BrainCircuit, LogOut, Dumbbell, Eye, Star, Award, Lock, Play, Youtube, X, Info, Lightbulb, Egg, GlassWater, Moon, Carrot, Send, Bot, Loader2, Maximize2, Minimize2, ChevronRight, BookOpen, ExternalLink, Search, Flame, Sparkles, Circle, Medal, ClipboardList, Activity, Calendar
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -48,7 +48,7 @@ const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
     const center = 100;
     const points = labels.map((label, i) => {
         const value = skills[label] || 5;
-        const angle = (Math.PI * 2 * i) / numPoints - Math.PI / 2;
+        const angle = (Math.PI * 2 * i) / numPoints - Math.PI / - Math.PI / 2;
         const r = (value / 10) * radius;
         return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
     });
@@ -56,8 +56,8 @@ const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
 
     return (
         <div className="relative w-full aspect-square max-w-[280px] mx-auto">
-            <div className="absolute top-0 right-0 opacity-5 -mr-10 -mt-10"><Star size={120} /></div>
-            <svg viewBox="0 0 200 200" className="w-full h-full overflow-visible">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-orange-500/5 to-transparent opacity-50"></div>
+            <svg viewBox="0 0 200 200" className="w-full h-full overflow-visible relative z-10">
                 {[0.2, 0.4, 0.6, 0.8, 1.0].map((scale, idx) => (
                     <circle key={idx} cx={center} cy={center} r={radius * scale} fill="none" stroke="white" strokeWidth="0.5" strokeOpacity="0.1" />
                 ))}
@@ -69,7 +69,7 @@ const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
                 {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="white" className="drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]" />)}
                 {labels.map((label, i) => {
                     const angle = (Math.PI * 2 * i) / numPoints - Math.PI / 2;
-                    const r = radius + 20;
+                    const r = radius + 25;
                     const x = center + r * Math.cos(angle);
                     const y = center + r * Math.sin(angle);
                     return <text key={i} x={x} y={y} fill="#94a3b8" fontSize="8" fontWeight="900" textAnchor="middle" dominantBaseline="middle" className="uppercase tracking-widest">{label}</text>;
@@ -130,7 +130,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
       const skills = Object.values(myPlayer.skillAssessment || {}) as number[];
       const avgSkill = skills.length > 0 ? skills.reduce((a, b) => a + b, 0) / skills.length : 5;
       const ovr = Math.min(99, Math.round(50 + (avgSkill * 5)));
-      return { ovr, level: 4, progressToNext: 25 }; 
+      return { ovr, level: Math.floor(ovr / 10), progressToNext: (ovr % 10) * 10 }; 
   }, [myPlayer]);
 
   const myTrainingPlan = useMemo(() => (myPlayer.individualPlan || [])
@@ -160,7 +160,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans pb-24 relative overflow-x-hidden">
-       {/* PROFILE HEADER - IMAGE 1 STYLE */}
+       {/* PROFILE HEADER */}
        <header className="relative pt-12 pb-16 px-6 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-[#020617] to-[#020617]"></div>
           <div className="relative z-10 max-w-md mx-auto">
@@ -197,21 +197,23 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                 </div>
              </div>
           </div>
-          <button onClick={onLogout} className="absolute top-6 right-6 p-2.5 bg-slate-800/50 rounded-full text-slate-500 hover:text-white backdrop-blur-sm z-50"><LogOut size={16} /></button>
+          <button onClick={onLogout} className="absolute top-6 right-6 p-3 bg-slate-800/80 rounded-2xl text-white hover:bg-rose-600 backdrop-blur-md z-50 transition-all shadow-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+            {isPreview ? <X size={16} /> : <LogOut size={16} />}
+            {isPreview ? 'Avsluta Preview' : 'Logga ut'}
+          </button>
        </header>
 
        <main className="max-w-lg mx-auto px-4 -mt-6 relative z-20 space-y-6">
-          <div className="flex p-1 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl">
+          <nav className="flex p-1 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl sticky top-4 z-40">
              {(['career', 'training', 'fuel', 'matches'] as const).map((tab) => (
                  <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500'}`}>
                     {tab === 'career' ? 'Profil' : tab === 'fuel' ? 'Kost' : tab === 'matches' ? 'Match' : 'Träning'}
                  </button>
              ))}
-          </div>
+          </nav>
 
           {activeTab === 'training' && (
              <div className="space-y-10 animate-in slide-in-from-right duration-300 pb-20">
-                {/* COACHUPPDRAG - IMAGE 1 STYLE */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 px-2">
                         <ClipboardList size={16} className="text-slate-500" />
@@ -234,7 +236,6 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
                     </div>
                 </div>
 
-                {/* DIN UTVECKLINGSPLAN - IMAGE 1 STYLE */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 px-2">
                         <Target size={16} className="text-slate-500" />
@@ -267,49 +268,68 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
               <div className="space-y-6 animate-in slide-in-from-right duration-300 pb-20">
                   <div className="flex items-center gap-2 px-2">
                         <Trophy size={16} className="text-slate-500" />
-                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DIN MATCHANALYS</h3>
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">MATCHLOGG ({matches.length})</h3>
                   </div>
                   
-                  {matches.map((m) => {
-                      const feedback = m.feedbacks.find(f => f.playerId === player.id);
-                      return (
-                          <div key={m.id} className="p-6 rounded-[2.5rem] bg-[#0a0f1d] border border-slate-800/50 space-y-6 shadow-xl relative overflow-hidden">
-                              <div className="flex justify-between items-start">
-                                  <div>
-                                      <h4 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">{m.opponent}</h4>
-                                      <p className="text-[9px] font-bold text-slate-500 uppercase mt-2 tracking-widest">{m.date}</p>
+                  <div className="space-y-4">
+                      {matches.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((m) => {
+                          const feedback = m.feedbacks.find(f => f.playerId === player.id);
+                          const isWin = m.score > m.opponentScore;
+                          return (
+                              <div key={m.id} className="p-6 rounded-[2.5rem] bg-[#0a0f1d] border border-slate-800/50 space-y-6 shadow-xl relative overflow-hidden group">
+                                  <div className={`absolute top-0 left-0 w-1.5 h-full ${isWin ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                                  
+                                  <div className="flex justify-between items-start pl-2">
+                                      <div className="space-y-1">
+                                          <div className="flex items-center gap-2 text-slate-500 text-[8px] font-black uppercase tracking-widest">
+                                              <Calendar size={10} /> {m.date}
+                                          </div>
+                                          <h4 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">{m.opponent}</h4>
+                                      </div>
+                                      <div className="flex flex-col items-end gap-1">
+                                          <div className={`px-4 py-2 rounded-2xl font-black text-lg shadow-inner ${isWin ? 'bg-emerald-600/10 border border-emerald-500/20 text-emerald-500' : 'bg-rose-600/10 border border-rose-500/20 text-rose-500'}`}>
+                                              {m.score} - {m.opponentScore}
+                                          </div>
+                                          <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest mr-1">{isWin ? 'VINST' : 'FÖRLUST'}</span>
+                                      </div>
                                   </div>
-                                  <div className="w-10 h-10 bg-emerald-600/10 border border-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-500 font-black text-sm shadow-inner">W</div>
-                              </div>
 
-                              <div className="grid grid-cols-3 gap-2">
-                                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col items-center gap-2">
-                                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em]">EFFORT</span>
-                                      <div className="flex items-center gap-1.5 text-yellow-500 font-black italic">
-                                          <Zap size={14} fill="currentColor" /> {feedback?.effort || 3}
+                                  <div className="grid grid-cols-3 gap-2">
+                                      <div className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col items-center gap-2 group-hover:border-yellow-500/30 transition-colors">
+                                          <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em]">ANSTRÄNGNING</span>
+                                          <div className="flex items-center gap-1.5 text-yellow-500 font-black italic">
+                                              <Zap size={14} fill="currentColor" /> {feedback?.effort || 3}
+                                          </div>
+                                      </div>
+                                      <div className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col items-center gap-2 group-hover:border-rose-500/30 transition-colors">
+                                          <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em]">LAGANDA</span>
+                                          <div className="flex items-center gap-1.5 text-rose-500 font-black italic">
+                                              <Heart size={14} fill="currentColor" /> {feedback?.teamwork || 3}
+                                          </div>
+                                      </div>
+                                      <div className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col items-center gap-2 group-hover:border-emerald-500/30 transition-colors">
+                                          <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em]">LÄRANDE</span>
+                                          <div className="flex items-center gap-1.5 text-emerald-500 font-black italic">
+                                              <Target size={14} fill="currentColor" /> {feedback?.learning || 3}
+                                          </div>
                                       </div>
                                   </div>
-                                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col items-center gap-2">
-                                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em]">LAGANDA</span>
-                                      <div className="flex items-center gap-1.5 text-rose-500 font-black italic">
-                                          <Heart size={14} fill="currentColor" /> {feedback?.teamwork || 3}
+                                  
+                                  {m.teamSummary && (
+                                      <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-800/50">
+                                          <p className="text-[9px] text-slate-400 italic font-medium leading-relaxed">Coach: "{m.teamSummary}"</p>
                                       </div>
-                                  </div>
-                                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-900 flex flex-col items-center gap-2">
-                                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.2em]">UTV.</span>
-                                      <div className="flex items-center gap-1.5 text-emerald-500 font-black italic">
-                                          <Target size={14} fill="currentColor" /> {feedback?.learning || 3}
-                                      </div>
-                                  </div>
+                                  )}
                               </div>
+                          );
+                      })}
+                      {matches.length === 0 && (
+                          <div className="p-20 text-center border-2 border-dashed border-slate-800 rounded-[2.5rem] opacity-30">
+                              <Activity className="mx-auto mb-4 text-slate-600" size={32} />
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Ingen matchdata än.</p>
                           </div>
-                      );
-                  })}
-                  {matches.length === 0 && (
-                      <div className="p-20 text-center border-2 border-dashed border-slate-800 rounded-[2.5rem] opacity-30">
-                          <p className="text-[10px] font-black uppercase tracking-widest">Ingen matchdata registrerad än.</p>
-                      </div>
-                  )}
+                      )}
+                  </div>
               </div>
           )}
 
@@ -341,13 +361,13 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, onLogout, is
 
           {activeTab === 'career' && (
               <div className="space-y-8 animate-in slide-in-from-left duration-300 pb-20">
-                  <div className="p-8 rounded-[3rem] bg-[#0a0f1d] border border-slate-800 shadow-2xl flex flex-col items-center">
-                      <div className="w-full flex items-center gap-2 mb-8 px-2">
+                  <div className="p-8 rounded-[3rem] bg-[#0a0f1d] border border-slate-800 shadow-2xl flex flex-col items-center relative overflow-hidden">
+                      <div className="w-full flex items-center gap-2 mb-8 px-2 relative z-10">
                         <Star size={16} className="text-yellow-500" fill="currentColor" />
                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">DIN SPELARPROFIL</h3>
                       </div>
                       <RadarChart skills={myPlayer.skillAssessment || {}} />
-                      <div className="w-full space-y-5 mt-12 px-2">
+                      <div className="w-full space-y-5 mt-12 px-2 relative z-10">
                           {[
                               { label: 'DRIBBLING', val: (myPlayer.skillAssessment?.['Dribbling'] || 5), color: SKILL_THEMES['DRIBBLING'] },
                               { label: 'SPELFÖRSTÅELSE', val: (myPlayer.skillAssessment?.['Spelförståelse'] || 5), color: SKILL_THEMES['SPELFÖRSTÅELSE'] },
