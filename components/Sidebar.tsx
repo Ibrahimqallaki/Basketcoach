@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from '../types';
 import { 
   LayoutDashboard, 
@@ -9,7 +9,10 @@ import {
   Trophy,
   MonitorPlay,
   Bot,
-  Wrench
+  Wrench,
+  ChevronLeft,
+  ChevronRight,
+  Menu
 } from 'lucide-react';
 // Fix: Added @ts-ignore to bypass environment-specific resolution issues with Firebase exports
 // @ts-ignore
@@ -23,11 +26,12 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   
   const menuItems = [
     { id: View.DASHBOARD, label: 'Hem', icon: LayoutDashboard },
     { id: View.ROSTER, label: 'Laget', icon: Users },
-    { id: View.PLAN, label: 'Plan', icon: CalendarDays },
+    { id: View.PLAN, label: 'Planering', icon: CalendarDays },
     { id: View.TRAINING, label: 'Träna', icon: ClipboardCheck },
     { id: View.MATCH_EVAL, label: 'Match', icon: Trophy },
     { id: View.VIDEO_ANALYSIS, label: 'Video', icon: MonitorPlay },
@@ -38,47 +42,94 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-72 p-4 flex-col h-full shrink-0">
-        <div className="flex-1 rounded-[2rem] bg-slate-900/80 backdrop-blur-xl border border-white/5 flex flex-col overflow-hidden shadow-2xl">
-          {/* Header */}
-          <div className="p-8 pb-4">
-             <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-lg bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-900/50">
-                   <Trophy size={16} className="text-white" />
+      <aside className={`hidden md:flex transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) p-4 flex-col h-full shrink-0 ${isCollapsed ? 'w-24' : 'w-72'}`}>
+        <div className="flex-1 rounded-[2.5rem] bg-slate-900/90 backdrop-blur-2xl border border-white/5 flex flex-col overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] relative">
+          
+          {/* Collapse Toggle Button - Mer framträdande handle */}
+          <button 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="absolute top-6 -right-0 translate-x-1/2 md:right-4 md:translate-x-0 z-50 p-2.5 rounded-xl bg-orange-600 text-white hover:bg-orange-500 transition-all shadow-[0_0_20px_rgba(234,88,12,0.4)] border border-white/10 active:scale-90"
+            title={isCollapsed ? "Expandera meny" : "Kollapsa meny"}
+          >
+            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+
+          {/* Header Section */}
+          <div className={`transition-all duration-500 flex flex-col items-center pt-10 pb-6 ${isCollapsed ? 'px-0' : 'px-8 items-start'}`}>
+             <div className="flex items-center gap-3">
+                <div className={`rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg shadow-orange-900/40 shrink-0 transition-all duration-500 ${isCollapsed ? 'w-12 h-12 rotate-0' : 'w-10 h-10 -rotate-6'}`}>
+                   <Trophy size={isCollapsed ? 24 : 18} className="text-white" />
                 </div>
-                <span className="text-lg font-black italic uppercase text-white tracking-tighter">Coach Pro</span>
+                {!isCollapsed && (
+                   <div className="animate-in fade-in slide-in-from-left duration-500">
+                      <span className="text-xl font-black italic uppercase text-white tracking-tighter whitespace-nowrap block leading-none">Coach Pro</span>
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mt-1 block">Säsong 25/26</span>
+                   </div>
+                )}
              </div>
-             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-11">Säsong 25/26</div>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar py-4">
+          {/* Navigation Items */}
+          <nav className="flex-1 px-3 space-y-2 overflow-y-auto custom-scrollbar py-6">
             {menuItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 group relative ${
+                title={isCollapsed ? item.label : ''}
+                className={`w-full flex items-center rounded-2xl transition-all duration-300 group relative ${
+                  isCollapsed ? 'justify-center py-5' : 'px-5 py-4 gap-4'
+                } ${
                   activeView === item.id
-                    ? 'bg-gradient-to-r from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-900/20 translate-x-1'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-gradient-to-r from-orange-600/20 to-transparent border-l-4 border-orange-500 text-white'
+                    : 'text-slate-500 hover:bg-white/5 hover:text-slate-200'
                 }`}
               >
-                <item.icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${activeView === item.id ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
-                <span className="font-bold text-xs uppercase tracking-wide">{item.label}</span>
-                {activeView === item.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>}
+                <item.icon className={`transition-all duration-300 shrink-0 ${isCollapsed ? 'w-7 h-7' : 'w-5 h-5'} ${activeView === item.id ? 'text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]' : 'text-slate-600 group-hover:text-slate-300'}`} />
                 
-                {/* Desktop New Indicator */}
+                {!isCollapsed && (
+                  <span className="font-black text-[11px] uppercase tracking-widest whitespace-nowrap animate-in fade-in slide-in-from-left duration-500">{item.label}</span>
+                )}
+                
+                {!isCollapsed && activeView === item.id && (
+                    <div className="ml-auto flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></div>
+                    </div>
+                )}
+                
+                {/* New Feature Badge/Dot */}
                 {/* @ts-ignore */}
                 {item.isNew && (
-                  <span className="absolute right-2 top-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)]"></span>
+                  <span className={`absolute bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)] ${isCollapsed ? 'right-3 top-3 w-2.5 h-2.5' : 'right-4 top-1/2 -translate-y-1/2 w-2 h-2'}`}></span>
                 )}
               </button>
             ))}
           </nav>
+
+          {/* User Profile Summary (Bottom) */}
+          <div className={`p-4 border-t border-white/5 transition-all duration-500 ${isCollapsed ? 'items-center px-0' : 'px-6'}`}>
+              <button 
+                onClick={() => onNavigate(View.ACCOUNT)}
+                className={`flex items-center transition-all duration-300 hover:bg-white/5 rounded-2xl w-full ${isCollapsed ? 'justify-center py-4' : 'p-3 gap-3'}`}
+              >
+                  <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                    {user?.photoURL ? (
+                        <img src={user.photoURL} alt="P" className="w-full h-full object-cover" />
+                    ) : (
+                        <Users size={20} className="text-slate-600" />
+                    )}
+                  </div>
+                  {!isCollapsed && (
+                      <div className="text-left animate-in fade-in duration-500">
+                          <div className="text-[10px] font-black text-white uppercase truncate max-w-[100px]">{user?.displayName?.split(' ')[0] || 'Coach'}</div>
+                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Inställningar</div>
+                      </div>
+                  )}
+              </button>
+          </div>
         </div>
       </aside>
 
-      {/* Mobile Bottom Navigation - Fixed layout, no scrolling */}
+      {/* Mobile Bottom Navigation - Förblir kompakt */}
       <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-white/10 h-16 rounded-2xl flex items-center z-50 shadow-2xl px-1 overflow-hidden">
         <div className="flex items-center justify-between w-full h-full px-2">
           {menuItems.slice(0, 5).map((item) => (
@@ -93,7 +144,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
               <span className="text-[8px] font-bold uppercase tracking-tight scale-75">{item.label}</span>
             </button>
           ))}
-          {/* Mobile More Button for Extra Items */}
            <button
               onClick={() => onNavigate(View.TOOLS)}
               className={`flex flex-col items-center justify-center gap-1 transition-all relative w-12 h-12 rounded-xl ${
