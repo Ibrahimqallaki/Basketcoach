@@ -34,13 +34,10 @@ import {
   MessageSquare,
   Clock,
   Trash2,
-  ExternalLink,
-  ChevronRight,
   RefreshCw,
-  Eye,
   Info,
-  Shield,
-  Zap
+  Zap,
+  GripVertical
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
@@ -52,42 +49,46 @@ interface AccountProps {
 
 const TicketCard: React.FC<{ 
   ticket: AppTicket; 
-  onUpdateStatus: (id: string, status: TicketStatus) => void | Promise<void>;
   onDelete: (id: string) => void | Promise<void>;
+  onDragStart: (e: React.DragEvent, id: string) => void;
 }> = ({ 
   ticket, 
-  onUpdateStatus, 
-  onDelete 
-}) => (
-    <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 group relative overflow-hidden">
-        <div className={`absolute top-0 left-0 w-1 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
-        <div className="flex justify-between items-start pl-2">
-            <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2">
-                    <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
-                        {ticket.type}
-                    </span>
-                    <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest truncate">{ticket.userName}</span>
+  onDelete,
+  onDragStart
+}) => {
+    return (
+        <div 
+            draggable
+            onDragStart={(e) => onDragStart(e, ticket.id)}
+            className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 group relative overflow-hidden cursor-grab active:cursor-grabbing hover:border-slate-600 transition-all hover:shadow-lg"
+        >
+            <div className={`absolute top-0 left-0 w-1 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+            
+            <div className="flex justify-between items-start pl-2">
+                <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
+                            {ticket.type}
+                        </span>
+                        <span className="text-[7px] font-bold text-slate-600 uppercase tracking-widest truncate">{ticket.userName}</span>
+                    </div>
+                    <h5 className="text-xs font-black text-white uppercase truncate pr-4">{ticket.title}</h5>
                 </div>
-                <h5 className="text-sm font-black text-white uppercase truncate">{ticket.title}</h5>
+                <div className="flex items-center gap-1">
+                    <button onClick={() => onDelete(ticket.id)} className="p-1.5 text-slate-700 hover:text-rose-500 transition-all"><Trash2 size={12}/></button>
+                    <GripVertical size={12} className="text-slate-800" />
+                </div>
             </div>
-            <button onClick={() => onDelete(ticket.id)} className="p-2 text-slate-700 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14}/></button>
+            
+            <p className="text-[10px] text-slate-400 font-medium leading-relaxed italic pl-2 line-clamp-2">"{ticket.description}"</p>
+            
+            <div className="flex justify-between items-center pl-2 pt-1">
+                <span className="text-[7px] font-black text-slate-700 uppercase">{ticket.createdAt?.split('T')[0]}</span>
+                <span className="text-[7px] font-black text-slate-800 uppercase">v{ticket.appVersion}</span>
+            </div>
         </div>
-        <p className="text-[10px] text-slate-400 font-medium leading-relaxed italic pl-2">"{ticket.description}"</p>
-        
-        <div className="flex gap-1 pl-2">
-            {(['backlog', 'todo', 'in_progress', 'done'] as TicketStatus[]).map(s => (
-                <button 
-                  key={s} 
-                  onClick={() => onUpdateStatus(ticket.id, s)}
-                  className={`flex-1 py-1.5 rounded-lg text-[7px] font-black uppercase transition-all ${ticket.status === s ? 'bg-white text-black' : 'bg-slate-900 text-slate-600 hover:text-slate-400'}`}
-                >
-                    {s.replace('_', ' ')}
-                </button>
-            ))}
-        </div>
-    </div>
-);
+    );
+};
 
 export const Account: React.FC<AccountProps> = ({ user }) => {
   const [localStats, setLocalStats] = useState({ players: 0, sessions: 0 });
@@ -99,6 +100,9 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
   const [copyStatus, setCopyStatus] = useState(false);
   const [rulesCopied, setRulesCopied] = useState(false);
   
+  // Drag and drop state
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+
   // Debug & Test state
   const [testCode, setTestCode] = useState("");
   const [testResult, setTestResult] = useState<{status: 'success' | 'error' | 'idle', message: string}>({ status: 'idle', message: '' });
@@ -107,7 +111,6 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
 
   const isGuest = !user || user.uid === 'guest';
   
-  // Mycket robust check för Ibrahim
   const isSuperAdmin = useMemo(() => {
     return dataService.isSuperAdmin(user);
   }, [user]);
@@ -145,7 +148,6 @@ service cloud.firestore {
       if (user && !isGuest) {
           setLoadingTickets(true);
           try {
-            // Vi hämtar all data och låter dataService sköta filtreringen baserat på SuperAdmin-status
             const [w, t] = await Promise.all([
                 dataService.getWhitelistedEmails(),
                 dataService.getTickets(user)
@@ -170,15 +172,40 @@ service cloud.firestore {
     window.location.reload();
   };
 
-  const handleUpdateTicket = async (id: string, status: TicketStatus) => {
-      await dataService.updateTicketStatus(id, status);
+  const handleUpdateTicketStatus = async (id: string, status: TicketStatus) => {
+      // Optimistisk uppdatering lokalt först
       setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+      try {
+          await dataService.updateTicketStatus(id, status);
+      } catch (err) {
+          console.error("Failed to sync ticket status:", err);
+          loadAdminData(); // Återställ vid fel
+      }
   };
 
   const handleDeleteTicket = async (id: string) => {
       if (!confirm("Radera ticket?")) return;
       await dataService.deleteTicket(id);
       setTickets(prev => prev.filter(t => t.id !== id));
+  };
+
+  const onDragStart = (e: React.DragEvent, ticketId: string) => {
+      e.dataTransfer.setData("ticketId", ticketId);
+      e.dataTransfer.effectAllowed = "move";
+  };
+
+  const onDragOver = (e: React.DragEvent, status: string) => {
+      e.preventDefault();
+      setDragOverColumn(status);
+  };
+
+  const onDrop = async (e: React.DragEvent, status: TicketStatus) => {
+      e.preventDefault();
+      const ticketId = e.dataTransfer.getData("ticketId");
+      setDragOverColumn(null);
+      if (ticketId) {
+          await handleUpdateTicketStatus(ticketId, status);
+      }
   };
 
   const handleAddToWhitelist = async () => {
@@ -270,7 +297,7 @@ service cloud.firestore {
         </div>
       </div>
 
-      {/* KANBAN BOARD (Säkrad för Ibrahim) */}
+      {/* KANBAN BOARD (Drag and Drop) */}
       {(isSuperAdmin || showDebug) && !isGuest && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
               <div className="flex items-center justify-between px-2">
@@ -297,27 +324,33 @@ service cloud.firestore {
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                   {[
-                      { id: 'backlog', label: 'Backlog', color: 'text-slate-500' },
-                      { id: 'todo', label: 'Att Göra', color: 'text-blue-400' },
-                      { id: 'in_progress', label: 'Pågår', color: 'text-amber-400' },
-                      { id: 'done', label: 'Färdigt', color: 'text-emerald-400' }
+                      { id: 'backlog', label: 'Backlog', color: 'text-slate-500', border: 'border-slate-800' },
+                      { id: 'todo', label: 'Att Göra', color: 'text-blue-400', border: 'border-blue-500/20' },
+                      { id: 'in_progress', label: 'Pågår', color: 'text-amber-400', border: 'border-amber-500/20' },
+                      { id: 'done', label: 'Färdigt', color: 'text-emerald-400', border: 'border-emerald-500/20' }
                   ].map(column => (
-                      <div key={column.id} className="space-y-3">
-                          <div className="flex items-center justify-between px-2 mb-2">
+                      <div 
+                        key={column.id} 
+                        className={`space-y-3 p-2 rounded-2xl border-2 transition-all ${dragOverColumn === column.id ? 'bg-slate-900/50 border-indigo-500/50 scale-[1.02]' : 'bg-transparent border-transparent'}`}
+                        onDragOver={(e) => onDragOver(e, column.id)}
+                        onDragLeave={() => setDragOverColumn(null)}
+                        onDrop={(e) => onDrop(e, column.id as TicketStatus)}
+                      >
+                          <div className="flex items-center justify-between px-2 mb-1">
                               <span className={`text-[10px] font-black uppercase tracking-widest ${column.color}`}>{column.label}</span>
                               <span className="text-[10px] font-black text-slate-800">{tickets.filter(t => t.status === column.id).length}</span>
                           </div>
-                          <div className="space-y-3 min-h-[100px]">
+                          <div className="space-y-3 min-h-[150px]">
                               {tickets.filter(t => t.status === column.id).map(ticket => (
                                   <TicketCard 
                                     key={ticket.id} 
                                     ticket={ticket} 
-                                    onUpdateStatus={handleUpdateTicket}
                                     onDelete={handleDeleteTicket}
+                                    onDragStart={onDragStart}
                                   />
                               ))}
                               {tickets.filter(t => t.status === column.id).length === 0 && (
-                                  <div className="p-8 border-2 border-dashed border-slate-900 rounded-2xl flex flex-col items-center justify-center opacity-20">
+                                  <div className="p-8 border-2 border-dashed border-slate-900 rounded-2xl flex flex-col items-center justify-center opacity-10">
                                       <ClipboardList size={20} className="text-slate-600" />
                                   </div>
                               )}
