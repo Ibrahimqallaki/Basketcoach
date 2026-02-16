@@ -241,10 +241,9 @@ export const dataService = {
       
       let q;
       if (dataService.isSuperAdmin()) {
-          // Admin ser allt
           q = query(colRef, orderBy('createdAt', 'desc'), limit(100));
       } else if (user) {
-          // Vanliga användare ser bara sina egna
+          // Viktigt: Om index saknas kommer detta kasta ett fel
           q = query(colRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
       } else {
           return [];
@@ -252,8 +251,14 @@ export const dataService = {
 
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ id: d.id, ...d.data() } as AppTicket));
-    } catch (err) {
-      console.warn("Ticket fetch error:", err);
+    } catch (err: any) {
+      console.warn("Ticket fetch error:", err.code, err.message);
+      if (err.message?.includes('index')) {
+          throw new Error("MISSING_INDEX");
+      }
+      if (err.code === 'permission-denied') {
+          throw new Error("ACCESS_DENIED");
+      }
       return [];
     }
   },

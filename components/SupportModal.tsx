@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Send, Bug, Lightbulb, MessageSquare, Loader2, CheckCircle2, History, PlusCircle, Clock, CheckCircle } from 'lucide-react';
+import { X, Send, Bug, Lightbulb, MessageSquare, Loader2, CheckCircle2, History, PlusCircle, Clock, CheckCircle, AlertTriangle, DatabaseZap } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
 import { TicketType, AppTicket, TicketStatus } from '../types';
@@ -20,14 +20,23 @@ export const SupportModal: React.FC<SupportModalProps> = ({ onClose, userRole })
   
   const [myTickets, setMyTickets] = useState<AppTicket[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchHistory = async () => {
     setLoadingHistory(true);
+    setError(null);
     try {
       const tickets = await dataService.getTickets();
       setMyTickets(tickets);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      if (err.message === 'MISSING_INDEX') {
+          setError("Databas-index saknas. Be din coach öppna konsolen och skapa indexet via länken.");
+      } else if (err.message === 'ACCESS_DENIED') {
+          setError("Behörighet saknas. Du måste vara inloggad för att se dina ärenden.");
+      } else {
+          setError("Kunde inte hämta historik. Försök igen senare.");
+      }
     } finally {
       setLoadingHistory(false);
     }
@@ -65,6 +74,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ onClose, userRole })
       }, 2000);
     } catch (err) {
       console.error(err);
+      alert("Kunde inte skicka ärendet. Kontrollera din anslutning.");
     } finally {
       setSubmitting(false);
     }
@@ -175,6 +185,14 @@ export const SupportModal: React.FC<SupportModalProps> = ({ onClose, userRole })
                        <Loader2 className="animate-spin text-blue-500" size={32} />
                        <span className="text-[10px] font-black uppercase tracking-widest">Hämtar historik...</span>
                    </div>
+               ) : error ? (
+                   <div className="py-12 px-6 text-center space-y-4 rounded-[2rem] bg-rose-500/5 border border-rose-500/20">
+                       <div className="w-12 h-12 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto text-rose-500">
+                           {error.includes('index') ? <DatabaseZap size={24}/> : <AlertTriangle size={24} />}
+                       </div>
+                       <p className="text-xs font-bold text-slate-300 leading-relaxed">{error}</p>
+                       <button onClick={fetchHistory} className="px-6 py-2 bg-slate-800 rounded-xl text-[10px] font-black uppercase text-white">Försök igen</button>
+                   </div>
                ) : myTickets.length > 0 ? (
                    myTickets.map(ticket => {
                        const statusInfo = getStatusInfo(ticket.status);
@@ -182,7 +200,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ onClose, userRole })
                            <div key={ticket.id} className="p-5 rounded-[2rem] bg-slate-950 border border-slate-800 group hover:border-slate-700 transition-all">
                                <div className="flex justify-between items-start mb-2">
                                    <div className="flex items-center gap-2">
-                                       <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                       <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
                                            {ticket.type}
                                        </span>
                                        <div className="flex items-center gap-1.5 ml-2">
@@ -190,7 +208,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ onClose, userRole })
                                            <span className={`text-[8px] font-black uppercase tracking-widest ${statusInfo.color}`}>{statusInfo.label}</span>
                                        </div>
                                    </div>
-                                   <span className="text-[7px] font-bold text-slate-700 uppercase">{ticket.createdAt.split('T')[0]}</span>
+                                   <span className="text-[7px] font-bold text-slate-700 uppercase">{ticket.createdAt?.split('T')[0] || 'Nyligen'}</span>
                                </div>
                                <h5 className="text-xs font-black text-white uppercase tracking-tight mb-1">{ticket.title}</h5>
                                <p className="text-[10px] text-slate-500 font-medium line-clamp-2 italic leading-relaxed">"{ticket.description}"</p>

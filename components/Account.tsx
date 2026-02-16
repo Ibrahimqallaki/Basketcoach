@@ -69,12 +69,13 @@ service cloud.firestore {
     // 1. Inställningar (Whitelist)
     match /app_settings/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null && !request.auth.token.anonymous;
+      allow write: if request.auth != null && request.auth.token.email == "Ibrahim.qallaki@gmail.com";
     }
 
     // 2. Tickets (Feedback Loop)
+    // Tillåt alla inloggade (även anonyma spelare) att skriva
     match /app_tickets/{ticketId} {
-      allow create: if true; // Alla får skicka
+      allow create: if request.auth != null; 
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email == "Ibrahim.qallaki@gmail.com");
       allow update, delete: if request.auth != null && request.auth.token.email == "Ibrahim.qallaki@gmail.com";
     }
@@ -86,8 +87,7 @@ service cloud.firestore {
 
     // 4. Användardata
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null;
+      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == "Ibrahim.qallaki@gmail.com");
     }
   }
 }`;
@@ -179,14 +179,13 @@ service cloud.firestore {
       }
   };
 
-  // Fix: Explicitly add key to prop type definition for the local component to satisfy TS
-  const TicketCard = ({ ticket }: { ticket: AppTicket; key?: string | number }) => (
-      <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 group relative overflow-hidden">
+  const TicketCard = ({ ticket, key }: { ticket: AppTicket; key?: string | number }) => (
+      <div key={key} className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 group relative overflow-hidden">
           <div className={`absolute top-0 left-0 w-1 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
           <div className="flex justify-between items-start pl-2">
               <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2">
-                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
                           {ticket.type}
                       </span>
                       <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">{ticket.role} • {ticket.userName}</span>
