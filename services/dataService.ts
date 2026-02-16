@@ -241,16 +241,22 @@ export const dataService = {
       
       let q;
       if (dataService.isSuperAdmin()) {
+          // För admin hämtar vi alla, ingen 'where' kombinerad med 'orderBy' här så det kräver inget index
           q = query(colRef, orderBy('createdAt', 'desc'), limit(100));
       } else if (user) {
-          // Viktigt: Om index saknas kommer detta kasta ett fel
-          q = query(colRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+          // FIX: Här tar vi bort orderBy i själva queryn för att slippa kravet på sammansatt index.
+          // Vi sorterar istället resultatet manuellt nedan.
+          q = query(colRef, where('userId', '==', user.uid));
       } else {
           return [];
       }
 
       const snap = await getDocs(q);
-      return snap.docs.map(d => ({ id: d.id, ...d.data() } as AppTicket));
+      const results = snap.docs.map(d => ({ id: d.id, ...d.data() } as AppTicket));
+      
+      // Manuell sortering i minnet (säkerställer 'createdAt' desc)
+      return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
     } catch (err: any) {
       console.warn("Ticket fetch error:", err.code, err.message);
       if (err.message?.includes('index')) {
