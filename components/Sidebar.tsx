@@ -42,22 +42,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) p-4 flex-col h-full shrink-0 ${isCollapsed ? 'w-24' : 'w-72'}`}>
+      <aside className={`hidden md:flex transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) p-4 flex-col h-full shrink-0 relative ${isCollapsed ? 'w-24' : 'w-72'}`}>
+        
+        {/* Collapse Toggle Button - Nu centrerad vertikalt på kanten */}
+        <button 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute top-1/2 -right-3 -translate-y-1/2 z-[100] w-8 h-16 rounded-full bg-orange-600 text-white hover:bg-orange-500 transition-all shadow-[0_0_20px_rgba(234,88,12,0.4)] border border-white/10 flex items-center justify-center group/toggle active:scale-90"
+          title={isCollapsed ? "Expandera meny" : "Kollapsa meny"}
+        >
+          <div className="transition-transform duration-500 group-hover/toggle:scale-110">
+            {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </div>
+        </button>
+
         <div className="flex-1 rounded-[2.5rem] bg-slate-900/90 backdrop-blur-2xl border border-white/5 flex flex-col overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] relative">
           
-          {/* Collapse Toggle Button - Mer framträdande handle */}
-          <button 
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="absolute top-6 -right-0 translate-x-1/2 md:right-4 md:translate-x-0 z-50 p-2.5 rounded-xl bg-orange-600 text-white hover:bg-orange-500 transition-all shadow-[0_0_20px_rgba(234,88,12,0.4)] border border-white/10 active:scale-90"
-            title={isCollapsed ? "Expandera meny" : "Kollapsa meny"}
-          >
-            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
-
-          {/* Header Section */}
+          {/* Header Section - Nu helt fri från knappar */}
           <div className={`transition-all duration-500 flex flex-col items-center pt-10 pb-6 ${isCollapsed ? 'px-0' : 'px-8 items-start'}`}>
              <div className="flex items-center gap-3">
-                <div className={`rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg shadow-orange-900/40 shrink-0 transition-all duration-500 ${isCollapsed ? 'w-12 h-12 rotate-0' : 'w-10 h-10 -rotate-6'}`}>
+                <div className={`rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg shadow-orange-900/40 shrink-0 transition-all duration-500 ${isCollapsed ? 'w-12 h-12' : 'w-10 h-10 -rotate-6'}`}>
                    <Trophy size={isCollapsed ? 24 : 18} className="text-white" />
                 </div>
                 {!isCollapsed && (
@@ -96,7 +99,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
                     </div>
                 )}
                 
-                {/* New Feature Badge/Dot */}
                 {/* @ts-ignore */}
                 {item.isNew && (
                   <span className={`absolute bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)] ${isCollapsed ? 'right-3 top-3 w-2.5 h-2.5' : 'right-4 top-1/2 -translate-y-1/2 w-2 h-2'}`}></span>
@@ -129,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
         </div>
       </aside>
 
-      {/* Mobile Bottom Navigation - Förblir kompakt */}
+      {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-white/10 h-16 rounded-2xl flex items-center z-50 shadow-2xl px-1 overflow-hidden">
         <div className="flex items-center justify-between w-full h-full px-2">
           {menuItems.slice(0, 5).map((item) => (
