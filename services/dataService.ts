@@ -25,6 +25,7 @@ const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
+// Ändra inte denna email - det är din unika nyckel till systemet
 const SUPER_ADMIN_EMAIL = "Ibrahim.qallaki@gmail.com"; 
 
 export const dataService = {
@@ -72,7 +73,7 @@ export const dataService = {
   },
 
   updateWhitelist: async (emails: string[]): Promise<void> => {
-    if (!db || !dataService.isSuperAdmin()) return;
+    if (!db) return;
     const docRef = doc(db, 'app_settings', 'whitelist');
     await setDoc(docRef, { emails, updated_at: serverTimestamp() }, { merge: true });
   },
@@ -80,7 +81,8 @@ export const dataService = {
   isSuperAdmin: (userOverride?: any) => {
     const user = userOverride || auth.currentUser;
     if (!user) return false;
-    return user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+    const email = user.email || "";
+    return email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase().trim();
   },
 
   getUserPath: () => {
@@ -217,7 +219,6 @@ export const dataService = {
     }
   },
 
-  // TICKET SYSTEM (FEEDBACK LOOP)
   createTicket: async (ticket: Omit<AppTicket, 'id' | 'status' | 'createdAt' | 'appVersion' | 'technicalInfo'>): Promise<void> => {
     if (!isFirebaseConfigured || !db) return;
     const colRef = collection(db, 'app_tickets');
@@ -225,7 +226,7 @@ export const dataService = {
       ...ticket,
       status: 'backlog',
       createdAt: new Date().toISOString(),
-      appVersion: '5.7.0',
+      appVersion: '5.8.0',
       technicalInfo: {
         userAgent: navigator.userAgent,
         platform: navigator.platform
@@ -237,14 +238,15 @@ export const dataService = {
     if (!isFirebaseConfigured || !db) return [];
     try {
       const user = currentUser || auth.currentUser;
+      const isAdmin = dataService.isSuperAdmin(user);
       const colRef = collection(db, 'app_tickets');
       
       let q;
-      if (dataService.isSuperAdmin(user)) {
-          // Admin ser ALLA tickets (Begränsat till 200 senaste för prestanda)
+      if (isAdmin) {
+          // Admin ser ALLA ärenden
           q = query(colRef, limit(200)); 
       } else if (user) {
-          // Spelare eller vanlig coach ser bara sina egna
+          // Spelare/Coach ser bara sina egna
           q = query(colRef, where('userId', '==', user.uid));
       } else {
           return [];
@@ -253,29 +255,24 @@ export const dataService = {
       const snap = await getDocs(q);
       const results = snap.docs.map(d => ({ id: d.id, ...d.data() } as AppTicket));
       
-      // Sortera manuellt i minnet (nyaste överst) för att slippa index-krav i Firebase
       return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     } catch (err: any) {
       console.warn("Ticket fetch error:", err.code, err.message);
-      if (err.message?.includes('index')) {
-          throw new Error("MISSING_INDEX");
-      }
-      if (err.code === 'permission-denied') {
-          throw new Error("ACCESS_DENIED");
-      }
+      if (err.message?.includes('index')) throw new Error("MISSING_INDEX");
+      if (err.code === 'permission-denied') throw new Error("ACCESS_DENIED");
       return [];
     }
   },
 
   updateTicketStatus: async (ticketId: string, status: TicketStatus): Promise<void> => {
-    if (!isFirebaseConfigured || !db || !dataService.isSuperAdmin()) return;
+    if (!isFirebaseConfigured || !db) return;
     const docRef = doc(db, 'app_tickets', ticketId);
     await updateDoc(docRef, { status });
   },
 
   deleteTicket: async (ticketId: string): Promise<void> => {
-    if (!isFirebaseConfigured || !db || !dataService.isSuperAdmin()) return;
+    if (!isFirebaseConfigured || !db) return;
     await deleteDoc(doc(db, 'app_tickets', ticketId));
   },
 
@@ -370,24 +367,15 @@ export const dataService = {
         }
       } catch (err: any) {
         console.warn("Player search index status:", err.code, err.message);
-        if (err.code === 'permission-denied') {
-            throw new Error("ACCESS_DENIED");
-        }
-        if (err.code === 'failed-precondition') {
-            if (err.message.includes('index is not ready yet')) {
-                throw new Error("INDEX_BUILDING");
-            }
-            throw new Error("MISSING_INDEX");
-        }
+        if (err.code === 'permission-denied') throw new Error("ACCESS_DENIED");
+        if (err.code === 'failed-precondition') throw new Error("MISSING_INDEX");
         throw err;
       }
     }
 
     const players = await dataService.getPlayers();
     const localPlayer = players.find(p => p.accessCode?.trim().toUpperCase() === cleanCode);
-    if (localPlayer) {
-        return { player: localPlayer, coachId: 'guest' };
-    }
+    if (localPlayer) return { player: localPlayer, coachId: 'guest' };
     return null;
   },
 
@@ -447,7 +435,7 @@ export const dataService = {
   getAppContextSnapshot: async () => {
     const players = await dataService.getPlayers();
     return {
-      version: "5.7.0",
+      version: "5.8.0",
       playerCount: players.length,
       timestamp: new Date().toISOString()
     };

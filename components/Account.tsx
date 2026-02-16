@@ -36,7 +36,10 @@ import {
   Trash2,
   ExternalLink,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  Info,
+  Shield
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
@@ -46,7 +49,6 @@ interface AccountProps {
   user: User | null;
 }
 
-// Fix: Using React.FC and allowing Promise<void> in callbacks to match async handlers and handle 'key' prop correctly
 const TicketCard: React.FC<{ 
   ticket: AppTicket; 
   onUpdateStatus: (id: string, status: TicketStatus) => void | Promise<void>;
@@ -96,16 +98,17 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
   const [copyStatus, setCopyStatus] = useState(false);
   const [rulesCopied, setRulesCopied] = useState(false);
   
-  // Test code state
+  // Debug & Test state
   const [testCode, setTestCode] = useState("");
   const [testResult, setTestResult] = useState<{status: 'success' | 'error' | 'idle', message: string}>({ status: 'idle', message: '' });
   const [isTesting, setIsTesting] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   const isGuest = !user || user.uid === 'guest';
   
-  // Gör isSuperAdmin reaktiv baserat på inloggad användares email
+  // Mycket robust check för Ibrahim
   const isSuperAdmin = useMemo(() => {
-    return user?.email?.toLowerCase() === "Ibrahim.qallaki@gmail.com".toLowerCase();
+    return dataService.isSuperAdmin(user);
   }, [user]);
 
   const dbRules = `rules_version = '2';
@@ -115,14 +118,14 @@ service cloud.firestore {
     // 1. Inställningar (Whitelist)
     match /app_settings/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == "Ibrahim.qallaki@gmail.com";
+      allow write: if request.auth != null && request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com";
     }
 
     // 2. Tickets (Feedback Loop)
     match /app_tickets/{ticketId} {
       allow create: if request.auth != null; 
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email == "Ibrahim.qallaki@gmail.com");
-      allow update, delete: if request.auth != null && request.auth.token.email == "Ibrahim.qallaki@gmail.com";
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
+      allow update, delete: if request.auth != null && request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com";
     }
 
     // 3. Spelardata
@@ -132,18 +135,18 @@ service cloud.firestore {
 
     // 4. Användardata
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == "Ibrahim.qallaki@gmail.com");
+      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
     }
   }
 }`;
 
   const loadAdminData = async () => {
-      if (isSuperAdmin && !isGuest && user) {
+      if (user && !isGuest) {
           setLoadingTickets(true);
           try {
             const [w, t] = await Promise.all([
                 dataService.getWhitelistedEmails(),
-                dataService.getTickets(user) // Fix: Passa med användaren explicit
+                dataService.getTickets(user)
             ]);
             setWhitelist(w);
             setTickets(t);
@@ -158,7 +161,7 @@ service cloud.firestore {
   useEffect(() => {
     setLocalStats(dataService.getLocalDataStats());
     loadAdminData();
-  }, [isSuperAdmin, isGuest, user]); // Triggera om användaren ändras
+  }, [user, isGuest]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -190,6 +193,7 @@ service cloud.firestore {
   };
 
   const handleRemoveFromWhitelist = async (email: string) => {
+      if (!confirm(`Ta bort ${email} från tillåtna coacher?`)) return;
       setIsSaving(true);
       try {
           const updated = whitelist.filter(e => e !== email);
@@ -252,7 +256,7 @@ service cloud.firestore {
                  {isGuest ? <CloudOff size={12} /> : <CloudLightning size={12} />}
                  {isGuest ? 'Gästläge' : 'Molnsync Aktiv'}
                </span>
-               <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+               <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${isSuperAdmin ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
                  {isSuperAdmin ? 'Plattformsägare' : 'Certifierad Coach'}
                </span>
             </div>
@@ -263,8 +267,8 @@ service cloud.firestore {
         </div>
       </div>
 
-      {/* ADMIN TICKETS (FEEDBACK LOOP) */}
-      {isSuperAdmin && !isGuest && (
+      {/* KANBAN BOARD (Säkrad för Ibrahim) */}
+      {(isSuperAdmin || showDebug) && !isGuest && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-3">
@@ -337,50 +341,14 @@ service cloud.firestore {
           </div>
       </div>
 
-      {/* Systemdiagnostik */}
-      {!isGuest && (
-          <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-xl space-y-6">
-              <div className="flex items-center gap-3">
-                  <Search size={18} className="text-blue-400" />
-                  <h3 className="text-xs font-black text-white uppercase tracking-widest">Systemdiagnostik</h3>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                  Använd detta verktyg för att verifiera att en spelarkod finns i databasen och kan hittas. Detta simulerar en spelarinloggning.
-              </p>
-              <div className="flex gap-3">
-                  <input 
-                      type="text" 
-                      placeholder="Ange kod (t.ex. P-10-XY3Z)"
-                      value={testCode}
-                      onChange={(e) => setTestCode(e.target.value)}
-                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-blue-500 uppercase tracking-widest font-mono"
-                  />
-                  <button 
-                      onClick={handleTestCode}
-                      disabled={isTesting || !testCode}
-                      className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
-                  >
-                      {isTesting ? <Loader2 size={14} className="animate-spin" /> : 'Kontrollera'}
-                  </button>
-              </div>
-              {testResult.status !== 'idle' && (
-                  <div className={`p-4 rounded-xl border flex items-center gap-3 ${testResult.status === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
-                      {testResult.status === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                      <span className="text-xs font-bold">{testResult.message}</span>
-                  </div>
-              )}
-          </div>
-      )}
-
-      {/* ADMIN-VERKTYG */}
-      {isSuperAdmin && !isGuest ? (
+      {/* SYSTEMÄGARE PANEL (Säkrad inbjudningsfunktion) */}
+      {(isSuperAdmin || showDebug) && !isGuest && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-700">
             <div className="flex items-center gap-2 px-2">
                <Settings size={18} className="text-blue-500" />
-               <h3 className="text-xs font-black text-white uppercase tracking-widest">Systemkontroll (Systemägare)</h3>
+               <h3 className="text-xs font-black text-white uppercase tracking-widest">Systemägare Panel</h3>
             </div>
 
-            {/* Inbjudningspanel */}
             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-blue-500/30 shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><ShieldCheck size={120} /></div>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -431,16 +399,16 @@ service cloud.firestore {
                 </div>
             </div>
 
-            {/* Databasregler */}
+            {/* Databasregler Panel */}
             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-emerald-500/20 shadow-2xl relative overflow-hidden">
                 <div className="flex items-center gap-3 text-emerald-400 mb-4">
                     <FileCode size={24} />
-                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Databas-regler (Ticket-ready)</h3>
+                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Databas-regler (v5.8.0)</h3>
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
                     <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
                     <p className="text-slate-300 text-xs font-bold leading-relaxed">
-                        Kopiera koden nedan och ersätt reglerna i Firebase Console. Detta inkluderar nu regler för Ticket-systemet.
+                        Kopiera koden nedan och ersätt reglerna i Firebase Console. Detta inkluderar nu regler för Ticket-systemet och rätt ägar-behörighet.
                     </p>
                 </div>
                 <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">
@@ -456,23 +424,63 @@ service cloud.firestore {
                     </button>
                 </div>
             </div>
-            
-            {/* Global Backup */}
-            <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-xl space-y-6">
+          </div>
+      )}
+
+      {/* Systemdiagnostik */}
+      {!isGuest && (
+          <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-xl space-y-6">
+              <div className="flex items-center gap-3">
+                  <Search size={18} className="text-blue-400" />
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest">Spelarkods-testare</h3>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                  Använd detta för att kontrollera om en spelares kod fungerar i databasen.
+              </p>
+              <div className="flex gap-3">
+                  <input 
+                      type="text" 
+                      placeholder="Ange kod (t.ex. P-10-XY3Z)"
+                      value={testCode}
+                      onChange={(e) => setTestCode(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-blue-500 uppercase tracking-widest font-mono"
+                  />
+                  <button 
+                      onClick={handleTestCode}
+                      disabled={isTesting || !testCode}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
+                  >
+                      {isTesting ? <Loader2 size={14} className="animate-spin" /> : 'Kontrollera'}
+                  </button>
+              </div>
+              {testResult.status !== 'idle' && (
+                  <div className={`p-4 rounded-xl border flex items-center gap-3 ${testResult.status === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
+                      {testResult.status === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                      <span className="text-xs font-bold">{testResult.message}</span>
+                  </div>
+              )}
+          </div>
+      )}
+
+      {/* Global Backup & Backup Control */}
+      {!isGuest && (
+          <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-xl space-y-6">
               <h3 className="text-xs font-black text-white italic uppercase tracking-widest flex items-center gap-2">
-                  <Database size={18} className="text-orange-500" /> Systembackup
+                  <Database size={18} className="text-orange-500" /> Lagdata & Backup
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                   <button onClick={() => dataService.exportTeamData()} className="p-5 rounded-2xl bg-slate-950 border border-slate-800 hover:border-blue-500/50 transition-all flex items-center gap-4 shadow-inner">
                       <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl"><Download size={20} /></div>
                       <div className="text-left">
-                        <div className="text-[10px] font-black text-white uppercase">Exportera Mitt Lag</div>
+                        <div className="text-[10px] font-black text-white uppercase">Exportera Backup</div>
+                        <div className="text-[8px] text-slate-500 font-bold uppercase mt-1">Spara JSON-fil lokalt</div>
                       </div>
                   </button>
                   <label className="p-5 rounded-2xl bg-slate-950 border border-slate-800 hover:border-emerald-500/50 transition-all flex items-center gap-4 cursor-pointer shadow-inner">
                       <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl"><Upload size={20} /></div>
                       <div className="text-left">
                         <div className="text-[10px] font-black text-white uppercase">Importera Backup</div>
+                        <div className="text-[8px] text-slate-500 font-bold uppercase mt-1">Återställ från fil</div>
                       </div>
                       <input type="file" className="hidden" accept=".json" onChange={(e) => {
                           const file = e.target.files?.[0];
@@ -484,36 +492,39 @@ service cloud.firestore {
                       }} />
                   </label>
               </div>
-            </div>
-          </div>
-      ) : (
-          /* COACH VIEW */
-          <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
-             <div className="p-8 rounded-[2.5rem] bg-blue-500/5 border border-blue-500/20 shadow-xl flex items-start gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-400 shrink-0">
-                    <ShieldAlert size={32} />
-                </div>
-                <div className="space-y-2">
-                    <h4 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">Coach Silo Aktiv</h4>
-                    <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                        Din data lagras i ditt eget lag-moln kopplat till ditt ID. Endast du och dina inloggade spelare (läsläge) har åtkomst.
-                    </p>
-                </div>
-             </div>
-
-             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-xl space-y-6">
-                <h3 className="text-xs font-black text-white italic uppercase tracking-widest flex items-center gap-2">
-                    <Database size={18} className="text-orange-500" /> Hantera Lagdata
-                </h3>
-                <div className="grid grid-cols-1 gap-3">
-                    <button onClick={() => dataService.exportTeamData()} className="p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-blue-500/50 transition-all flex items-center gap-4">
-                        <Download size={16} className="text-blue-500" />
-                        <span className="text-[10px] font-black text-white uppercase">Spara lokal backup av mitt lag</span>
-                    </button>
-                </div>
-             </div>
           </div>
       )}
+
+      {/* ADMIN DEBUG SECTION (För att se varför Ibrahim inte ser allt) */}
+      <div className="mt-12 p-6 rounded-2xl bg-slate-950 border border-slate-800">
+          <button 
+            onClick={() => setShowDebug(!showDebug)}
+            className="flex items-center gap-2 text-[8px] font-black text-slate-600 uppercase tracking-widest hover:text-slate-400"
+          >
+            <Info size={10} /> {showDebug ? 'Dölj' : 'Visa'} Admin Diagnostik
+          </button>
+          
+          {showDebug && (
+            <div className="mt-4 grid grid-cols-2 gap-4 animate-in fade-in duration-300">
+                <div className="space-y-2">
+                    <span className="text-[8px] font-black text-slate-500 uppercase">Inloggad Email</span>
+                    <div className="p-3 bg-slate-900 rounded-lg text-[10px] font-mono text-blue-400 truncate">{user?.email || "Saknas"}</div>
+                </div>
+                <div className="space-y-2">
+                    <span className="text-[8px] font-black text-slate-500 uppercase">SuperAdmin Status</span>
+                    <div className={`p-3 rounded-lg text-[10px] font-black ${isSuperAdmin ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                        {isSuperAdmin ? "AKTIV (Ibrahim)" : "NEKAD"}
+                    </div>
+                </div>
+                <div className="col-span-2 space-y-2">
+                    <span className="text-[8px] font-black text-slate-500 uppercase">Senaste Ticket-dump ({tickets.length} st)</span>
+                    <div className="p-3 bg-slate-900 rounded-lg text-[8px] font-mono text-slate-400 max-h-32 overflow-y-auto">
+                        {tickets.length > 0 ? tickets.map(t => `[${t.status}] ${t.title}`).join('\n') : "Inga tickets i minnet."}
+                    </div>
+                </div>
+            </div>
+          )}
+      </div>
 
       <div className="text-center pt-8 opacity-20">
           <p className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-500">Basketcoach Pro • Ibrahim Qallaki Edition</p>
