@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 // @ts-ignore
 import { signOut } from 'firebase/auth';
 // @ts-ignore
@@ -35,7 +35,8 @@ import {
   Clock,
   Trash2,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
@@ -45,12 +46,53 @@ interface AccountProps {
   user: User | null;
 }
 
+// Fix: Moved TicketCard outside of Account component and added explicit props to resolve TypeScript 'key' prop error
+const TicketCard = ({ 
+  ticket, 
+  onUpdateStatus, 
+  onDelete 
+}: { 
+  ticket: AppTicket; 
+  onUpdateStatus: (id: string, status: TicketStatus) => void;
+  onDelete: (id: string) => void;
+}) => (
+    <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 group relative overflow-hidden">
+        <div className={`absolute top-0 left-0 w-1 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+        <div className="flex justify-between items-start pl-2">
+            <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
+                        {ticket.type}
+                    </span>
+                    <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest truncate">{ticket.userName}</span>
+                </div>
+                <h5 className="text-sm font-black text-white uppercase truncate">{ticket.title}</h5>
+            </div>
+            <button onClick={() => onDelete(ticket.id)} className="p-2 text-slate-700 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14}/></button>
+        </div>
+        <p className="text-[10px] text-slate-400 font-medium leading-relaxed italic pl-2">"{ticket.description}"</p>
+        
+        <div className="flex gap-1 pl-2">
+            {(['backlog', 'todo', 'in_progress', 'done'] as TicketStatus[]).map(s => (
+                <button 
+                  key={s} 
+                  onClick={() => onUpdateStatus(ticket.id, s)}
+                  className={`flex-1 py-1.5 rounded-lg text-[7px] font-black uppercase transition-all ${ticket.status === s ? 'bg-white text-black' : 'bg-slate-900 text-slate-600 hover:text-slate-400'}`}
+                >
+                    {s.replace('_', ' ')}
+                </button>
+            ))}
+        </div>
+    </div>
+);
+
 export const Account: React.FC<AccountProps> = ({ user }) => {
   const [localStats, setLocalStats] = useState({ players: 0, sessions: 0 });
   const [whitelist, setWhitelist] = useState<string[]>([]);
   const [tickets, setTickets] = useState<AppTicket[]>([]);
   const [newEmail, setNewEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [loadingTickets, setLoadingTickets] = useState(false);
   const [copyStatus, setCopyStatus] = useState(false);
   const [rulesCopied, setRulesCopied] = useState(false);
   
@@ -60,7 +102,11 @@ export const Account: React.FC<AccountProps> = ({ user }) => {
   const [isTesting, setIsTesting] = useState(false);
 
   const isGuest = !user || user.uid === 'guest';
-  const isSuperAdmin = dataService.isSuperAdmin();
+  
+  // Gör isSuperAdmin reaktiv baserat på inloggad användares email
+  const isSuperAdmin = useMemo(() => {
+    return user?.email?.toLowerCase() === "Ibrahim.qallaki@gmail.com".toLowerCase();
+  }, [user]);
 
   const dbRules = `rules_version = '2';
 service cloud.firestore {
@@ -73,14 +119,13 @@ service cloud.firestore {
     }
 
     // 2. Tickets (Feedback Loop)
-    // Tillåt alla inloggade (även anonyma spelare) att skriva
     match /app_tickets/{ticketId} {
       allow create: if request.auth != null; 
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email == "Ibrahim.qallaki@gmail.com");
       allow update, delete: if request.auth != null && request.auth.token.email == "Ibrahim.qallaki@gmail.com";
     }
 
-    // 3. Spelardata (Tillåt sökning på kod för inloggning)
+    // 3. Spelardata
     match /{path=**}/players/{playerId} {
       allow read: if true; 
     }
@@ -94,19 +139,26 @@ service cloud.firestore {
 
   const loadAdminData = async () => {
       if (isSuperAdmin && !isGuest) {
-          const [w, t] = await Promise.all([
-              dataService.getWhitelistedEmails(),
-              dataService.getTickets()
-          ]);
-          setWhitelist(w);
-          setTickets(t);
+          setLoadingTickets(true);
+          try {
+            const [w, t] = await Promise.all([
+                dataService.getWhitelistedEmails(),
+                dataService.getTickets()
+            ]);
+            setWhitelist(w);
+            setTickets(t);
+          } catch (err) {
+            console.error("Admin fetch failed:", err);
+          } finally {
+            setLoadingTickets(false);
+          }
       }
   };
 
   useEffect(() => {
     setLocalStats(dataService.getLocalDataStats());
     loadAdminData();
-  }, [isSuperAdmin, isGuest]);
+  }, [isSuperAdmin, isGuest, user]); // Triggera om användaren ändras
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -179,37 +231,6 @@ service cloud.firestore {
       }
   };
 
-  const TicketCard = ({ ticket, key }: { ticket: AppTicket; key?: string | number }) => (
-      <div key={key} className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 group relative overflow-hidden">
-          <div className={`absolute top-0 left-0 w-1 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
-          <div className="flex justify-between items-start pl-2">
-              <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
-                          {ticket.type}
-                      </span>
-                      <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">{ticket.role} • {ticket.userName}</span>
-                  </div>
-                  <h5 className="text-sm font-black text-white uppercase truncate">{ticket.title}</h5>
-              </div>
-              <button onClick={() => handleDeleteTicket(ticket.id)} className="p-2 text-slate-700 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14}/></button>
-          </div>
-          <p className="text-[10px] text-slate-400 font-medium leading-relaxed italic pl-2">"{ticket.description}"</p>
-          
-          <div className="flex gap-1 pl-2">
-              {(['backlog', 'todo', 'in_progress', 'done'] as TicketStatus[]).map(s => (
-                  <button 
-                    key={s} 
-                    onClick={() => handleUpdateTicket(ticket.id, s)}
-                    className={`flex-1 py-1.5 rounded-lg text-[7px] font-black uppercase transition-all ${ticket.status === s ? 'bg-white text-black' : 'bg-slate-900 text-slate-600 hover:text-slate-400'}`}
-                  >
-                      {s.replace('_', ' ')}
-                  </button>
-              ))}
-          </div>
-      </div>
-  );
-
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24 px-2">
       {/* Profil Header */}
@@ -249,11 +270,21 @@ service cloud.firestore {
                 <div className="flex items-center gap-3">
                     <LayoutGrid size={20} className="text-indigo-400" />
                     <h3 className="text-xs font-black text-white uppercase tracking-widest">Feedback Kanban</h3>
+                    {loadingTickets && <Loader2 size={14} className="animate-spin text-slate-600" />}
                 </div>
-                <div className="flex gap-4">
-                    <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Bugg</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Förslag</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Allmänt</span></div>
+                <div className="flex items-center gap-4">
+                    <button 
+                      onClick={loadAdminData}
+                      disabled={loadingTickets}
+                      className="p-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-500 hover:text-white transition-all flex items-center gap-2 text-[8px] font-black uppercase"
+                    >
+                      <RefreshCw size={12} className={loadingTickets ? 'animate-spin' : ''} /> Uppdatera
+                    </button>
+                    <div className="hidden sm:flex gap-4">
+                        <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Bugg</span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Förslag</span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Allmänt</span></div>
+                    </div>
                 </div>
               </div>
 
@@ -271,7 +302,12 @@ service cloud.firestore {
                           </div>
                           <div className="space-y-3 min-h-[100px]">
                               {tickets.filter(t => t.status === column.id).map(ticket => (
-                                  <TicketCard key={ticket.id} ticket={ticket} />
+                                  <TicketCard 
+                                    key={ticket.id} 
+                                    ticket={ticket} 
+                                    onUpdateStatus={handleUpdateTicket}
+                                    onDelete={handleDeleteTicket}
+                                  />
                               ))}
                               {tickets.filter(t => t.status === column.id).length === 0 && (
                                   <div className="p-8 border-2 border-dashed border-slate-900 rounded-2xl flex flex-col items-center justify-center opacity-20">
