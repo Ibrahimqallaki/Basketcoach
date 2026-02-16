@@ -44,22 +44,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) p-4 flex-col h-full shrink-0 relative ${isCollapsed ? 'w-24' : 'w-72'}`}>
         
-        {/* Sleek Edge Toggle Handle - En vertikal linje istället för en klumpig knapp */}
+        {/* Sleek Long Edge Toggle Handle - Nu längre (h-64) för bättre kontroll */}
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`absolute top-2/3 -right-1 -translate-y-1/2 z-[100] w-1.5 h-32 rounded-full transition-all duration-300 group/toggle ${isCollapsed ? 'hover:w-3 bg-white/10 hover:bg-orange-600' : 'hover:w-3 bg-white/5 hover:bg-orange-600'}`}
+          className={`absolute top-1/2 -right-1 -translate-y-1/2 z-[100] w-1.5 h-64 rounded-full transition-all duration-300 group/toggle ${isCollapsed ? 'hover:w-3 bg-white/10 hover:bg-orange-600' : 'hover:w-3 bg-white/5 hover:bg-orange-600'}`}
           title={isCollapsed ? "Expandera meny" : "Kollapsa meny"}
         >
           {/* Subtil pil som bara visas vid hover */}
           <div className="opacity-0 group-hover/toggle:opacity-100 transition-opacity flex items-center justify-center h-full">
-            {isCollapsed ? <ChevronRight size={12} className="text-white" /> : <ChevronLeft size={12} className="text-white" />}
+            {isCollapsed ? <ChevronRight size={14} className="text-white" /> : <ChevronLeft size={14} className="text-white" />}
           </div>
         </button>
 
         <div className="flex-1 rounded-[2.5rem] bg-slate-900/90 backdrop-blur-2xl border border-white/5 flex flex-col overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] relative">
           
           {/* Header Section */}
-          <div className={`transition-all duration-500 flex flex-col items-center pt-10 pb-6 ${isCollapsed ? 'px-0' : 'px-8 items-start'}`}>
+          <div className={`transition-all duration-500 flex flex-col items-center pt-10 pb-6 shrink-0 ${isCollapsed ? 'px-0' : 'px-8 items-start'}`}>
              <div className="flex items-center gap-3">
                 <div className={`rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg shadow-orange-900/40 shrink-0 transition-all duration-500 ${isCollapsed ? 'w-12 h-12 rotate-0' : 'w-10 h-10 -rotate-6'}`}>
                    <Trophy size={isCollapsed ? 24 : 18} className="text-white" />
@@ -73,8 +73,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
              </div>
           </div>
 
-          {/* Navigation Items */}
-          <nav className="flex-1 px-3 space-y-2 overflow-y-auto custom-scrollbar py-6">
+          {/* Navigation Items - Nu låst från skroll (overflow-hidden) */}
+          <nav className="flex-1 px-3 space-y-2 overflow-hidden py-6">
             {menuItems.map((item) => (
               <button
                 key={item.id}
@@ -109,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
           </nav>
 
           {/* User Profile Summary (Bottom) */}
-          <div className={`p-4 border-t border-white/5 transition-all duration-500 ${isCollapsed ? 'items-center px-0' : 'px-6'}`}>
+          <div className={`p-4 border-t border-white/5 transition-all duration-500 shrink-0 ${isCollapsed ? 'items-center px-0' : 'px-6'}`}>
               <button 
                 onClick={() => onNavigate(View.ACCOUNT)}
                 className={`flex items-center transition-all duration-300 hover:bg-white/5 rounded-2xl w-full ${isCollapsed ? 'justify-center py-4' : 'p-3 gap-3'}`}
