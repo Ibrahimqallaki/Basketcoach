@@ -46,15 +46,15 @@ interface AccountProps {
   user: User | null;
 }
 
-// Fix: Moved TicketCard outside of Account component and added explicit props to resolve TypeScript 'key' prop error
-const TicketCard = ({ 
+// Fix: Using React.FC and allowing Promise<void> in callbacks to match async handlers and handle 'key' prop correctly
+const TicketCard: React.FC<{ 
+  ticket: AppTicket; 
+  onUpdateStatus: (id: string, status: TicketStatus) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
+}> = ({ 
   ticket, 
   onUpdateStatus, 
   onDelete 
-}: { 
-  ticket: AppTicket; 
-  onUpdateStatus: (id: string, status: TicketStatus) => void;
-  onDelete: (id: string) => void;
 }) => (
     <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 group relative overflow-hidden">
         <div className={`absolute top-0 left-0 w-1 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
@@ -138,12 +138,12 @@ service cloud.firestore {
 }`;
 
   const loadAdminData = async () => {
-      if (isSuperAdmin && !isGuest) {
+      if (isSuperAdmin && !isGuest && user) {
           setLoadingTickets(true);
           try {
             const [w, t] = await Promise.all([
                 dataService.getWhitelistedEmails(),
-                dataService.getTickets()
+                dataService.getTickets(user) // Fix: Passa med användaren explicit
             ]);
             setWhitelist(w);
             setTickets(t);

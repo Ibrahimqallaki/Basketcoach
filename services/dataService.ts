@@ -77,8 +77,8 @@ export const dataService = {
     await setDoc(docRef, { emails, updated_at: serverTimestamp() }, { merge: true });
   },
 
-  isSuperAdmin: () => {
-    const user = auth.currentUser;
+  isSuperAdmin: (userOverride?: any) => {
+    const user = userOverride || auth.currentUser;
     if (!user) return false;
     return user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
   },
@@ -233,18 +233,18 @@ export const dataService = {
     });
   },
 
-  getTickets: async (): Promise<AppTicket[]> => {
+  getTickets: async (currentUser?: any): Promise<AppTicket[]> => {
     if (!isFirebaseConfigured || !db) return [];
     try {
-      const user = auth.currentUser;
+      const user = currentUser || auth.currentUser;
       const colRef = collection(db, 'app_tickets');
       
       let q;
-      if (dataService.isSuperAdmin()) {
-          // FIX: Tog bort orderBy även här för att slippa index-krav för admin
+      if (dataService.isSuperAdmin(user)) {
+          // Admin ser ALLA tickets (Begränsat till 200 senaste för prestanda)
           q = query(colRef, limit(200)); 
       } else if (user) {
-          // Spelare hämtar sina egna
+          // Spelare eller vanlig coach ser bara sina egna
           q = query(colRef, where('userId', '==', user.uid));
       } else {
           return [];
@@ -253,7 +253,7 @@ export const dataService = {
       const snap = await getDocs(q);
       const results = snap.docs.map(d => ({ id: d.id, ...d.data() } as AppTicket));
       
-      // Sortera manuellt i minnet (nyaste överst)
+      // Sortera manuellt i minnet (nyaste överst) för att slippa index-krav i Firebase
       return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     } catch (err: any) {

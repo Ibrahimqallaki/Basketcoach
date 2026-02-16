@@ -26,7 +26,8 @@ export const SupportModal: React.FC<SupportModalProps> = ({ onClose, userRole })
     setLoadingHistory(true);
     setError(null);
     try {
-      const tickets = await dataService.getTickets();
+      const user = auth.currentUser;
+      const tickets = await dataService.getTickets(user);
       setMyTickets(tickets);
     } catch (err: any) {
       console.error(err);
