@@ -309,7 +309,17 @@ const App: React.FC = () => {
                 {currentView === View.ACCOUNT ? 'Inställningar' : currentView.replace('_', ' ')}
               </h2>
             </div>
-            {/* Profilknapp borttagen härifrån eftersom den finns i sidpanelen */}
+            
+            <button 
+              onClick={() => setCurrentView(View.ACCOUNT)}
+              className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center overflow-hidden hover:border-orange-500 transition-all shadow-lg active:scale-95"
+            >
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="Profil" className="w-full h-full object-cover" />
+              ) : (
+                <UserCheck size={20} className="text-slate-400" />
+              )}
+            </button>
           </header>
         )}
 
