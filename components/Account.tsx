@@ -37,7 +37,8 @@ import {
   RefreshCw,
   Info,
   Zap,
-  GripVertical
+  GripVertical,
+  MoreVertical
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
@@ -60,31 +61,48 @@ const TicketCard: React.FC<{
         <div 
             draggable
             onDragStart={(e) => onDragStart(e, ticket.id)}
-            className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 group relative overflow-hidden cursor-grab active:cursor-grabbing hover:border-slate-600 transition-all hover:shadow-lg"
+            className="p-5 rounded-[1.5rem] bg-slate-950 border border-slate-800 space-y-4 group relative overflow-hidden cursor-grab active:cursor-grabbing hover:border-slate-600 transition-all hover:shadow-2xl active:scale-[1.02] active:rotate-1 shadow-lg"
         >
-            <div className={`absolute top-0 left-0 w-1 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+            {/* Vänster accent/grepp-bar */}
+            <div className={`absolute top-0 left-0 w-1.5 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'} opacity-80`}></div>
             
-            <div className="flex justify-between items-start pl-2">
-                <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                        <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
+            {/* Grip-ikoner som ledtråd */}
+            <div className="absolute top-1/2 left-1.5 -translate-y-1/2 opacity-20 group-hover:opacity-40 transition-opacity">
+                <GripVertical size={14} className="text-white" />
+            </div>
+
+            <div className="pl-3 space-y-3">
+                <div className="flex justify-between items-start">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-full ${ticket.type === 'bug' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : ticket.type === 'feature' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'}`}>
                             {ticket.type}
                         </span>
-                        <span className="text-[7px] font-bold text-slate-600 uppercase tracking-widest truncate">{ticket.userName}</span>
+                        <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest truncate max-w-[80px]">{ticket.userName}</span>
                     </div>
-                    <h5 className="text-xs font-black text-white uppercase truncate pr-4">{ticket.title}</h5>
                 </div>
-                <div className="flex items-center gap-1">
-                    <button onClick={() => onDelete(ticket.id)} className="p-1.5 text-slate-700 hover:text-rose-500 transition-all"><Trash2 size={12}/></button>
-                    <GripVertical size={12} className="text-slate-800" />
+                
+                <h5 className="text-xs font-black text-white uppercase italic tracking-tight leading-tight pr-2">{ticket.title}</h5>
+                
+                <p className="text-[10px] text-slate-400 font-medium leading-relaxed italic line-clamp-3">"{ticket.description}"</p>
+                
+                <div className="flex justify-between items-end pt-2 border-t border-slate-900">
+                    <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-slate-700 uppercase">{ticket.createdAt?.split('T')[0]}</span>
+                        <span className="text-[7px] font-black text-slate-800 uppercase tracking-tighter">BUILD v{ticket.appVersion}</span>
+                    </div>
+                    
+                    {/* Säkrare raderingsknapp - flyttad och gjord diskret */}
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(ticket.id);
+                        }} 
+                        className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-700 hover:text-rose-500 hover:border-rose-500/30 transition-all"
+                        title="Radera ärende"
+                    >
+                        <Trash2 size={12}/>
+                    </button>
                 </div>
-            </div>
-            
-            <p className="text-[10px] text-slate-400 font-medium leading-relaxed italic pl-2 line-clamp-2">"{ticket.description}"</p>
-            
-            <div className="flex justify-between items-center pl-2 pt-1">
-                <span className="text-[7px] font-black text-slate-700 uppercase">{ticket.createdAt?.split('T')[0]}</span>
-                <span className="text-[7px] font-black text-slate-800 uppercase">v{ticket.appVersion}</span>
             </div>
         </div>
     );
@@ -192,6 +210,16 @@ service cloud.firestore {
   const onDragStart = (e: React.DragEvent, ticketId: string) => {
       e.dataTransfer.setData("ticketId", ticketId);
       e.dataTransfer.effectAllowed = "move";
+      
+      // Skapa en visuell ghost-image för bättre känsla
+      const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+      dragImage.style.width = "250px";
+      dragImage.style.opacity = "0.8";
+      dragImage.style.position = "absolute";
+      dragImage.style.top = "-1000px";
+      document.body.appendChild(dragImage);
+      e.dataTransfer.setDragImage(dragImage, 125, 50);
+      setTimeout(() => document.body.removeChild(dragImage), 0);
   };
 
   const onDragOver = (e: React.DragEvent, status: string) => {
@@ -266,7 +294,7 @@ service cloud.firestore {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24 px-2">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24 px-2 text-slate-200">
       {/* Profil Header */}
       <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-orange-600/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
@@ -297,10 +325,10 @@ service cloud.firestore {
         </div>
       </div>
 
-      {/* KANBAN BOARD (Drag and Drop) */}
+      {/* KANBAN BOARD (Förbättrad Drag and Drop) */}
       {(isSuperAdmin || showDebug) && !isGuest && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
-              <div className="flex items-center justify-between px-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
                 <div className="flex items-center gap-3">
                     <LayoutGrid size={20} className="text-indigo-400" />
                     <h3 className="text-xs font-black text-white uppercase tracking-widest">Feedback Kanban</h3>
@@ -310,7 +338,7 @@ service cloud.firestore {
                     <button 
                       onClick={loadAdminData}
                       disabled={loadingTickets}
-                      className="p-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-500 hover:text-white transition-all flex items-center gap-2 text-[8px] font-black uppercase"
+                      className="p-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-500 hover:text-white transition-all flex items-center gap-2 text-[8px] font-black uppercase px-4"
                     >
                       <RefreshCw size={12} className={loadingTickets ? 'animate-spin' : ''} /> Uppdatera
                     </button>
@@ -325,22 +353,22 @@ service cloud.firestore {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                   {[
                       { id: 'backlog', label: 'Backlog', color: 'text-slate-500', border: 'border-slate-800' },
-                      { id: 'todo', label: 'Att Göra', color: 'text-blue-400', border: 'border-blue-500/20' },
+                      { id: 'todo', label: 'Planerad', color: 'text-blue-400', border: 'border-blue-500/20' },
                       { id: 'in_progress', label: 'Pågår', color: 'text-amber-400', border: 'border-amber-500/20' },
                       { id: 'done', label: 'Färdigt', color: 'text-emerald-400', border: 'border-emerald-500/20' }
                   ].map(column => (
                       <div 
                         key={column.id} 
-                        className={`space-y-3 p-2 rounded-2xl border-2 transition-all ${dragOverColumn === column.id ? 'bg-slate-900/50 border-indigo-500/50 scale-[1.02]' : 'bg-transparent border-transparent'}`}
+                        className={`space-y-4 p-2 rounded-[2rem] border-2 transition-all duration-300 ${dragOverColumn === column.id ? 'bg-indigo-600/5 border-indigo-500/30 scale-[1.03] shadow-2xl z-10' : 'bg-transparent border-transparent'}`}
                         onDragOver={(e) => onDragOver(e, column.id)}
                         onDragLeave={() => setDragOverColumn(null)}
                         onDrop={(e) => onDrop(e, column.id as TicketStatus)}
                       >
-                          <div className="flex items-center justify-between px-2 mb-1">
+                          <div className="flex items-center justify-between px-3 mb-1">
                               <span className={`text-[10px] font-black uppercase tracking-widest ${column.color}`}>{column.label}</span>
-                              <span className="text-[10px] font-black text-slate-800">{tickets.filter(t => t.status === column.id).length}</span>
+                              <span className="text-[10px] font-black text-slate-800 bg-slate-900 px-2 py-0.5 rounded-full">{tickets.filter(t => t.status === column.id).length}</span>
                           </div>
-                          <div className="space-y-3 min-h-[150px]">
+                          <div className="space-y-4 min-h-[200px]">
                               {tickets.filter(t => t.status === column.id).map(ticket => (
                                   <TicketCard 
                                     key={ticket.id} 
@@ -350,8 +378,8 @@ service cloud.firestore {
                                   />
                               ))}
                               {tickets.filter(t => t.status === column.id).length === 0 && (
-                                  <div className="p-8 border-2 border-dashed border-slate-900 rounded-2xl flex flex-col items-center justify-center opacity-10">
-                                      <ClipboardList size={20} className="text-slate-600" />
+                                  <div className="p-12 border-2 border-dashed border-slate-900 rounded-[2rem] flex flex-col items-center justify-center opacity-5">
+                                      <ClipboardList size={24} className="text-slate-600" />
                                   </div>
                               )}
                           </div>
