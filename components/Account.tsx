@@ -179,7 +179,8 @@ service cloud.firestore {
       }
   };
 
-  const TicketCard = ({ ticket }: { ticket: AppTicket }) => (
+  // Fix: Explicitly add key to prop type definition for the local component to satisfy TS
+  const TicketCard = ({ ticket }: { ticket: AppTicket; key?: string | number }) => (
       <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 group relative overflow-hidden">
           <div className={`absolute top-0 left-0 w-1 h-full ${ticket.type === 'bug' ? 'bg-rose-500' : ticket.type === 'feature' ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
           <div className="flex justify-between items-start pl-2">
