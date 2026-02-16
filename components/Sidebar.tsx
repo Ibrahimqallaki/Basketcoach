@@ -44,23 +44,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) p-4 flex-col h-full shrink-0 relative ${isCollapsed ? 'w-24' : 'w-72'}`}>
         
-        {/* Collapse Toggle Button - Nu centrerad vertikalt på kanten */}
+        {/* Sleek Edge Toggle Handle - En vertikal linje istället för en klumpig knapp */}
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute top-1/2 -right-3 -translate-y-1/2 z-[100] w-8 h-16 rounded-full bg-orange-600 text-white hover:bg-orange-500 transition-all shadow-[0_0_20px_rgba(234,88,12,0.4)] border border-white/10 flex items-center justify-center group/toggle active:scale-90"
+          className={`absolute top-2/3 -right-1 -translate-y-1/2 z-[100] w-1.5 h-32 rounded-full transition-all duration-300 group/toggle ${isCollapsed ? 'hover:w-3 bg-white/10 hover:bg-orange-600' : 'hover:w-3 bg-white/5 hover:bg-orange-600'}`}
           title={isCollapsed ? "Expandera meny" : "Kollapsa meny"}
         >
-          <div className="transition-transform duration-500 group-hover/toggle:scale-110">
-            {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          {/* Subtil pil som bara visas vid hover */}
+          <div className="opacity-0 group-hover/toggle:opacity-100 transition-opacity flex items-center justify-center h-full">
+            {isCollapsed ? <ChevronRight size={12} className="text-white" /> : <ChevronLeft size={12} className="text-white" />}
           </div>
         </button>
 
         <div className="flex-1 rounded-[2.5rem] bg-slate-900/90 backdrop-blur-2xl border border-white/5 flex flex-col overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] relative">
           
-          {/* Header Section - Nu helt fri från knappar */}
+          {/* Header Section */}
           <div className={`transition-all duration-500 flex flex-col items-center pt-10 pb-6 ${isCollapsed ? 'px-0' : 'px-8 items-start'}`}>
              <div className="flex items-center gap-3">
-                <div className={`rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg shadow-orange-900/40 shrink-0 transition-all duration-500 ${isCollapsed ? 'w-12 h-12' : 'w-10 h-10 -rotate-6'}`}>
+                <div className={`rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg shadow-orange-900/40 shrink-0 transition-all duration-500 ${isCollapsed ? 'w-12 h-12 rotate-0' : 'w-10 h-10 -rotate-6'}`}>
                    <Trophy size={isCollapsed ? 24 : 18} className="text-white" />
                 </div>
                 {!isCollapsed && (

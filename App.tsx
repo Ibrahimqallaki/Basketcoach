@@ -101,7 +101,6 @@ const App: React.FC = () => {
     try {
         const result = await dataService.loginPlayer(playerCode);
         if (result) {
-            // Viktigt: Logga in anonymt i Firebase Auth för att få behörighet till Firestore
             if (isFirebaseConfigured) {
                 try {
                     await signInAnonymously(auth);
@@ -280,16 +279,6 @@ const App: React.FC = () => {
                                             {loginError.isBuilding ? <Clock size={14} className="animate-spin" /> : loginError.isIndexIssue ? <DatabaseZap size={14} /> : <AlertTriangle size={14} />} 
                                             {loginError.message}
                                         </div>
-                                        {loginError.isAuthDisabled && (
-                                            <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
-                                                Gå till Firebase Console {'->'} Authentication {'->'} Sign-in method och aktivera &quot;Anonymous&quot;.
-                                            </p>
-                                        )}
-                                        {loginError.isIndexIssue && !loginError.isBuilding && (
-                                            <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
-                                                Be din coach öppna webbläsarens konsol (F12) och klicka på Firebase-länken för att skapa indexet.
-                                            </p>
-                                        )}
                                     </div>
                                 )}
                              </div>
@@ -320,9 +309,7 @@ const App: React.FC = () => {
                 {currentView === View.ACCOUNT ? 'Inställningar' : currentView.replace('_', ' ')}
               </h2>
             </div>
-            <button onClick={() => setCurrentView(View.ACCOUNT)} className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden hover:border-orange-500 transition-all">
-                {user?.photoURL ? <img src={user.photoURL} alt="P" className="w-full h-full object-cover" /> : <span className="text-sm font-black text-slate-400">{user.displayName?.charAt(0) || 'C'}</span>}
-            </button>
+            {/* Profilknapp borttagen härifrån eftersom den finns i sidpanelen */}
           </header>
         )}
 
