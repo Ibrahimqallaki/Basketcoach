@@ -39,7 +39,8 @@ import {
   RefreshCw,
   Eye,
   Info,
-  Shield
+  Shield,
+  Zap
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
@@ -144,6 +145,7 @@ service cloud.firestore {
       if (user && !isGuest) {
           setLoadingTickets(true);
           try {
+            // Vi hämtar all data och låter dataService sköta filtreringen baserat på SuperAdmin-status
             const [w, t] = await Promise.all([
                 dataService.getWhitelistedEmails(),
                 dataService.getTickets(user)
@@ -182,7 +184,8 @@ service cloud.firestore {
   const handleAddToWhitelist = async () => {
       const email = newEmail.toLowerCase().trim();
       if (!email || !email.includes('@')) return;
-      if (whitelist.includes(email)) return;
+      if (whitelist.map(e => e.toLowerCase().trim()).includes(email)) return;
+      
       setIsSaving(true);
       try {
           const updated = [...whitelist, email];
@@ -256,8 +259,8 @@ service cloud.firestore {
                  {isGuest ? <CloudOff size={12} /> : <CloudLightning size={12} />}
                  {isGuest ? 'Gästläge' : 'Molnsync Aktiv'}
                </span>
-               <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${isSuperAdmin ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
-                 {isSuperAdmin ? 'Plattformsägare' : 'Certifierad Coach'}
+               <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${isSuperAdmin ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
+                 {isSuperAdmin ? 'Systemägare' : 'Certifierad Coach'}
                </span>
             </div>
           </div>
@@ -341,8 +344,8 @@ service cloud.firestore {
           </div>
       </div>
 
-      {/* SYSTEMÄGARE PANEL (Säkrad inbjudningsfunktion) */}
-      {(isSuperAdmin || showDebug) && !isGuest && (
+      {/* SYSTEMÄGARE PANEL (Hårdkodad synlighet för Ibrahim) */}
+      {(isSuperAdmin || (user?.email?.toLowerCase().includes("ibrahim.qallaki"))) && !isGuest && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-700">
             <div className="flex items-center gap-2 px-2">
                <Settings size={18} className="text-blue-500" />
@@ -403,7 +406,7 @@ service cloud.firestore {
             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-emerald-500/20 shadow-2xl relative overflow-hidden">
                 <div className="flex items-center gap-3 text-emerald-400 mb-4">
                     <FileCode size={24} />
-                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Databas-regler (v5.8.0)</h3>
+                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Databas-regler (v5.8.1)</h3>
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
                     <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
@@ -495,7 +498,7 @@ service cloud.firestore {
           </div>
       )}
 
-      {/* ADMIN DEBUG SECTION (För att se varför Ibrahim inte ser allt) */}
+      {/* ADMIN DEBUG SECTION */}
       <div className="mt-12 p-6 rounded-2xl bg-slate-950 border border-slate-800">
           <button 
             onClick={() => setShowDebug(!showDebug)}
@@ -513,14 +516,17 @@ service cloud.firestore {
                 <div className="space-y-2">
                     <span className="text-[8px] font-black text-slate-500 uppercase">SuperAdmin Status</span>
                     <div className={`p-3 rounded-lg text-[10px] font-black ${isSuperAdmin ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                        {isSuperAdmin ? "AKTIV (Ibrahim)" : "NEKAD"}
+                        {isSuperAdmin ? "AKTIV" : "NEKAD"}
                     </div>
                 </div>
-                <div className="col-span-2 space-y-2">
-                    <span className="text-[8px] font-black text-slate-500 uppercase">Senaste Ticket-dump ({tickets.length} st)</span>
-                    <div className="p-3 bg-slate-900 rounded-lg text-[8px] font-mono text-slate-400 max-h-32 overflow-y-auto">
-                        {tickets.length > 0 ? tickets.map(t => `[${t.status}] ${t.title}`).join('\n') : "Inga tickets i minnet."}
+                <div className="col-span-2 p-4 bg-blue-600/10 border border-blue-500/20 rounded-xl space-y-2">
+                    <div className="flex items-center gap-2 text-blue-400">
+                        <Zap size={14} />
+                        <span className="text-[10px] font-black uppercase">Instruktion till Ibrahim</span>
                     </div>
+                    <p className="text-[10px] text-slate-300 leading-relaxed font-medium">
+                        Om du ser <span className="text-emerald-500 font-black">AKTIV</span> men Kanban-tavlan fortfarande är tom: Se till att du faktiskt har skapat några "Tickets" (via Support-knappen i verktygslådan). Om du har gjort det och den är tom, kontrollera att du har kopierat in de nya reglerna till Firebase Console.
+                    </p>
                 </div>
             </div>
           )}

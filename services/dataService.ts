@@ -25,8 +25,8 @@ const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
-// Ändra inte denna email - det är din unika nyckel till systemet
-const SUPER_ADMIN_EMAIL = "Ibrahim.qallaki@gmail.com"; 
+// Din unika access-nyckel
+const SUPER_ADMIN_EMAIL = "ibrahim.qallaki@gmail.com"; 
 
 export const dataService = {
   getStorageMode: () => {
@@ -49,13 +49,13 @@ export const dataService = {
     if (!db || !isFirebaseConfigured) return true;
     try {
       const lowerEmail = email.toLowerCase().trim();
-      if (lowerEmail === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
+      if (lowerEmail === SUPER_ADMIN_EMAIL) return true;
 
       const docRef = doc(db, 'app_settings', 'whitelist');
       const snap = await getDoc(docRef);
       if (!snap.exists()) return false; 
       const list = snap.data().emails || [];
-      return list.includes(lowerEmail);
+      return list.map((e: string) => e.toLowerCase().trim()).includes(lowerEmail);
     } catch (err) {
       return false; 
     }
@@ -80,9 +80,9 @@ export const dataService = {
 
   isSuperAdmin: (userOverride?: any) => {
     const user = userOverride || auth.currentUser;
-    if (!user) return false;
-    const email = user.email || "";
-    return email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase().trim();
+    if (!user || !user.email) return false;
+    // Tvinga allt till lowercase och trimma för att eliminera stavfel/skiftläge
+    return user.email.toLowerCase().trim() === SUPER_ADMIN_EMAIL;
   },
 
   getUserPath: () => {
@@ -226,7 +226,7 @@ export const dataService = {
       ...ticket,
       status: 'backlog',
       createdAt: new Date().toISOString(),
-      appVersion: '5.8.0',
+      appVersion: '5.8.1',
       technicalInfo: {
         userAgent: navigator.userAgent,
         platform: navigator.platform
@@ -242,11 +242,10 @@ export const dataService = {
       const colRef = collection(db, 'app_tickets');
       
       let q;
+      // För att kunna lista ALLA ärenden måste queryn vara ren om man är admin
       if (isAdmin) {
-          // Admin ser ALLA ärenden
-          q = query(colRef, limit(200)); 
+          q = query(colRef, limit(300)); 
       } else if (user) {
-          // Spelare/Coach ser bara sina egna
           q = query(colRef, where('userId', '==', user.uid));
       } else {
           return [];
@@ -435,7 +434,7 @@ export const dataService = {
   getAppContextSnapshot: async () => {
     const players = await dataService.getPlayers();
     return {
-      version: "5.8.0",
+      version: "5.8.1",
       playerCount: players.length,
       timestamp: new Date().toISOString()
     };
