@@ -241,11 +241,10 @@ export const dataService = {
       
       let q;
       if (dataService.isSuperAdmin()) {
-          // För admin hämtar vi alla, ingen 'where' kombinerad med 'orderBy' här så det kräver inget index
-          q = query(colRef, orderBy('createdAt', 'desc'), limit(100));
+          // FIX: Tog bort orderBy även här för att slippa index-krav för admin
+          q = query(colRef, limit(200)); 
       } else if (user) {
-          // FIX: Här tar vi bort orderBy i själva queryn för att slippa kravet på sammansatt index.
-          // Vi sorterar istället resultatet manuellt nedan.
+          // Spelare hämtar sina egna
           q = query(colRef, where('userId', '==', user.uid));
       } else {
           return [];
@@ -254,7 +253,7 @@ export const dataService = {
       const snap = await getDocs(q);
       const results = snap.docs.map(d => ({ id: d.id, ...d.data() } as AppTicket));
       
-      // Manuell sortering i minnet (säkerställer 'createdAt' desc)
+      // Sortera manuellt i minnet (nyaste överst)
       return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     } catch (err: any) {
