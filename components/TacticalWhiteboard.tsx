@@ -165,7 +165,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
       className={`flex flex-col bg-slate-950 select-none overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full w-full'}`}
       style={{ touchAction: 'none' }}
     >
-      {/* Enhanced Toolbar with more padding */}
+      {/* Enhanced Toolbar - Now completely without "X" */}
       <div className={`flex flex-col lg:flex-row items-center justify-between p-5 bg-slate-900 border-b border-slate-800 gap-5 shrink-0`}>
         <div className="flex flex-wrap items-center gap-5 w-full lg:w-auto">
           {/* Main Tools Grouped */}
@@ -193,7 +193,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
             </button>
           </div>
 
-          {/* Number Picker for Player Mode - Expanded Range */}
+          {/* Number Picker for Player Mode */}
           {mode === 'player' && (
               <div className="flex flex-wrap bg-indigo-950/30 p-2 rounded-2xl border border-indigo-500/20 gap-1.5 animate-in slide-in-from-left duration-200 max-w-[280px] md:max-w-none">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(n => (
@@ -208,7 +208,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
               </div>
           )}
 
-          {/* Color Palette - Expanded 10 colors */}
+          {/* Color Palette */}
           <div className="flex flex-wrap gap-3 px-2">
             {COLORS.map(c => (
                 <button 
