@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Trash2, Eraser, Pencil, Maximize2, Minimize2, Check, User, X } from 'lucide-react';
+import { Trash2, Eraser, Pencil, Maximize2, Minimize2, Check, User } from 'lucide-react';
 
 interface TacticalWhiteboardProps {
   onSave?: (dataUrl: string) => void;
@@ -24,7 +24,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#ffffff');
   const [mode, setMode] = useState<'pencil' | 'eraser' | 'player'>('pencil');
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
   const [selectedNumber, setSelectedNumber] = useState(1);
 
   const updateCanvasSize = useCallback(() => {
@@ -35,6 +35,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
     const rect = container.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
 
+    // Spara nuvarande innehåll
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     tempCanvas.width = canvas.width;
@@ -55,33 +56,23 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
         ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
       }
       ctx.strokeStyle = mode === 'eraser' ? '#000000' : color;
-      ctx.lineWidth = mode === 'eraser' ? (isFullscreen ? 50 : 25) : (isFullscreen ? 6 : 4);
+      ctx.lineWidth = mode === 'eraser' ? (isPseudoFullscreen ? 50 : 25) : (isPseudoFullscreen ? 6 : 4);
     }
-  }, [color, mode, isFullscreen]);
+  }, [color, mode, isPseudoFullscreen]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     const observer = new ResizeObserver(() => window.requestAnimationFrame(updateCanvasSize));
     observer.observe(container);
-    const handleFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-      setTimeout(updateCanvasSize, 100);
-    };
-    document.addEventListener('fullscreenchange', handleFsChange);
     setTimeout(updateCanvasSize, 100);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener('fullscreenchange', handleFsChange);
-    };
+    return () => observer.disconnect();
   }, [updateCanvasSize]);
 
-  const toggleFullscreen = async () => {
-    if (!containerRef.current) return;
-    try {
-      if (!document.fullscreenElement) await containerRef.current.requestFullscreen();
-      else await document.exitFullscreen();
-    } catch (err) { console.error(err); }
+  // Vi använder nu enbart CSS-baserad helskärm för att slippa browser-injektioner av kryss
+  const toggleFullscreen = () => {
+    setIsPseudoFullscreen(!isPseudoFullscreen);
+    setTimeout(updateCanvasSize, 50);
   };
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
@@ -96,7 +87,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   };
 
   const drawPlayer = (ctx: CanvasRenderingContext2D, x: number, y: number, num: number) => {
-    const size = isFullscreen ? 28 : 22;
+    const size = isPseudoFullscreen ? 28 : 22;
     ctx.beginPath();
     ctx.arc(x, y, size + 2, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
@@ -111,7 +102,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
     ctx.stroke();
 
     ctx.fillStyle = (color === '#ffffff' || color === '#eab308') ? '#000000' : '#ffffff';
-    ctx.font = `black ${isFullscreen ? '20px' : '15px'} Inter, sans-serif`;
+    ctx.font = `black ${isPseudoFullscreen ? '20px' : '15px'} Inter, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(num.toString(), x, y);
@@ -137,7 +128,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
     const { x, y } = getPos(e);
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) {
-      ctx.lineWidth = mode === 'eraser' ? (isFullscreen ? 50 : 25) : (isFullscreen ? 6 : 4);
+      ctx.lineWidth = mode === 'eraser' ? (isPseudoFullscreen ? 50 : 25) : (isPseudoFullscreen ? 6 : 4);
       ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
       ctx.strokeStyle = color;
       ctx.lineTo(x, y);
@@ -155,37 +146,26 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   return (
     <div 
       ref={containerRef} 
-      className={`flex flex-col bg-slate-950 select-none overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full w-full'}`}
+      className={`flex flex-col bg-slate-950 select-none overflow-hidden transition-all duration-300 ${isPseudoFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full w-full'}`}
       style={{ touchAction: 'none' }}
     >
-      {/* Floating Exit Button at TOP CENTER (only shown in Fullscreen) */}
-      {isFullscreen && (
-        <button 
-          onClick={toggleFullscreen}
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-2 px-6 py-2.5 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-full text-white shadow-2xl hover:bg-slate-800 transition-all active:scale-95 group"
-        >
-          <X size={20} className="group-hover:rotate-90 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Stäng Helskärm</span>
-        </button>
-      )}
-
-      {/* Ultra Slim Toolbar - NO "X" on sides - Single Row */}
-      <div className="flex items-center justify-between p-2 md:p-3 bg-slate-900 border-b border-slate-800 gap-2 shrink-0">
+      {/* ULTRA SLIM TOOLBAR - NO X - SINGLE ROW */}
+      <div className="flex items-center justify-between px-2 py-1.5 md:px-4 md:py-2 bg-slate-900 border-b border-slate-800 gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* Main Drawing Tools */}
+          {/* Drawing Tools */}
           <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
-            <button onClick={() => setMode('pencil')} className={`p-2 rounded-lg transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-300'}`} title="Penna">
-              <Pencil size={isFullscreen ? 22 : 18} />
+            <button onClick={() => setMode('pencil')} className={`p-2 rounded-lg transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+              <Pencil size={isPseudoFullscreen ? 22 : 18} />
             </button>
-            <button onClick={() => setMode('player')} className={`p-2 rounded-lg transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`} title="Spelare">
-              <User size={isFullscreen ? 22 : 18} />
+            <button onClick={() => setMode('player')} className={`p-2 rounded-lg transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+              <User size={isPseudoFullscreen ? 22 : 18} />
             </button>
-            <button onClick={() => setMode('eraser')} className={`p-2 rounded-lg transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`} title="Sudd">
-              <Eraser size={isFullscreen ? 22 : 18} />
+            <button onClick={() => setMode('eraser')} className={`p-2 rounded-lg transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}>
+              <Eraser size={isPseudoFullscreen ? 22 : 18} />
             </button>
           </div>
 
-          {/* Player Number Selector - Compact */}
+          {/* Player Number Selector (Hidden on very small screens if many players) */}
           {mode === 'player' && (
               <div className="hidden sm:flex bg-indigo-950/30 p-1 rounded-xl border border-indigo-500/20 gap-1 animate-in slide-in-from-left duration-200">
                   {[1, 2, 3, 4, 5].map(n => (
@@ -197,7 +177,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
           )}
 
           {/* Color Palette - 8 colors, single row */}
-          <div className="flex items-center gap-1.5 px-2 overflow-x-auto hide-scrollbar">
+          <div className="flex items-center gap-1.5 px-1 overflow-x-auto hide-scrollbar">
             {COLORS.map(c => (
                 <button 
                     key={c.name}
@@ -209,7 +189,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
           </div>
         </div>
 
-        {/* Global Actions - Unified row */}
+        {/* Unified Action Group on the RIGHT */}
         <div className="flex items-center gap-2 shrink-0 border-l border-slate-800 pl-2">
           <button onClick={clearCanvas} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all" title="Rensa">
             <Trash2 size={20} />
@@ -221,17 +201,15 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
               </button>
           )}
 
-          {/* Only show Maximize if not in fullscreen - the center button handles minimize */}
-          {!isFullscreen && (
-            <button onClick={toggleFullscreen} className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all" title="Helskärm">
-              <Maximize2 size={20} />
-            </button>
-          )}
+          <button onClick={toggleFullscreen} className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg" title={isPseudoFullscreen ? "Minimera" : "Helskärm"}>
+            {isPseudoFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+          </button>
         </div>
       </div>
 
-      {/* Drawing Area - Max Size */}
+      {/* Drawing Area - Always Max size */}
       <div className="flex-1 relative cursor-crosshair bg-slate-900 overflow-hidden">
+        {/* Pitch markings */}
         <div className="absolute inset-0 pointer-events-none opacity-[0.12] flex items-center justify-center p-4">
           <div className="w-full h-full border-2 border-white relative max-w-[850px] aspect-[1/1.4]">
              <div className="absolute inset-1.5 border border-white/30"></div>
