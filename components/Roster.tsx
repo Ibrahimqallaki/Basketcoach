@@ -8,14 +8,15 @@ interface RosterProps {
     onSimulatePlayerLogin?: (player: Player) => void;
 }
 
-export const SKILL_COLORS: Record<string, string> = {
-    'Skytte': 'accent-rose-500', 
-    'Dribbling': 'accent-amber-500', 
-    'Passning': 'accent-blue-500',
-    'Försvar': 'accent-emerald-500', 
-    'Spelförståelse': 'accent-purple-500', 
-    'Kondition': 'accent-cyan-500', 
-    'Fysik': 'accent-indigo-500'
+// Synkade färger med PlayerPortal.tsx
+export const SKILL_THEMES: Record<string, string> = {
+    'Skytte': 'bg-rose-500', 
+    'Dribbling': 'bg-amber-500', 
+    'Passning': 'bg-blue-500',
+    'Försvar': 'bg-emerald-500', 
+    'Spelförståelse': 'bg-purple-500', 
+    'Kondition': 'bg-cyan-500', 
+    'Fysik': 'bg-indigo-500'
 };
 
 const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
@@ -259,7 +260,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                 <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl">
                    <div className="flex justify-between items-center">
                         <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Dumbbell size={14} className="text-blue-400" /> Aktiva Uppdrag</h3>
-                        <button onClick={() => setShowHomeworkInput(!showHomeworkInput)} className="p-2 bg-blue-600/10 text-blue-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><ClipboardPlus size={16}/></button>
+                        <button onClick={() => setShowHomeworkInput(!showHomeworkInput)} className="p-2 bg-blue-600/10 text-blue-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-lg"><ClipboardPlus size={16}/></button>
                    </div>
                    
                    {showHomeworkInput && (
@@ -283,7 +284,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                 <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl">
                     <div className="flex justify-between items-center">
                         <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Target size={14} className="text-purple-400" /> Individuell Utvecklingsplan</h3>
-                        <button onClick={() => setShowExercisePicker(true)} className="p-2 bg-purple-600/10 text-purple-400 rounded-lg hover:bg-purple-600 hover:text-white transition-all"><BookPlus size={16}/></button>
+                        <button onClick={() => setShowExercisePicker(true)} className="p-2 bg-purple-600/10 text-purple-400 rounded-lg hover:bg-purple-600 hover:text-white transition-all shadow-lg"><BookPlus size={16}/></button>
                     </div>
                     <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
                         {assignedExercises.map(ex => (
@@ -313,17 +314,23 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                               <div key={skill} className="space-y-2 group">
                                   <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 group-hover:text-slate-200 transition-colors">
                                       <span>{skill}</span>
-                                      <span className="text-white">{val}/10</span>
+                                      <span className="text-white font-black italic">{val}/10</span>
                                   </div>
                                   <div className="relative pt-1">
-                                      <input 
-                                          type="range" 
-                                          min="1" 
-                                          max="10" 
-                                          value={val} 
-                                          onChange={(e) => handleUpdateAssessment(skill, parseInt(e.target.value))} 
-                                          className={`w-full h-1.5 bg-slate-950 rounded-full appearance-none ${SKILL_COLORS[skill] || 'accent-orange-600'} cursor-pointer shadow-inner`} 
-                                      />
+                                      <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-white/5 shadow-inner relative">
+                                          <div 
+                                            className={`absolute top-0 left-0 h-full ${SKILL_THEMES[skill] || 'bg-orange-600'} transition-all duration-500 shadow-[0_0_10px_rgba(0,0,0,0.5)]`}
+                                            style={{ width: `${(val / 10) * 100}%` }}
+                                          />
+                                          <input 
+                                              type="range" 
+                                              min="1" 
+                                              max="10" 
+                                              value={val} 
+                                              onChange={(e) => handleUpdateAssessment(skill, parseInt(e.target.value))} 
+                                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                                          />
+                                      </div>
                                   </div>
                               </div>
                           ))}
