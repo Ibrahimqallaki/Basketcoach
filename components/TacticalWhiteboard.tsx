@@ -1,10 +1,9 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Trash2, Eraser, Pencil, Maximize2, Minimize2, Check, X, User } from 'lucide-react';
+import { Trash2, Eraser, Pencil, Maximize2, Minimize2, Check, User } from 'lucide-react';
 
 interface TacticalWhiteboardProps {
   onSave?: (dataUrl: string) => void;
-  onClose?: () => void;
   id: string;
 }
 
@@ -18,7 +17,7 @@ const COLORS = [
     { name: 'Purple', value: '#a855f7' }
 ];
 
-export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, onClose, id }) => {
+export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, id }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -96,7 +95,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   };
 
   const drawPlayer = (ctx: CanvasRenderingContext2D, x: number, y: number, num: number) => {
-    const size = isFullscreen ? 24 : 18;
+    const size = isFullscreen ? 26 : 20;
     // Circle Shadow
     ctx.beginPath();
     ctx.arc(x, y, size, 0, Math.PI * 2);
@@ -113,8 +112,8 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
     ctx.stroke();
 
     // Number
-    ctx.fillStyle = (color === '#ffffff' || color === '#f59e0b') ? '#000000' : '#ffffff';
-    ctx.font = `black ${isFullscreen ? '18px' : '14px'} Inter, sans-serif`;
+    ctx.fillStyle = (color === '#ffffff' || color === '#f59e0b' || color === '#f97316') ? '#000000' : '#ffffff';
+    ctx.font = `bold ${isFullscreen ? '18px' : '14px'} Inter, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(num.toString(), x, y);
@@ -163,42 +162,42 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
       className={`flex flex-col bg-slate-950 select-none overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full w-full'}`}
       style={{ touchAction: 'none' }}
     >
-      {/* Toolbar */}
-      <div className={`flex flex-col md:flex-row items-center justify-between p-3 bg-slate-900 border-b border-slate-800 gap-3 shrink-0`}>
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {/* Main Tools */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0 shadow-inner">
+      {/* Toolbar with increased padding */}
+      <div className={`flex flex-col md:flex-row items-center justify-between p-4 bg-slate-900 border-b border-slate-800 gap-4 shrink-0`}>
+        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+          {/* Main Tools Grouped */}
+          <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shrink-0 shadow-inner">
             <button 
               onClick={() => setMode('pencil')}
-              className={`p-2.5 rounded-lg transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-3 rounded-xl transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg scale-105' : 'text-slate-500 hover:text-slate-300'}`}
               title="Penna"
             >
               <Pencil size={isFullscreen ? 24 : 18} />
             </button>
             <button 
               onClick={() => setMode('player')}
-              className={`p-2.5 rounded-lg transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-3 rounded-xl transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:text-slate-300'}`}
               title="Placera Spelare"
             >
               <User size={isFullscreen ? 24 : 18} />
             </button>
             <button 
               onClick={() => setMode('eraser')}
-              className={`p-2.5 rounded-lg transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-3 rounded-xl transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner scale-105' : 'text-slate-500 hover:text-slate-300'}`}
               title="Sudda"
             >
               <Eraser size={isFullscreen ? 24 : 18} />
             </button>
           </div>
 
-          {/* Number Picker for Player Mode */}
+          {/* Number Picker for Player Mode - More spacing */}
           {mode === 'player' && (
-              <div className="flex bg-indigo-950/30 p-1 rounded-xl border border-indigo-500/20 gap-1 animate-in slide-in-from-left">
+              <div className="flex bg-indigo-950/30 p-1.5 rounded-2xl border border-indigo-500/20 gap-1.5 animate-in slide-in-from-left duration-200">
                   {[1, 2, 3, 4, 5].map(n => (
                       <button 
                         key={n} 
                         onClick={() => setSelectedNumber(n)}
-                        className={`w-9 h-9 rounded-lg font-black text-xs transition-all ${selectedNumber === n ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 hover:bg-indigo-500/10'}`}
+                        className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${selectedNumber === n ? 'bg-indigo-600 text-white shadow-lg scale-110' : 'text-indigo-400 hover:bg-indigo-500/10'}`}
                       >
                         {n}
                       </button>
@@ -206,13 +205,13 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
               </div>
           )}
 
-          {/* Color Palette - No X here */}
-          <div className="flex flex-wrap gap-2 px-2">
+          {/* Color Palette - Completely clean now */}
+          <div className="flex flex-wrap gap-2.5 px-2">
             {COLORS.map(c => (
                 <button 
                     key={c.name}
                     onClick={() => { setColor(c.value); if(mode === 'eraser') setMode('pencil'); }}
-                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${color === c.value && mode !== 'eraser' ? 'border-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'border-white/10 opacity-60'}`}
+                    className={`w-9 h-9 rounded-full border-2 transition-all hover:scale-110 active:scale-90 ${color === c.value && mode !== 'eraser' ? 'border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'border-white/10 opacity-60'}`}
                     style={{ backgroundColor: c.value }}
                     title={c.name}
                 />
@@ -220,48 +219,40 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 w-full md:w-auto justify-end border-t md:border-t-0 md:border-l border-slate-800 pt-3 md:pt-0 md:pl-3">
+        <div className="flex items-center gap-3 shrink-0 w-full md:w-auto justify-end border-t md:border-t-0 md:border-l border-slate-800 pt-4 md:pt-0 md:pl-4">
           <button 
             onClick={clearCanvas}
-            className="p-2.5 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
+            className="p-3 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
             title="Rensa allt"
           >
-            <Trash2 size={20} />
+            <Trash2 size={22} />
           </button>
 
           {onSave && (
               <button 
                 onClick={() => onSave(canvasRef.current!.toDataURL())}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg font-black uppercase text-[10px] tracking-widest transition-all active:scale-95"
+                className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95"
               >
-                <Check size={18} />
+                <Check size={20} />
                 <span className="hidden sm:inline">Spara</span>
               </button>
           )}
 
           <button 
             onClick={toggleFullscreen}
-            className="p-2.5 rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg"
+            className="p-3 rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg"
+            title={isFullscreen ? "Stäng helskärm" : "Helskärm"}
           >
             {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
           </button>
-
-          {onClose && (
-            <button 
-              onClick={onClose}
-              className="p-2.5 rounded-xl text-slate-500 hover:bg-rose-600 hover:text-white transition-all ml-1"
-            >
-              <X size={20} />
-            </button>
-          )}
         </div>
       </div>
 
       {/* Drawing Area */}
       <div className="flex-1 relative cursor-crosshair bg-slate-900 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none opacity-[0.15] flex items-center justify-center p-4">
-          <div className="w-full h-full border-2 border-white relative max-w-[800px] aspect-[1/1.4]">
-             <div className="absolute inset-1 border border-white/30"></div>
+        <div className="absolute inset-0 pointer-events-none opacity-[0.12] flex items-center justify-center p-6">
+          <div className="w-full h-full border-2 border-white relative max-w-[850px] aspect-[1/1.4]">
+             <div className="absolute inset-1.5 border border-white/30"></div>
              <div className="absolute bottom-0 left-0 w-full h-px bg-white/80"></div>
              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/3 aspect-square border-2 border-white rounded-full translate-y-1/2"></div>
              <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[95%] aspect-square border-2 border-white rounded-full"></div>
