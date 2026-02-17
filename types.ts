@@ -11,7 +11,26 @@ export enum View {
   AI_STUDIO = 'AI_STUDIO',
   ABOUT = 'ABOUT',
   ACCOUNT = 'ACCOUNT',
-  PLAYER_PORTAL = 'PLAYER_PORTAL'
+  PLAYER_PORTAL = 'PLAYER_PORTAL',
+  LIVE_SCOUT = 'LIVE_SCOUT'
+}
+
+export interface LiveMatchData {
+  id: string;
+  coachId: string;
+  homeName: string;
+  awayName: string;
+  homeScore: number;
+  awayScore: number;
+  period: number;
+  homeFouls: number;
+  awayFouls: number;
+  homeTimeouts: number;
+  awayTimeouts: number;
+  playerFouls: Record<string, number>;
+  playerPoints: Record<string, number>;
+  status: 'active' | 'finished';
+  lastUpdated: string;
 }
 
 export type TicketStatus = 'backlog' | 'todo' | 'in_progress' | 'done';
@@ -36,7 +55,6 @@ export interface AppTicket {
   };
 }
 
-/* Added 'Layups' and 'Returtagning' to SkillCategory to match mockData usage */
 export type SkillCategory = 'Skott' | 'Dribbling' | 'Passningar' | 'Försvar' | 'Kondition' | 'Basket-IQ' | 'Transition' | 'Pick & Roll' | 'Fysik' | 'Taktik' | 'Layups' | 'Returtagning';
 
 export interface Homework {
@@ -68,9 +86,9 @@ export interface Player {
   skillAssessment?: Record<string, number>;
   individualPlan?: string[];
   notes?: string;
-  accessCode?: string; // Code for player login
-  homework?: Homework[]; // List of assignments
-  nutrition?: NutritionLog; // Daily nutrition tracking
+  accessCode?: string; 
+  homework?: Homework[]; 
+  nutrition?: NutritionLog; 
   created_at?: string;
 }
 
@@ -106,7 +124,7 @@ export interface Exercise {
   };
   criteria: string[];
   diagramPrompt: string;
-  videoUrl?: string; // Optional YouTube embed URL
+  videoUrl?: string; 
 }
 
 export interface Phase {
@@ -153,8 +171,8 @@ export interface MatchFeedback {
 
 export interface Shot {
   id: string;
-  x: number; // Percentage 0-100 relative to width
-  y: number; // Percentage 0-100 relative to height
+  x: number; 
+  y: number; 
   result: 'make' | 'miss';
 }
 
@@ -166,9 +184,9 @@ export interface MatchRecord {
   opponentScore: number;
   feedbacks: MatchFeedback[];
   teamSummary: string;
-  strategyImage?: string; // Deprecated, kept for backward compatibility
-  tacticalPlays?: string[]; // New: Array of multiple whiteboard images
-  shots?: Shot[]; // New: Shot chart data
+  strategyImage?: string; 
+  tacticalPlays?: string[]; 
+  shots?: Shot[]; 
   created_at?: string;
 }
 

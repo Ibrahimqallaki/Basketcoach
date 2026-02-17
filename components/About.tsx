@@ -27,36 +27,17 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // 1. App Settings (Whitelist)
+    // Alla måste kunna läsa för att se om de får logga in.
+    // Endast inloggade får skriva (Admin-kontroll sker i appen).
     match /app_settings/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com";
+      allow write: if request.auth != null;
     }
 
-    // 2. Tickets
-    match /app_tickets/{ticketId} {
-      allow create: if request.auth != null; 
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
-      allow update, delete: if request.auth != null && request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com";
-    }
-
-    // 3. Spelardata
-    match /{path=**}/players/{playerId} {
-      allow read: if true; 
-    }
-
-    // 4. Matcher & Träningar (LÄSRÄTTIGHETER FÖR SPELARE)
-    match /users/{userId}/matches/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
-    }
-    match /users/{userId}/sessions/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
-    }
-
-    // 5. Användardata
+    // 2. Användardata
+    // Varje coach har full kontroll över sin egen mapp.
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }`;
@@ -141,7 +122,7 @@ service cloud.firestore {
               </p>
            </div>
            <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">
-              <pre className="text-[10px] text-emerald-500/80 font-mono leading-tight overflow-x-auto whitespace-pre-wrap">
+              <pre className="text-[10px] text-emerald-500/80 font-mono leading-tight overflow-x-auto">
 {`rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -149,34 +130,13 @@ service cloud.firestore {
     // 1. App Settings (Whitelist)
     match /app_settings/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com";
+      allow write: if request.auth != null;
     }
 
-    // 2. Tickets
-    match /app_tickets/{ticketId} {
-      allow create: if request.auth != null; 
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
-      allow update, delete: if request.auth != null && request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com";
-    }
-
-    // 3. Spelardata
-    match /{path=**}/players/{playerId} {
-      allow read: if true; 
-    }
-
-    // 4. Matcher & Träningar (LÄSRÄTTIGHETER FÖR SPELARE)
-    match /users/{userId}/matches/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
-    }
-    match /users/{userId}/sessions/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
-    }
-
-    // 5. Övrig Användardata
+    // 2. Användardata (Privat)
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
+      allow read, write: if request.auth != null && 
+                         request.auth.uid == userId;
     }
   }
 }`}

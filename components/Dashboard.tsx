@@ -192,26 +192,24 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Säsongens Överblick</div>
       </div>
 
-      {/* Grid Update: gap-3 instead of gap-4 on mobile to prevent overflow */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         {stats.map((s, i) => (
-          <div key={i} className={`p-3 md:p-6 rounded-2xl md:rounded-3xl border ${s.border} ${s.bg} backdrop-blur-sm relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300`}>
+          <div key={i} className={`p-4 md:p-6 rounded-3xl border ${s.border} ${s.bg} backdrop-blur-sm relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300`}>
             <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
-              <div className="flex items-center justify-between gap-1">
-                {/* Truncate label to prevent overflow */}
-                <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-300 opacity-80 truncate">{s.label}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-300 opacity-80">{s.label}</span>
                 {s.trend !== undefined && s.trend !== 0 && (
-                    <div className={`flex items-center gap-0.5 text-[7px] md:text-[8px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${s.trend > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                        {s.trend > 0 ? <ArrowUpRight size={8} /> : <ArrowDownRight size={8} />}
+                    <div className={`flex items-center gap-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${s.trend > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                        {s.trend > 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
                         {Math.abs(s.trend)}%
                     </div>
                 )}
-                <s.icon className="w-3 h-3 md:w-5 md:h-5 text-white opacity-60 shrink-0" />
+                <s.icon className="w-4 h-4 md:w-5 md:h-5 text-white opacity-60 shrink-0" />
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                    <div className="text-xl md:text-5xl font-black text-white tracking-tighter truncate">{s.value}</div>
-                    {s.label === 'Utvecklingsindex' && <span className="text-[9px] md:text-xs text-slate-500 font-bold">/5</span>}
+                    <div className="text-2xl md:text-5xl font-black text-white tracking-tighter truncate">{s.value}</div>
+                    {s.label === 'Utvecklingsindex' && <span className="text-xs text-slate-500 font-bold">/5</span>}
                 </div>
                 <div className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase mt-1 tracking-wide truncate">{s.subtext}</div>
               </div>
@@ -241,7 +239,7 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                {aggregatedTimeline.length > 0 ? aggregatedTimeline.map((item, i) => {
                  const height = (item.avg / 5) * 100;
                  return (
-                   <div key={i} className="relative flex-1 group flex flex-col items-center gap-2 h-full justify-end min-w-[20px]">
+                   <div key={i} className="relative flex-1 group flex flex-col items-center gap-2 h-full justify-end">
                      <div className="w-full bg-slate-800/30 rounded-t-xl h-full absolute bottom-0 z-0"></div>
                      <div 
                         className="w-full bg-gradient-to-t from-orange-600 to-orange-400 rounded-t-xl transition-all duration-700 shadow-[0_0_20px_rgba(249,115,22,0.2)] relative z-10 hover:brightness-125" 

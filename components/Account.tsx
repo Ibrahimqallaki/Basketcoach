@@ -155,20 +155,7 @@ service cloud.firestore {
       allow read: if true; 
     }
 
-    // 4. Matcher & Träningar (LÄSRÄTTIGHETER FÖR SPELARE)
-    // Tillåter alla inloggade (inkl. anonyma spelare) att läsa matcher/sessions
-    // men endast ägaren (coachen) får skriva.
-    match /users/{userId}/matches/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
-    }
-    
-    match /users/{userId}/sessions/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
-    }
-
-    // 5. Övrig Användardata (Privat)
+    // 4. Användardata
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
     }
@@ -485,7 +472,7 @@ service cloud.firestore {
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
                     <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
                     <p className="text-slate-300 text-xs font-bold leading-relaxed">
-                        Kopiera koden nedan och ersätt reglerna i Firebase Console. Detta inkluderar nu regler för att tillåta spelare att läsa matcher.
+                        Kopiera koden nedan och ersätt reglerna i Firebase Console. Detta inkluderar nu regler för Ticket-systemet och rätt ägar-behörighet.
                     </p>
                 </div>
                 <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">

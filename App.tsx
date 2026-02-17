@@ -12,13 +12,14 @@ import { PlayerPortal } from './components/PlayerPortal';
 import { KeySelectionOverlay } from './components/KeySelectionOverlay';
 import { AICoach } from './components/AICoach';
 import { CoachTools } from './components/CoachTools';
+import { MatchLiveScout } from './components/MatchLiveScout';
 import { auth, isFirebaseConfigured, googleProvider } from './services/firebase';
 import { dataService } from './services/dataService';
 // @ts-ignore
 import { onAuthStateChanged, signInWithPopup, signOut, signInAnonymously } from 'firebase/auth';
 // @ts-ignore
 import type { User } from 'firebase/auth';
-import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff, Shield, DatabaseZap, Clock } from 'lucide-react';
+import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff, Shield, DatabaseZap, Clock, Radio } from 'lucide-react';
 import { View, Player } from './types';
 
 const App: React.FC = () => {
@@ -34,6 +35,19 @@ const App: React.FC = () => {
   const [loggedInPlayer, setLoggedInPlayer] = useState<Player | null>(null);
   const [currentCoachId, setCurrentCoachId] = useState<string | null>(null);
   const [verifyingCode, setVerifyingCode] = useState(false);
+
+  // Live Scout State
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Kolla om vi har en match-id i URL:en (för scouten)
+    const params = new URLSearchParams(window.location.search);
+    const mId = params.get('match');
+    if (mId) {
+        setActiveMatchId(mId);
+        setCurrentView(View.LIVE_SCOUT);
+    }
+  }, []);
 
   useEffect(() => {
     if (isFirebaseConfigured && auth) {
@@ -204,6 +218,14 @@ const App: React.FC = () => {
       );
   }
 
+  if (currentView === View.LIVE_SCOUT && activeMatchId) {
+      return <MatchLiveScout matchId={activeMatchId} onExit={() => {
+          setActiveMatchId(null);
+          window.history.replaceState({}, '', '/');
+          setCurrentView(View.DASHBOARD);
+      }} />;
+  }
+
   if (!user || (user.isAnonymous && !loggedInPlayer)) {
     return (
       <div className="min-h-screen w-full bg-[#020617] flex items-center justify-center p-4 relative overflow-hidden">
@@ -309,17 +331,6 @@ const App: React.FC = () => {
                 {currentView === View.ACCOUNT ? 'Inställningar' : currentView.replace('_', ' ')}
               </h2>
             </div>
-            
-            <button 
-              onClick={() => setCurrentView(View.ACCOUNT)}
-              className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center overflow-hidden hover:border-orange-500 transition-all shadow-lg active:scale-95"
-            >
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt="Profil" className="w-full h-full object-cover" />
-              ) : (
-                <UserCheck size={20} className="text-slate-400" />
-              )}
-            </button>
           </header>
         )}
 
