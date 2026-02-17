@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Trash2, Eraser, Pencil, Maximize2, Minimize2, Check, X } from 'lucide-react';
+import { Trash2, Eraser, Pencil, Maximize2, Minimize2, Check, X, User } from 'lucide-react';
 
 interface TacticalWhiteboardProps {
   onSave?: (dataUrl: string) => void;
@@ -8,25 +8,33 @@ interface TacticalWhiteboardProps {
   id: string;
 }
 
+const COLORS = [
+    { name: 'White', value: '#ffffff' },
+    { name: 'Orange', value: '#f97316' },
+    { name: 'Blue', value: '#3b82f6' },
+    { name: 'Emerald', value: '#10b981' },
+    { name: 'Rose', value: '#f43f5e' },
+    { name: 'Amber', value: '#f59e0b' },
+    { name: 'Purple', value: '#a855f7' }
+];
+
 export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, onClose, id }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#ffffff');
-  const [mode, setMode] = useState<'pencil' | 'eraser'>('pencil');
+  const [mode, setMode] = useState<'pencil' | 'eraser' | 'player'>('pencil');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedNumber, setSelectedNumber] = useState(1);
 
-  // Funktion för att spara och återställa canvas-innehåll vid storleksändring
   const updateCanvasSize = useCallback(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
 
     const rect = container.getBoundingClientRect();
-    
     if (rect.width === 0 || rect.height === 0) return;
 
-    // Spara nuvarande innehåll temporärt
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     tempCanvas.width = canvas.width;
@@ -35,7 +43,6 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
         tempCtx.drawImage(canvas, 0, 0);
     }
 
-    // Uppdatera canvas interna storlek till behållarens faktiska storlek
     canvas.width = rect.width;
     canvas.height = rect.height;
     
@@ -44,13 +51,9 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.imageSmoothingEnabled = true;
-      
-      // Rita tillbaka det sparade innehållet
       if (tempCanvas.width > 0) {
         ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
       }
-      
-      // Återställ penselinställningar
       ctx.strokeStyle = mode === 'eraser' ? '#000000' : color;
       ctx.lineWidth = mode === 'eraser' ? (isFullscreen ? 40 : 20) : (isFullscreen ? 6 : 4);
     }
@@ -59,21 +62,14 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
-    const observer = new ResizeObserver(() => {
-        window.requestAnimationFrame(updateCanvasSize);
-    });
-
+    const observer = new ResizeObserver(() => window.requestAnimationFrame(updateCanvasSize));
     observer.observe(container);
-
     const handleFsChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
       setTimeout(updateCanvasSize, 100);
     };
-
     document.addEventListener('fullscreenchange', handleFsChange);
     setTimeout(updateCanvasSize, 100);
-
     return () => {
       observer.disconnect();
       document.removeEventListener('fullscreenchange', handleFsChange);
@@ -83,82 +79,82 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   const toggleFullscreen = async () => {
     if (!containerRef.current) return;
     try {
-      if (!document.fullscreenElement) {
-        await containerRef.current.requestFullscreen();
-      } else {
-        await document.exitFullscreen();
-      }
-    } catch (err) {
-      console.error("Fullscreen error:", err);
-    }
+      if (!document.fullscreenElement) await containerRef.current.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch (err) { console.error(err); }
   };
 
-  // FÖRBÄTTRAD KOORDINATBERÄKNING (KALIBRERING)
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
-    
     const rect = canvas.getBoundingClientRect();
-    
-    // Hämta råa klient-koordinater
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-
-    // Beräkna skalningsfaktor mellan CSS-pixlar och interna canvas-pixlar
-    // Detta fixar offset-felet om canvasen är skalad via CSS
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+  };
 
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
-    };
+  const drawPlayer = (ctx: CanvasRenderingContext2D, x: number, y: number, num: number) => {
+    const size = isFullscreen ? 24 : 18;
+    // Circle Shadow
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fill();
+
+    // Main Circle
+    ctx.beginPath();
+    ctx.arc(x, y, size - 2, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Number
+    ctx.fillStyle = (color === '#ffffff' || color === '#f59e0b') ? '#000000' : '#ffffff';
+    ctx.font = `black ${isFullscreen ? '18px' : '14px'} Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(num.toString(), x, y);
   };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
     if (e.cancelable) e.preventDefault();
     const { x, y } = getPos(e);
-    
     const ctx = canvasRef.current?.getContext('2d');
-    if (ctx) {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      setIsDrawing(true);
+    if (!ctx) return;
+
+    if (mode === 'player') {
+        drawPlayer(ctx, x, y, selectedNumber);
+        return;
     }
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
+    if (!isDrawing || mode === 'player') return;
     if (e.cancelable) e.preventDefault();
-
     const { x, y } = getPos(e);
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) {
       ctx.lineWidth = mode === 'eraser' ? (isFullscreen ? 40 : 20) : (isFullscreen ? 6 : 4);
       ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
       ctx.strokeStyle = color;
-      
       ctx.lineTo(x, y);
       ctx.stroke();
     }
   };
 
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const handleManualSave = () => {
-    if (canvasRef.current && onSave) {
-      onSave(canvasRef.current.toDataURL());
-    }
-  };
+  const stopDrawing = () => setIsDrawing(false);
 
   const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (ctx && canvas) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx && canvasRef.current) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   };
 
   return (
@@ -168,60 +164,84 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
       style={{ touchAction: 'none' }}
     >
       {/* Toolbar */}
-      <div className={`flex items-center justify-between p-2 bg-slate-900 border-b border-slate-800 gap-2 shrink-0 ${isFullscreen ? 'p-4' : ''}`}>
-        <div className="flex-1 flex items-center gap-2 overflow-x-auto hide-scrollbar pr-4">
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+      <div className={`flex flex-col md:flex-row items-center justify-between p-3 bg-slate-900 border-b border-slate-800 gap-3 shrink-0`}>
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Main Tools */}
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0 shadow-inner">
             <button 
-              onClick={() => { setMode('pencil'); setColor('#ffffff'); }}
-              className={`p-2 rounded-lg transition-all ${mode === 'pencil' && color === '#ffffff' ? 'bg-white text-black shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+              onClick={() => setMode('pencil')}
+              className={`p-2.5 rounded-lg transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Penna"
             >
               <Pencil size={isFullscreen ? 24 : 18} />
             </button>
             <button 
-              onClick={() => { setMode('pencil'); setColor('#f97316'); }}
-              className={`w-10 h-10 flex items-center justify-center transition-all ${color === '#f97316' && mode === 'pencil' ? 'scale-110' : 'opacity-40 hover:opacity-70'}`}
+              onClick={() => setMode('player')}
+              className={`p-2.5 rounded-lg transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Placera Spelare"
             >
-              <div className={`rounded-full bg-orange-500 border-2 border-white/20 shadow-lg ${isFullscreen ? 'w-8 h-8' : 'w-6 h-6'}`} />
+              <User size={isFullscreen ? 24 : 18} />
             </button>
             <button 
-              onClick={() => { setMode('pencil'); setColor('#3b82f6'); }}
-              className={`w-10 h-10 flex items-center justify-center transition-all ${color === '#3b82f6' && mode === 'pencil' ? 'scale-110' : 'opacity-40 hover:opacity-70'}`}
+              onClick={() => setMode('eraser')}
+              className={`p-2.5 rounded-lg transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Sudda"
             >
-              <div className={`rounded-full bg-blue-500 border-2 border-white/20 shadow-lg ${isFullscreen ? 'w-8 h-8' : 'w-6 h-6'}`} />
+              <Eraser size={isFullscreen ? 24 : 18} />
             </button>
           </div>
 
-          <div className="w-px h-8 bg-slate-800 mx-1 shrink-0" />
+          {/* Number Picker for Player Mode */}
+          {mode === 'player' && (
+              <div className="flex bg-indigo-950/30 p-1 rounded-xl border border-indigo-500/20 gap-1 animate-in slide-in-from-left">
+                  {[1, 2, 3, 4, 5].map(n => (
+                      <button 
+                        key={n} 
+                        onClick={() => setSelectedNumber(n)}
+                        className={`w-9 h-9 rounded-lg font-black text-xs transition-all ${selectedNumber === n ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 hover:bg-indigo-500/10'}`}
+                      >
+                        {n}
+                      </button>
+                  ))}
+              </div>
+          )}
 
-          <button 
-            onClick={() => setMode('eraser')}
-            className={`p-2 rounded-lg transition-all shrink-0 ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            <Eraser size={isFullscreen ? 24 : 18} />
-          </button>
-
-           <button 
-            onClick={clearCanvas}
-            className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all shrink-0"
-          >
-            <Trash2 size={isFullscreen ? 24 : 18} />
-          </button>
+          {/* Color Palette - No X here */}
+          <div className="flex flex-wrap gap-2 px-2">
+            {COLORS.map(c => (
+                <button 
+                    key={c.name}
+                    onClick={() => { setColor(c.value); if(mode === 'eraser') setMode('pencil'); }}
+                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${color === c.value && mode !== 'eraser' ? 'border-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'border-white/10 opacity-60'}`}
+                    style={{ backgroundColor: c.value }}
+                    title={c.name}
+                />
+            ))}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 pl-2 border-l border-slate-800">
+        <div className="flex items-center gap-3 shrink-0 w-full md:w-auto justify-end border-t md:border-t-0 md:border-l border-slate-800 pt-3 md:pt-0 md:pl-3">
+          <button 
+            onClick={clearCanvas}
+            className="p-2.5 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
+            title="Rensa allt"
+          >
+            <Trash2 size={20} />
+          </button>
+
           {onSave && (
               <button 
-                onClick={handleManualSave}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg font-black uppercase text-[10px] tracking-widest transition-all active:scale-95"
+                onClick={() => onSave(canvasRef.current!.toDataURL())}
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg font-black uppercase text-[10px] tracking-widest transition-all active:scale-95"
               >
-                <Check size={16} />
-                <span className={isFullscreen ? "inline" : "hidden sm:inline"}>Spara</span>
+                <Check size={18} />
+                <span className="hidden sm:inline">Spara</span>
               </button>
           )}
 
           <button 
             onClick={toggleFullscreen}
-            className="p-2 rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg"
+            className="p-2.5 rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg"
           >
             {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
           </button>
@@ -229,7 +249,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
           {onClose && (
             <button 
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:bg-rose-600 hover:text-white transition-all"
+              className="p-2.5 rounded-xl text-slate-500 hover:bg-rose-600 hover:text-white transition-all ml-1"
             >
               <X size={20} />
             </button>
@@ -239,7 +259,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
 
       {/* Drawing Area */}
       <div className="flex-1 relative cursor-crosshair bg-slate-900 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none opacity-25 flex items-center justify-center p-4">
+        <div className="absolute inset-0 pointer-events-none opacity-[0.15] flex items-center justify-center p-4">
           <div className="w-full h-full border-2 border-white relative max-w-[800px] aspect-[1/1.4]">
              <div className="absolute inset-1 border border-white/30"></div>
              <div className="absolute bottom-0 left-0 w-full h-px bg-white/80"></div>
@@ -263,12 +283,6 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
           className="absolute inset-0 z-20 w-full h-full block touch-none"
         />
       </div>
-      
-      {isFullscreen && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-1 rounded-full text-[10px] text-white/50 pointer-events-none">
-              Helskärmsläge
-          </div>
-      )}
     </div>
   );
 };
