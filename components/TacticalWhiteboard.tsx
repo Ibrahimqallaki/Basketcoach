@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Trash2, Eraser, Pencil, Maximize2, Minimize2, Check, User } from 'lucide-react';
+import { Trash2, Eraser, Pencil, Maximize2, Minimize2, Check, User, X } from 'lucide-react';
 
 interface TacticalWhiteboardProps {
   onSave?: (dataUrl: string) => void;
@@ -158,7 +158,18 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
       className={`flex flex-col bg-slate-950 select-none overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full w-full'}`}
       style={{ touchAction: 'none' }}
     >
-      {/* Ultra Slim Toolbar - NO "X" - Single Row */}
+      {/* Floating Exit Button at TOP CENTER (only shown in Fullscreen) */}
+      {isFullscreen && (
+        <button 
+          onClick={toggleFullscreen}
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-2 px-6 py-2.5 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-full text-white shadow-2xl hover:bg-slate-800 transition-all active:scale-95 group"
+        >
+          <X size={20} className="group-hover:rotate-90 transition-transform" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Stäng Helskärm</span>
+        </button>
+      )}
+
+      {/* Ultra Slim Toolbar - NO "X" on sides - Single Row */}
       <div className="flex items-center justify-between p-2 md:p-3 bg-slate-900 border-b border-slate-800 gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {/* Main Drawing Tools */}
@@ -198,7 +209,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
           </div>
         </div>
 
-        {/* Global Actions - Lifted up to same row */}
+        {/* Global Actions - Unified row */}
         <div className="flex items-center gap-2 shrink-0 border-l border-slate-800 pl-2">
           <button onClick={clearCanvas} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all" title="Rensa">
             <Trash2 size={20} />
@@ -210,9 +221,12 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
               </button>
           )}
 
-          <button onClick={toggleFullscreen} className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all">
-            {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-          </button>
+          {/* Only show Maximize if not in fullscreen - the center button handles minimize */}
+          {!isFullscreen && (
+            <button onClick={toggleFullscreen} className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all" title="Helskärm">
+              <Maximize2 size={20} />
+            </button>
+          )}
         </div>
       </div>
 
