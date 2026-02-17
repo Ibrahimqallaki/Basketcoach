@@ -150,12 +150,18 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com";
     }
 
-    // 3. Spelardata
+    // 3. Live Matcher (Nya poäng-tavlan)
+    match /live_matches/{matchId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 4. Spelardata (Tillåt publika sökningar för portalkod)
     match /{path=**}/players/{playerId} {
       allow read: if true; 
     }
 
-    // 4. Användardata
+    // 5. Användardata
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
     }
@@ -325,7 +331,7 @@ service cloud.firestore {
         </div>
       </div>
 
-      {/* KANBAN BOARD (Förbättrad Drag and Drop) */}
+      {/* KANBAN BOARD */}
       {(isSuperAdmin || showDebug) && !isGuest && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
@@ -405,7 +411,7 @@ service cloud.firestore {
           </div>
       </div>
 
-      {/* SYSTEMÄGARE PANEL (Hårdkodad synlighet för Ibrahim) */}
+      {/* SYSTEMÄGARE PANEL */}
       {(isSuperAdmin || (user?.email?.toLowerCase().includes("ibrahim.qallaki"))) && !isGuest && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-700">
             <div className="flex items-center gap-2 px-2">
@@ -472,7 +478,7 @@ service cloud.firestore {
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
                     <ShieldAlert size={20} className="text-emerald-500 shrink-0 mt-0.5" />
                     <p className="text-slate-300 text-xs font-bold leading-relaxed">
-                        Kopiera koden nedan och ersätt reglerna i Firebase Console. Detta inkluderar nu regler för Ticket-systemet och rätt ägar-behörighet.
+                        Kopiera koden nedan och ersätt reglerna i Firebase Console. Detta inkluderar nu regler för Live Matcher och Ticket-systemet.
                     </p>
                 </div>
                 <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 relative group">
@@ -586,7 +592,7 @@ service cloud.firestore {
                         <span className="text-[10px] font-black uppercase">Instruktion till Ibrahim</span>
                     </div>
                     <p className="text-[10px] text-slate-300 leading-relaxed font-medium">
-                        Om du ser <span className="text-emerald-500 font-black">AKTIV</span> men Kanban-tavlan fortfarande är tom: Se till att du faktiskt har skapat några "Tickets" (via Support-knappen i verktygslådan). Om du har gjort det och den är tom, kontrollera att du har kopierat in de nya reglerna till Firebase Console.
+                        Om du ser <span className="text-emerald-500 font-black">AKTIV</span> men Kanban-tavlan fortfarande är tom: Se till att du faktiskt har skapat några "Tickets". Om du har gjort det och den är tom, kontrollera att du har kopierat in de nya reglerna till Firebase Console.
                     </p>
                 </div>
             </div>

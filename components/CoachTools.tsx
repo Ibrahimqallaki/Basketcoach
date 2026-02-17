@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-/* Fixed: Added missing 'X' icon import from lucide-react */
-import { Play, Pause, RotateCcw, Plus, Minus, Wrench, Clock, Hash, Timer, MonitorPlay, Bot, ArrowRight, User, AlertTriangle, ShieldAlert, PencilRuler, UserCheck, ChevronRight, ArrowLeftRight, BellRing, MessageSquareText, Radio, Loader2, QrCode, Share2, Check, X } from 'lucide-react';
+import { Play, Pause, RotateCcw, Plus, Minus, Wrench, Clock, Hash, Timer, MonitorPlay, Bot, ArrowRight, User, AlertTriangle, ShieldAlert, PencilRuler, UserCheck, ChevronRight, ArrowLeftRight, BellRing, MessageSquareText, Radio, Loader2, QrCode, Share2, Check, X, CloudOff, Info, ExternalLink } from 'lucide-react';
 import { View, Player } from '../types';
 import { dataService } from '../services/dataService';
 import { liveMatchService } from '../services/liveMatchService';
@@ -22,6 +21,9 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
   const [isLiveActive, setIsLiveActive] = useState(false);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [startingLive, setStartingLive] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const isGuest = dataService.getStorageMode() !== 'CLOUD';
 
   // Scoreboard State (Local Manual)
   const [homeScore, setHomeScore] = useState(0);
@@ -49,8 +51,25 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
       p.forEach(player => initialFouls[player.id] = 0);
       setPlayerFouls(initialFouls);
     };
+
+    const checkExisting = async () => {
+        if (!isGuest) {
+            try {
+                const existing = await liveMatchService.getExistingMatch();
+                if (existing) {
+                    setMatchId(existing.id);
+                    setIsLiveActive(true);
+                }
+            } catch (e) {
+                console.warn("Could not check existing match", e);
+            }
+        }
+        setCheckingExisting(false);
+    };
+
     loadPlayers();
-  }, []);
+    checkExisting();
+  }, [isGuest]);
 
   useEffect(() => {
     let interval: number;
@@ -63,14 +82,20 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
   }, [isRunning]);
 
   const handleStartLive = async () => {
+      if (isGuest) return;
+      
+      const opponent = prompt("Ange motståndarlaget:", "Motståndare");
+      if (opponent === null) return; 
+      
       setStartingLive(true);
       try {
-          const opponent = prompt("Motståndarens namn:", "Gäster") || "Gäster";
-          const id = await liveMatchService.startMatch("Orion HU14", opponent, players);
+          const id = await liveMatchService.startMatch("Orion HU14", opponent || "Gäster", players);
           setMatchId(id);
           setIsLiveActive(true);
-      } catch (err) {
-          alert("Kunde inte starta live-session. Kontrollera anslutning.");
+          setShowOnboarding(true); // Visa QR och länk direkt efter skapande
+      } catch (err: any) {
+          console.error("Live match error:", err);
+          alert("Kunde inte starta live-session.\n\nFelsökning:\n1. Gå till 'Mitt Konto'\n2. Kopiera reglerna under 'Databas-regler'\n3. Klistra in dem i Firebase Console -> Firestore -> Rules.");
       } finally {
           setStartingLive(false);
       }
@@ -81,6 +106,7 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
       if(matchId) await liveMatchService.finishMatch(matchId);
       setIsLiveActive(false);
       setMatchId(null);
+      setShowOnboarding(false);
   };
 
   const updatePlayerFoul = (playerId: string, delta: number) => {
@@ -103,6 +129,45 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24 px-1">
       {showSupport && <SupportModal userRole="coach" onClose={() => setShowSupport(false)} />}
+      
+      {/* ONBOARDING MODAL - VISAS VID START */}
+      {showOnboarding && matchId && (
+          <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl animate-in fade-in duration-300">
+              <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[3rem] p-8 md:p-10 shadow-2xl space-y-8 text-center relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-5"><QrCode size={120}/></div>
+                  <div className="w-20 h-20 bg-emerald-600/10 rounded-[2rem] flex items-center justify-center mx-auto text-emerald-500 border border-emerald-500/20 shadow-inner">
+                      <QrCode size={40}/>
+                  </div>
+                  <div>
+                      <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Live Session Redo!</h3>
+                      <p className="text-xs text-slate-400 mt-2 leading-relaxed">Ge länken nedan till föräldern som ska sköta statistiken. De behöver inte logga in.</p>
+                  </div>
+                  
+                  <div className="p-6 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
+                      <div className="text-xs font-black text-slate-500 uppercase tracking-widest">Match-ID</div>
+                      <div className="text-3xl font-mono font-black text-white tracking-[0.2em]">{matchId.split('_')[1].slice(0, 6).toUpperCase()}</div>
+                      <button 
+                        onClick={() => {
+                            const link = `${window.location.origin}?match=${matchId}`;
+                            navigator.clipboard.writeText(link);
+                            alert("Länk kopierad! Skicka den till matchscouten.");
+                        }}
+                        className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
+                      >
+                          <Share2 size={16}/> Kopiera Direktlänk
+                      </button>
+                  </div>
+
+                  <button 
+                    onClick={() => setShowOnboarding(false)}
+                    className="w-full py-5 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all"
+                  >
+                      Gå till Coach Dashboard
+                  </button>
+              </div>
+          </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2">
@@ -137,34 +202,59 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
 
       {activeTool === 'live' && (
           <div className="animate-in slide-in-from-bottom duration-500 h-full min-h-[600px]">
-              {isLiveActive && matchId ? (
+              {checkingExisting ? (
+                  <div className="h-[400px] flex flex-col items-center justify-center space-y-4">
+                      <Loader2 className="w-10 h-10 text-slate-700 animate-spin" />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Söker efter aktiva sessioner...</p>
+                  </div>
+              ) : isLiveActive && matchId ? (
                   <CoachLiveDashboard matchId={matchId} onClose={handleStopLive} />
               ) : (
                   <div className="flex flex-col items-center justify-center p-12 md:p-20 bg-slate-900 border border-slate-800 rounded-[3rem] text-center space-y-8 shadow-2xl relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-12 opacity-5"><Radio size={160}/></div>
-                      <div className="w-24 h-24 bg-emerald-600/10 rounded-[2.5rem] flex items-center justify-center text-emerald-500 shadow-inner"><Radio size={48} className="animate-pulse" /></div>
-                      <div className="space-y-3 z-10">
-                          <h3 className="text-3xl md:text-4xl font-black text-white italic uppercase tracking-tighter leading-none">Scoreboard Live-läget</h3>
-                          <p className="text-sm text-slate-400 max-w-sm leading-relaxed mx-auto">Låt en förälder sköta poängen i realtid från en annan telefon medan du coachar. Allt synkas direkt.</p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-md z-10 text-left">
-                          <div className="p-5 bg-slate-950 border border-slate-800 rounded-[2rem]">
-                              <h4 className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1 flex items-center gap-2"><QrCode size={14} className="text-emerald-500"/> 1. Dela länk</h4>
-                              <p className="text-[9px] text-slate-500 leading-tight">Matchscouten får en interaktiv kontrollpanel.</p>
+                      
+                      {isGuest ? (
+                          <div className="space-y-8 z-10 max-w-sm">
+                              <div className="w-20 h-20 bg-amber-500/10 rounded-[2rem] flex items-center justify-center text-amber-500 mx-auto border border-amber-500/20"><CloudOff size={40}/></div>
+                              <div className="space-y-2">
+                                  <h3 className="text-2xl font-black text-white uppercase italic">Inloggning krävs</h3>
+                                  <p className="text-sm text-slate-400">Live-läget kräver en inloggning via Google för att kunna skicka data i realtid till föräldrar.</p>
+                              </div>
+                              <button onClick={() => onNavigate?.(View.ACCOUNT)} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all">Gå till inställningar <ArrowRight size={14}/></button>
                           </div>
-                          <div className="p-5 bg-slate-950 border border-slate-800 rounded-[2rem]">
-                              <h4 className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1 flex items-center gap-2"><Check size={14} className="text-emerald-500"/> 2. Följ Live</h4>
-                              <p className="text-[9px] text-slate-500 leading-tight">Se poäng, fouls och timeouts på din egen HUD.</p>
-                          </div>
-                      </div>
-                      <button 
-                        onClick={handleStartLive} 
-                        disabled={startingLive}
-                        className="px-12 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-900/40 flex items-center gap-3 transition-all active:scale-95 disabled:opacity-50 z-10"
-                      >
-                          {startingLive ? <Loader2 className="animate-spin" size={20}/> : <Play size={20} fill="currentColor" className="ml-1"/>}
-                          Starta Live Session
-                      </button>
+                      ) : (
+                          <>
+                            <div className="w-24 h-24 bg-emerald-600/10 rounded-[2.5rem] flex items-center justify-center text-emerald-500 shadow-inner"><Radio size={48} className="animate-pulse" /></div>
+                            <div className="space-y-3 z-10">
+                                <h3 className="text-3xl md:text-4xl font-black text-white italic uppercase tracking-tighter leading-none">Scoreboard Live-läget</h3>
+                                <p className="text-sm text-slate-400 max-w-sm leading-relaxed mx-auto">Låt en förälder sköta poängen i realtid från en annan telefon medan du coachar. Allt synkas direkt.</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-md z-10 text-left">
+                                <div className="p-5 bg-slate-950 border border-slate-800 rounded-[2rem]">
+                                    <h4 className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1 flex items-center gap-2"><QrCode size={14} className="text-emerald-500"/> 1. Dela länk</h4>
+                                    <p className="text-[9px] text-slate-500 leading-tight">Matchscouten får en interaktiv kontrollpanel.</p>
+                                </div>
+                                <div className="p-5 bg-slate-950 border border-slate-800 rounded-[2rem]">
+                                    <h4 className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1 flex items-center gap-2"><Check size={14} className="text-emerald-500"/> 2. Följ Live</h4>
+                                    <p className="text-[9px] text-slate-500 leading-tight">Se poäng, fouls och timeouts på din egen HUD.</p>
+                                </div>
+                            </div>
+                            
+                            <div className="p-4 bg-blue-900/10 border border-blue-500/20 rounded-2xl flex items-start gap-3 text-left max-w-md">
+                                <Info size={18} className="text-blue-400 shrink-0 mt-0.5" />
+                                <p className="text-[10px] font-bold text-blue-300 leading-relaxed uppercase tracking-tighter">Viktigt: Om sessionen inte startar, gå till "Mitt Konto" och kopiera de senaste databasreglerna till Firebase Console.</p>
+                            </div>
+
+                            <button 
+                                onClick={handleStartLive} 
+                                disabled={startingLive}
+                                className="px-12 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-900/40 flex items-center gap-3 transition-all active:scale-95 disabled:opacity-50 z-10"
+                            >
+                                {startingLive ? <Loader2 className="animate-spin" size={20}/> : <Play size={20} fill="currentColor" className="ml-1"/>}
+                                Starta Live Session
+                            </button>
+                          </>
+                      )}
                   </div>
               )}
           </div>

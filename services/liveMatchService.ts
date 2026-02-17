@@ -51,6 +51,14 @@ export const liveMatchService = {
     return matchId;
   },
 
+  getExistingMatch: async (): Promise<LiveMatchData | null> => {
+    if (!db || !auth.currentUser) return null;
+    const coachId = auth.currentUser.uid;
+    const docRef = doc(db, 'live_matches', `live_${coachId}`);
+    const snap = await getDoc(docRef);
+    return snap.exists() ? (snap.data() as LiveMatchData) : null;
+  },
+
   subscribeToMatch: (matchId: string, callback: (data: LiveMatchData) => void) => {
     if (!db) return () => {};
     const docRef = doc(db, 'live_matches', matchId);
