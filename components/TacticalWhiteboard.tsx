@@ -35,7 +35,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
     const rect = container.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
 
-    // Spara nuvarande ritning
+    // Spara ritningen för att inte tappa den vid resize
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     tempCanvas.width = canvas.width;
@@ -63,18 +63,26 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const observer = new ResizeObserver(() => {
-        window.requestAnimationFrame(updateCanvasSize);
-    });
+    const observer = new ResizeObserver(() => window.requestAnimationFrame(updateCanvasSize));
     observer.observe(container);
     setTimeout(updateCanvasSize, 100);
     return () => observer.disconnect();
   }, [updateCanvasSize]);
 
+  // Effekt för att hantera "body scroll lock" och bryta ut ur animerade containers
+  useEffect(() => {
+    if (isPopup) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isPopup]);
+
   const togglePopup = () => {
     setIsPopup(!isPopup);
-    // Vi använder en kort timeout för att låta DOM:en uppdatera "fixed" läget innan vi mäter om canvasen
-    setTimeout(updateCanvasSize, 60);
+    // Vi triggar en resize direkt efter DOM-uppdateringen
+    setTimeout(updateCanvasSize, 100);
   };
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
@@ -148,26 +156,30 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   return (
     <div 
       ref={containerRef} 
-      className={`flex flex-col bg-slate-950 select-none overflow-hidden transition-all duration-300 ${isPopup ? 'fixed inset-0 z-[9999]' : 'h-full w-full relative'}`}
+      className={`bg-slate-950 select-none overflow-hidden flex flex-col transition-all duration-300 ${
+        isPopup 
+          ? 'fixed !top-0 !left-0 !right-0 !bottom-0 !w-screen !h-screen z-[9999]' 
+          : 'h-full w-full relative'
+      }`}
       style={{ touchAction: 'none' }}
     >
-      {/* ULTRA SLIM TOOLBAR - NO EXTRA CENTER BUTTON */}
+      {/* VERKTYGSFÄLT - ÅTERSTÄLLD LAYOUT UTAN MITTEN-KNAPP */}
       <div className="flex items-center justify-between px-2 py-1 md:px-4 md:py-1.5 bg-slate-900 border-b border-slate-800 gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* Drawing Tools */}
+          {/* Verktyg */}
           <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
             <button onClick={() => setMode('pencil')} className={`p-1.5 md:p-2 rounded-lg transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-              <Pencil size={isPopup ? 20 : 16} />
+              <Pencil size={isPopup ? 22 : 16} />
             </button>
             <button onClick={() => setMode('player')} className={`p-1.5 md:p-2 rounded-lg transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-              <User size={isPopup ? 20 : 16} />
+              <User size={isPopup ? 22 : 16} />
             </button>
             <button onClick={() => setMode('eraser')} className={`p-1.5 md:p-2 rounded-lg transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}>
-              <Eraser size={isPopup ? 20 : 16} />
+              <Eraser size={isPopup ? 22 : 16} />
             </button>
           </div>
 
-          {/* Player Numbers */}
+          {/* Sifferväljare vid spelarläge */}
           {mode === 'player' && (
               <div className="hidden sm:flex bg-indigo-950/30 p-1 rounded-xl border border-indigo-500/20 gap-1 animate-in slide-in-from-left duration-200">
                   {[1, 2, 3, 4, 5].map(n => (
@@ -178,7 +190,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
               </div>
           )}
 
-          {/* Palette + Integrated Trash Can */}
+          {/* Färgpalett + Soptunna */}
           <div className="flex items-center gap-1.5 px-1 overflow-x-auto hide-scrollbar border-l border-slate-800 ml-1 pl-2">
             {COLORS.map(c => (
                 <button 
@@ -199,24 +211,22 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
           </div>
         </div>
 
-        {/* Global Actions on the RIGHT */}
+        {/* Globala knappar till HÖGER */}
         <div className="flex items-center gap-2 shrink-0 border-l border-slate-800 pl-2">
           {onSave && (
               <button onClick={() => onSave(canvasRef.current!.toDataURL())} className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-lg transition-all active:scale-95">
-                <Check size={18} />
+                <Check size={20} />
               </button>
           )}
 
-          {/* Toggle Popup-Helskärm (Återställd till höger) */}
-          <button onClick={togglePopup} className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg" title={isPopup ? "Förminska" : "Förstora"}>
-            {isPopup ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          <button onClick={togglePopup} className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg" title={isPopup ? "Förminska" : "Popup Helskärm"}>
+            {isPopup ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
           </button>
         </div>
       </div>
 
-      {/* Drawing Area */}
+      {/* Rityta */}
       <div className="flex-1 relative cursor-crosshair bg-slate-900 overflow-hidden">
-        {/* Bakgrundsplan */}
         <div className="absolute inset-0 pointer-events-none opacity-[0.12] flex items-center justify-center p-4">
           <div className="w-full h-full border-2 border-white relative max-w-[850px] aspect-[1/1.4]">
              <div className="absolute inset-1.5 border border-white/30"></div>
