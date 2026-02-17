@@ -11,7 +11,6 @@ import { Exercise, Player, Evaluation, Phase, TrainingSession } from '../types';
 
 type TrainingStep = 'selection' | 'checkin' | 'live';
 
-// Unika bedömningskriterier för de två lägena
 const BASKET_CRITERIA = [
   { label: 'Teknik', icon: Target, desc: 'Precision & utförande' },
   { label: 'Intensitet', icon: Flame, desc: 'Tempo & närkamp' },
@@ -47,7 +46,6 @@ export const Training: React.FC = () => {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [allSessions, setAllSessions] = useState<TrainingSession[]>([]);
 
-  // Betygs-state för en spelare
   const [currentScores, setCurrentScores] = useState<number[]>([]);
   const [currentNote, setCurrentNote] = useState<string>("");
 
@@ -92,7 +90,6 @@ export const Training: React.FC = () => {
       setCurrentScores([...existing.scores]);
       setCurrentNote(existing.note || "");
     } else {
-      // Skapa alltid 5 poäng oavsett övningens egna kriterier för enhetlighet i DB
       setCurrentScores(new Array(5).fill(3));
       setCurrentNote("");
     }
@@ -166,21 +163,25 @@ export const Training: React.FC = () => {
           <div className="grid lg:grid-cols-12 gap-6 animate-in slide-in-from-right duration-500">
               <div className={`${selectedSession ? 'hidden lg:block' : ''} lg:col-span-4 space-y-2`}>
                 {allSessions.length > 0 ? allSessions.map(s => (
-                  <div key={s.id} onClick={() => setSelectedSession(s)} className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all group ${selectedSession?.id === s.id ? 'bg-orange-600/10 border-orange-500' : 'bg-slate-900 border-slate-800 hover:border-slate-600'}`}>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-slate-950 flex items-center justify-center font-black text-xs text-white border border-slate-800">{s.date.split('-')[2]}</div>
-                        <div className="text-xs font-black text-slate-300 uppercase tracking-tighter">Fas {s.phaseId} Pass</div>
+                  <div key={s.id} className="relative group">
+                    <div 
+                      onClick={() => setSelectedSession(s)} 
+                      className={`p-4 pr-16 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${selectedSession?.id === s.id ? 'bg-orange-600/10 border-orange-500' : 'bg-slate-900 border-slate-800 hover:border-slate-600'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-slate-950 flex items-center justify-center font-black text-xs text-white border border-slate-800">{s.date.split('-')[2]}</div>
+                          <div className="text-xs font-black text-slate-300 uppercase tracking-tighter">Fas {s.phaseId} Pass</div>
+                      </div>
+                      <ChevronRight size={14} className="text-slate-700" />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button 
-                            onClick={(e) => handleDeleteSession(s.id, e)}
-                            className="p-2 text-slate-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Ta bort pass"
-                        >
-                            <Trash2 size={14} />
-                        </button>
-                        <ChevronRight size={14} className="text-slate-700" />
-                    </div>
+                    {/* Radera-knapp: Placerad säkert i mitten/höger för att undvika felklick */}
+                    <button 
+                      onClick={(e) => handleDeleteSession(s.id, e)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100 z-10"
+                      title="Ta bort pass"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 )) : <p className="text-slate-600 p-8 text-center text-xs font-bold uppercase tracking-widest border-2 border-dashed border-slate-900 rounded-3xl">Inga sparade pass än.</p>}
               </div>
@@ -359,7 +360,6 @@ export const Training: React.FC = () => {
                   </div>
               )}
 
-              {/* MODAL: KOMPAKT SMART ASSESSMENT GRID */}
               {gradingPlayer && selectedExercise && (
                   <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md">
                       <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -395,7 +395,7 @@ export const Training: React.FC = () => {
                                                   <button 
                                                     key={v} 
                                                     onClick={() => { const next = [...currentScores]; next[i] = v; setCurrentScores(next); }} 
-                                                    className={`flex-1 h-10 rounded-xl font-black text-xs transition-all border ${currentScores[i] === v ? (viewMode === 'basket' ? 'bg-orange-600 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.3)]' : 'bg-blue-600 border-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.3)]') + ' text-white scale-[1.05] z-10' : 'bg-slate-900 border-slate-800 text-slate-600 hover:text-slate-400'}`}
+                                                    className={`flex-1 h-10 rounded-xl font-black text-xs transition-all border ${currentScores[i] === v ? (viewMode === 'basket' ? 'bg-orange-600 border-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]' : 'bg-blue-600 border-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.3)]') + ' text-white scale-[1.05] z-10' : 'bg-slate-900 border-slate-800 text-slate-600 hover:text-slate-400'}`}
                                                   >
                                                       {v}
                                                   </button>

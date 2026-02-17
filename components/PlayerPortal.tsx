@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Player, MatchRecord, TrainingSession, Badge, Exercise, Phase, Homework } from '../types';
 import { dataService } from '../services/dataService';
-import { SKILL_COLORS } from './Roster';
 import { 
   Trophy, Target, CheckCircle2, Zap, Heart, BrainCircuit, LogOut, Dumbbell, Eye, Star, Award, Lock, Play, Youtube, X, Info, Lightbulb, Egg, GlassWater, Moon, Carrot, Send, Bot, Loader2, Maximize2, Minimize2, ChevronRight, BookOpen, ExternalLink, Search, Flame, Sparkles, Circle, Medal, ClipboardList, Activity, Calendar, MessageSquareText
 } from 'lucide-react';
@@ -21,14 +20,15 @@ interface ChatMessage {
     text: string;
 }
 
+// Synkade färger från Roster.tsx för konsekvent UI
 const SKILL_THEMES: Record<string, string> = {
-    'DRIBBLING': 'bg-orange-500',
-    'SPELFÖRSTÅELSE': 'bg-purple-500',
-    'SKYTTE': 'bg-red-500',
-    'FÖRSVAR': 'bg-emerald-500',
-    'FYSIK': 'bg-indigo-500',
-    'PASSNING': 'bg-blue-500',
-    'KONDITION': 'bg-cyan-500'
+    'Skytte': 'bg-rose-500', 
+    'Dribbling': 'bg-amber-500', 
+    'Passning': 'bg-blue-500',
+    'Försvar': 'bg-emerald-500', 
+    'Spelförståelse': 'bg-purple-500', 
+    'Kondition': 'bg-cyan-500', 
+    'Fysik': 'bg-indigo-500'
 };
 
 const getVideoId = (url: string) => {
@@ -44,13 +44,14 @@ const getVideoId = (url: string) => {
 };
 
 const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
-    const labels = ['DRIBBLING', 'SPELFÖRSTÅELSE', 'SKYTTE', 'FÖRSVAR', 'FYSIK', 'PASSNING', 'KONDITION'];
+    // Exakta etiketter från coachens vy för 1:1 synk
+    const labels = ['Dribbling', 'Spelförståelse', 'Skytte', 'Försvar', 'Fysik', 'Passning', 'Kondition'];
     const numPoints = labels.length;
     const radius = 75;
     const center = 100;
     const points = labels.map((label, i) => {
         const value = skills[label] || 5;
-        const angle = (Math.PI * 2 * i) / numPoints - Math.PI / - Math.PI / 2;
+        const angle = (Math.PI * 2 * i) / numPoints - Math.PI / 2;
         const r = (value / 10) * radius;
         return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
     });
@@ -111,7 +112,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
           dataService.getMatches(coachId),
           dataService.getSessions(coachId),
           dataService.getUnifiedPhases(),
-          dataService.getPlayers()
+          dataService.getPlayers(coachId)
       ]);
       const updatedMe = currentPlayers.find(p => p.id === player.id);
       if (updatedMe) setMyPlayer(updatedMe);
@@ -374,13 +375,13 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
                       <RadarChart skills={myPlayer.skillAssessment || {}} />
                       <div className="w-full space-y-5 mt-12 px-2 relative z-10">
                           {[
-                              { label: 'DRIBBLING', val: (myPlayer.skillAssessment?.['Dribbling'] || 5), color: SKILL_THEMES['DRIBBLING'] },
-                              { label: 'SPELFÖRSTÅELSE', val: (myPlayer.skillAssessment?.['Spelförståelse'] || 5), color: SKILL_THEMES['SPELFÖRSTÅELSE'] },
-                              { label: 'SKYTTE', val: (myPlayer.skillAssessment?.['Skytte'] || 5), color: SKILL_THEMES['SKYTTE'] },
-                              { label: 'FÖRSVAR', val: (myPlayer.skillAssessment?.['Försvar'] || 5), color: SKILL_THEMES['FÖRSVAR'] },
-                              { label: 'FYSIK', val: (myPlayer.skillAssessment?.['Fysik'] || 5), color: SKILL_THEMES['FYSIK'] },
-                              { label: 'PASSNING', val: (myPlayer.skillAssessment?.['Passning'] || 5), color: SKILL_THEMES['PASSNING'] },
-                              { label: 'KONDITION', val: (myPlayer.skillAssessment?.['Kondition'] || 5), color: SKILL_THEMES['KONDITION'] }
+                              { label: 'Dribbling', val: (myPlayer.skillAssessment?.['Dribbling'] || 5), color: SKILL_THEMES['Dribbling'] },
+                              { label: 'Spelförståelse', val: (myPlayer.skillAssessment?.['Spelförståelse'] || 5), color: SKILL_THEMES['Spelförståelse'] },
+                              { label: 'Skytte', val: (myPlayer.skillAssessment?.['Skytte'] || 5), color: SKILL_THEMES['Skytte'] },
+                              { label: 'Försvar', val: (myPlayer.skillAssessment?.['Försvar'] || 5), color: SKILL_THEMES['Försvar'] },
+                              { label: 'Fysik', val: (myPlayer.skillAssessment?.['Fysik'] || 5), color: SKILL_THEMES['Fysik'] },
+                              { label: 'Passning', val: (myPlayer.skillAssessment?.['Passning'] || 5), color: SKILL_THEMES['Passning'] },
+                              { label: 'Kondition', val: (myPlayer.skillAssessment?.['Kondition'] || 5), color: SKILL_THEMES['Kondition'] }
                           ].map((skill) => (
                               <div key={skill.label} className="flex items-center justify-between gap-6">
                                   <div className="text-[10px] font-black text-slate-400 tracking-widest w-28 uppercase">{skill.label}</div>
