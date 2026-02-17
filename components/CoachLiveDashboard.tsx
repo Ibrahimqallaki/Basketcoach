@@ -28,6 +28,11 @@ export const CoachLiveDashboard: React.FC<CoachLiveDashboardProps> = ({ matchId,
     </div>
   );
 
+  const getQrUrl = (id: string) => {
+    const link = `${window.location.origin}?match=${id}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(link)}&bgcolor=ffffff`;
+  };
+
   return (
     <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500">
       {/* HUD HEADER */}
@@ -74,7 +79,7 @@ export const CoachLiveDashboard: React.FC<CoachLiveDashboardProps> = ({ matchId,
                   <div className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
                      {match.awayName.toUpperCase()} <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
                   </div>
-                  <div className="text-8xl md:text-[12rem] font-black text-slate-100 leading-none tabular-nums tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">{match.awayScore}</div>
+                  <div className="text-8xl md:text-[12rem] font-black text-slate-100 leading-none tabular-nums tracking-tighter drop-shadow-[0_0_255,255,255,0.1)]">{match.awayScore}</div>
                </div>
             </div>
 
@@ -119,7 +124,7 @@ export const CoachLiveDashboard: React.FC<CoachLiveDashboardProps> = ({ matchId,
                      <div key={p.id} className={`p-4 rounded-[1.5rem] border transition-all duration-500 relative overflow-hidden ${isOut ? 'bg-rose-950/20 border-rose-600 shadow-rose-900/20' : isCritical ? 'bg-orange-950/20 border-orange-500 shadow-orange-900/20' : 'bg-slate-950 border-slate-800 group hover:border-slate-600'}`}>
                         <div className="flex justify-between items-center relative z-10">
                            <div className="flex items-center gap-4">
-                              <div className={`w-10 h-10 rounded-xl bg-slate-900 border flex items-center justify-center font-black text-xs transition-colors ${isOut ? 'text-rose-500 border-rose-800' : isCritical ? 'text-orange-500 border-orange-800' : 'text-slate-600 border-slate-800 group-hover:text-orange-500'}`}>#{p.number}</div>
+                              <div className={`w-10 h-10 rounded-xl bg-slate-900 border flex items-center justify-center font-black text-xs transition-colors ${isOut ? 'text-rose-500 border-rose-800' : isCritical ? 'text-orange-500 border-rose-800' : 'text-slate-600 border-slate-800 group-hover:text-orange-500'}`}>#{p.number}</div>
                               <div>
                                  <div className="text-[11px] font-black text-white uppercase tracking-tight">{p.name}</div>
                                  <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{pts} POÄNG</div>
@@ -132,7 +137,7 @@ export const CoachLiveDashboard: React.FC<CoachLiveDashboardProps> = ({ matchId,
                         
                         <div className="flex gap-1.5 mt-3 relative z-10">
                            {[1,2,3,4,5].map(v => (
-                              <div key={v} className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${v <= fouls ? (v === 5 ? 'bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.6)]' : 'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.5)]') : 'bg-slate-800'}`}></div>
+                              <div key={v} className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${v <= fouls ? (v === 5 ? 'bg-rose-600 shadow-[0_0_10px_rgba(225,29,72,0.6)]' : 'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.5)]') : 'bg-slate-800'}`}></div>
                            ))}
                         </div>
                         
@@ -153,21 +158,30 @@ export const CoachLiveDashboard: React.FC<CoachLiveDashboardProps> = ({ matchId,
       {showShare && (
          <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md animate-in fade-in duration-300">
             <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 md:p-10 shadow-[0_0_60px_rgba(0,0,0,0.5)] space-y-8 text-center animate-in zoom-in-95">
-               <div className="w-24 h-24 bg-blue-600/10 rounded-[2rem] flex items-center justify-center mx-auto text-blue-500 shadow-inner border border-blue-500/20"><QrCode size={48}/></div>
                <div>
                   <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Bjud in Matchscout</h3>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2 leading-relaxed">Ge denna kod eller länk till en förälder för att sköta poängen i realtid.</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2 leading-relaxed">Låt föräldern skanna koden för att börja sköta poängen.</p>
                </div>
                
-               <div className="p-6 bg-slate-950 rounded-2xl border border-slate-800 space-y-4 shadow-inner">
-                  <div className="text-4xl font-mono font-black text-white tracking-[0.25em]">{matchId.split('_')[1].slice(0, 6).toUpperCase()}</div>
-                  <button onClick={() => {
-                      const link = `${window.location.origin}?match=${matchId}`;
-                      navigator.clipboard.writeText(link);
-                      alert("Länk kopierad! Skicka den till matchscouten via SMS eller WhatsApp.");
-                  }} className="w-full py-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-[10px] font-black uppercase border border-slate-800 transition-all flex items-center justify-center gap-2">
-                      <Share2 size={16}/> Kopiera Direktlänk
-                  </button>
+               <div className="flex flex-col items-center gap-6">
+                  <div className="p-4 bg-white rounded-3xl shadow-2xl">
+                      <img 
+                        src={getQrUrl(matchId)} 
+                        alt="Match QR Code" 
+                        className="w-48 h-48"
+                      />
+                  </div>
+
+                  <div className="w-full p-6 bg-slate-950 rounded-2xl border border-slate-800 space-y-4 shadow-inner">
+                      <div className="text-4xl font-mono font-black text-white tracking-[0.25em]">{matchId.split('_')[1].slice(0, 6).toUpperCase()}</div>
+                      <button onClick={() => {
+                          const link = `${window.location.origin}?match=${matchId}`;
+                          navigator.clipboard.writeText(link);
+                          alert("Länk kopierad!");
+                      }} className="w-full py-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-[10px] font-black uppercase border border-slate-800 transition-all flex items-center justify-center gap-2">
+                          <Share2 size={16}/> Kopiera Direktlänk
+                      </button>
+                  </div>
                </div>
 
                <button onClick={() => setShowShare(false)} className="w-full py-5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-900/40 transition-all active:scale-95">Stäng</button>

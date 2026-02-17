@@ -92,7 +92,7 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
           const id = await liveMatchService.startMatch("Orion HU14", opponent || "Gäster", players);
           setMatchId(id);
           setIsLiveActive(true);
-          setShowOnboarding(true); // Visa QR och länk direkt efter skapande
+          setShowOnboarding(true); 
       } catch (err: any) {
           console.error("Live match error:", err);
           alert("Kunde inte starta live-session.\n\nFelsökning:\n1. Gå till 'Mitt Konto'\n2. Kopiera reglerna under 'Databas-regler'\n3. Klistra in dem i Firebase Console -> Firestore -> Rules.");
@@ -126,36 +126,48 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
   };
 
+  const getQrUrl = (id: string) => {
+    const link = `${window.location.origin}?match=${id}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(link)}&bgcolor=ffffff`;
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24 px-1">
       {showSupport && <SupportModal userRole="coach" onClose={() => setShowSupport(false)} />}
       
-      {/* ONBOARDING MODAL - VISAS VID START */}
       {showOnboarding && matchId && (
           <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl animate-in fade-in duration-300">
               <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[3rem] p-8 md:p-10 shadow-2xl space-y-8 text-center relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-5"><QrCode size={120}/></div>
-                  <div className="w-20 h-20 bg-emerald-600/10 rounded-[2rem] flex items-center justify-center mx-auto text-emerald-500 border border-emerald-500/20 shadow-inner">
-                      <QrCode size={40}/>
-                  </div>
+                  
                   <div>
-                      <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Live Session Redo!</h3>
-                      <p className="text-xs text-slate-400 mt-2 leading-relaxed">Ge länken nedan till föräldern som ska sköta statistiken. De behöver inte logga in.</p>
+                      <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Skanna för att Scouta</h3>
+                      <p className="text-xs text-slate-400 mt-2 leading-relaxed">Låt föräldern skanna koden nedan för att öppna sekretariat-panelen.</p>
                   </div>
                   
-                  <div className="p-6 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
-                      <div className="text-xs font-black text-slate-500 uppercase tracking-widest">Match-ID</div>
-                      <div className="text-3xl font-mono font-black text-white tracking-[0.2em]">{matchId.split('_')[1].slice(0, 6).toUpperCase()}</div>
-                      <button 
-                        onClick={() => {
-                            const link = `${window.location.origin}?match=${matchId}`;
-                            navigator.clipboard.writeText(link);
-                            alert("Länk kopierad! Skicka den till matchscouten.");
-                        }}
-                        className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
-                      >
-                          <Share2 size={16}/> Kopiera Direktlänk
-                      </button>
+                  <div className="flex flex-col items-center gap-6">
+                      <div className="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.1)] animate-in zoom-in duration-500 delay-200">
+                          <img 
+                            src={getQrUrl(matchId)} 
+                            alt="Match QR Code" 
+                            className="w-48 h-48 md:w-56 md:h-56"
+                          />
+                      </div>
+                      
+                      <div className="w-full p-6 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
+                          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Alternativt Match-ID</div>
+                          <div className="text-3xl font-mono font-black text-white tracking-[0.2em]">{matchId.split('_')[1].slice(0, 6).toUpperCase()}</div>
+                          <button 
+                            onClick={() => {
+                                const link = `${window.location.origin}?match=${matchId}`;
+                                navigator.clipboard.writeText(link);
+                                alert("Länk kopierad!");
+                            }}
+                            className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
+                          >
+                              <Share2 size={16}/> Kopiera Direktlänk
+                          </button>
+                      </div>
                   </div>
 
                   <button 
