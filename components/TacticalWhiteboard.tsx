@@ -15,9 +15,7 @@ const COLORS = [
     { name: 'Rosa', value: '#f43f5e' },
     { name: 'Gul', value: '#eab308' },
     { name: 'Lila', value: '#a855f7' },
-    { name: 'Cyan', value: '#06b6d4' },
-    { name: 'Lime', value: '#84cc16' },
-    { name: 'Guld', value: '#fbbf24' }
+    { name: 'Cyan', value: '#06b6d4' }
 ];
 
 export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, id }) => {
@@ -99,13 +97,11 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
 
   const drawPlayer = (ctx: CanvasRenderingContext2D, x: number, y: number, num: number) => {
     const size = isFullscreen ? 28 : 22;
-    // Circle Shadow
     ctx.beginPath();
     ctx.arc(x, y, size + 2, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.fill();
 
-    // Main Circle
     ctx.beginPath();
     ctx.arc(x, y, size, 0, Math.PI * 2);
     ctx.fillStyle = color;
@@ -114,8 +110,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // Number
-    ctx.fillStyle = (color === '#ffffff' || color === '#fbbf24' || color === '#eab308' || color === '#84cc16') ? '#000000' : '#ffffff';
+    ctx.fillStyle = (color === '#ffffff' || color === '#eab308') ? '#000000' : '#ffffff';
     ctx.font = `black ${isFullscreen ? '20px' : '15px'} Inter, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -127,12 +122,10 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
     const { x, y } = getPos(e);
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
-
     if (mode === 'player') {
         drawPlayer(ctx, x, y, selectedNumber);
         return;
     }
-
     ctx.beginPath();
     ctx.moveTo(x, y);
     setIsDrawing(true);
@@ -165,97 +158,69 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
       className={`flex flex-col bg-slate-950 select-none overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full w-full'}`}
       style={{ touchAction: 'none' }}
     >
-      {/* Enhanced Toolbar - Now completely without "X" */}
-      <div className={`flex flex-col lg:flex-row items-center justify-between p-5 bg-slate-900 border-b border-slate-800 gap-5 shrink-0`}>
-        <div className="flex flex-wrap items-center gap-5 w-full lg:w-auto">
-          {/* Main Tools Grouped */}
-          <div className="flex bg-slate-950 p-2 rounded-2xl border border-slate-800 shrink-0 shadow-inner">
-            <button 
-              onClick={() => setMode('pencil')}
-              className={`p-3.5 rounded-xl transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg scale-105' : 'text-slate-500 hover:text-slate-300'}`}
-              title="Penna"
-            >
-              <Pencil size={isFullscreen ? 26 : 20} />
+      {/* Ultra Slim Toolbar - NO "X" - Single Row */}
+      <div className="flex items-center justify-between p-2 md:p-3 bg-slate-900 border-b border-slate-800 gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Main Drawing Tools */}
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+            <button onClick={() => setMode('pencil')} className={`p-2 rounded-lg transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-300'}`} title="Penna">
+              <Pencil size={isFullscreen ? 22 : 18} />
             </button>
-            <button 
-              onClick={() => setMode('player')}
-              className={`p-3.5 rounded-xl transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:text-slate-300'}`}
-              title="Placera Spelare"
-            >
-              <User size={isFullscreen ? 26 : 20} />
+            <button onClick={() => setMode('player')} className={`p-2 rounded-lg transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`} title="Spelare">
+              <User size={isFullscreen ? 22 : 18} />
             </button>
-            <button 
-              onClick={() => setMode('eraser')}
-              className={`p-3.5 rounded-xl transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner scale-105' : 'text-slate-500 hover:text-slate-300'}`}
-              title="Sudda"
-            >
-              <Eraser size={isFullscreen ? 26 : 20} />
+            <button onClick={() => setMode('eraser')} className={`p-2 rounded-lg transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`} title="Sudd">
+              <Eraser size={isFullscreen ? 22 : 18} />
             </button>
           </div>
 
-          {/* Number Picker for Player Mode */}
+          {/* Player Number Selector - Compact */}
           {mode === 'player' && (
-              <div className="flex flex-wrap bg-indigo-950/30 p-2 rounded-2xl border border-indigo-500/20 gap-1.5 animate-in slide-in-from-left duration-200 max-w-[280px] md:max-w-none">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(n => (
-                      <button 
-                        key={n} 
-                        onClick={() => setSelectedNumber(n)}
-                        className={`w-9 h-9 rounded-lg font-black text-[10px] transition-all ${selectedNumber === n ? 'bg-indigo-600 text-white shadow-lg scale-110' : 'text-indigo-400 hover:bg-indigo-500/10'}`}
-                      >
+              <div className="hidden sm:flex bg-indigo-950/30 p-1 rounded-xl border border-indigo-500/20 gap-1 animate-in slide-in-from-left duration-200">
+                  {[1, 2, 3, 4, 5].map(n => (
+                      <button key={n} onClick={() => setSelectedNumber(n)} className={`w-8 h-8 rounded-lg font-black text-[10px] transition-all ${selectedNumber === n ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 hover:bg-indigo-500/10'}`}>
                         {n}
                       </button>
                   ))}
               </div>
           )}
 
-          {/* Color Palette */}
-          <div className="flex flex-wrap gap-3 px-2">
+          {/* Color Palette - 8 colors, single row */}
+          <div className="flex items-center gap-1.5 px-2 overflow-x-auto hide-scrollbar">
             {COLORS.map(c => (
                 <button 
                     key={c.name}
                     onClick={() => { setColor(c.value); if(mode === 'eraser') setMode('pencil'); }}
-                    className={`w-9 h-9 rounded-full border-2 transition-all hover:scale-125 active:scale-90 ${color === c.value && mode !== 'eraser' ? 'border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'border-white/10 opacity-60'}`}
+                    className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 shrink-0 transition-all ${color === c.value && mode !== 'eraser' ? 'border-white scale-110 shadow-lg' : 'border-white/10 opacity-60'}`}
                     style={{ backgroundColor: c.value }}
-                    title={c.name}
                 />
             ))}
           </div>
         </div>
 
-        <div className="flex items-center gap-4 shrink-0 w-full lg:w-auto justify-end border-t lg:border-t-0 lg:border-l border-slate-800 pt-5 lg:pt-0 lg:pl-5">
-          <button 
-            onClick={clearCanvas}
-            className="p-3.5 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
-            title="Rensa allt"
-          >
-            <Trash2 size={24} />
+        {/* Global Actions - Lifted up to same row */}
+        <div className="flex items-center gap-2 shrink-0 border-l border-slate-800 pl-2">
+          <button onClick={clearCanvas} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all" title="Rensa">
+            <Trash2 size={20} />
           </button>
 
           {onSave && (
-              <button 
-                onClick={() => onSave(canvasRef.current!.toDataURL())}
-                className="flex items-center gap-3 px-7 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl shadow-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95"
-              >
-                <Check size={22} />
-                <span className="hidden sm:inline">Spara</span>
+              <button onClick={() => onSave(canvasRef.current!.toDataURL())} className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-lg transition-all active:scale-95">
+                <Check size={20} />
               </button>
           )}
 
-          <button 
-            onClick={toggleFullscreen}
-            className="p-3.5 rounded-2xl bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg"
-            title={isFullscreen ? "Stäng helskärm" : "Helskärm"}
-          >
-            {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+          <button onClick={toggleFullscreen} className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all">
+            {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
           </button>
         </div>
       </div>
 
-      {/* Drawing Area */}
+      {/* Drawing Area - Max Size */}
       <div className="flex-1 relative cursor-crosshair bg-slate-900 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none opacity-[0.15] flex items-center justify-center p-8">
-          <div className="w-full h-full border-2 border-white relative max-w-[900px] aspect-[1/1.4]">
-             <div className="absolute inset-2 border border-white/30"></div>
+        <div className="absolute inset-0 pointer-events-none opacity-[0.12] flex items-center justify-center p-4">
+          <div className="w-full h-full border-2 border-white relative max-w-[850px] aspect-[1/1.4]">
+             <div className="absolute inset-1.5 border border-white/30"></div>
              <div className="absolute bottom-0 left-0 w-full h-px bg-white/80"></div>
              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/3 aspect-square border-2 border-white rounded-full translate-y-1/2"></div>
              <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[95%] aspect-square border-2 border-white rounded-full"></div>
