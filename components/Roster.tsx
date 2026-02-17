@@ -1,16 +1,21 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { dataService } from '../services/dataService';
-import { User, Plus, X, Trash2, Star, PenTool, Target, Check, Save, Loader2, Eye, BookPlus, BrainCircuit, Trophy, Dumbbell, ChevronRight, BookOpen, Search, Copy, Key, RefreshCcw, Cloud, CloudUpload } from 'lucide-react';
-import { Player, Phase, MatchRecord, Exercise } from '../types';
+import { User, Plus, X, Trash2, Star, PenTool, Target, Check, Save, Loader2, Eye, BookPlus, BrainCircuit, Trophy, Dumbbell, ChevronRight, BookOpen, Search, Copy, Key, RefreshCcw, Cloud, CloudUpload, ClipboardPlus } from 'lucide-react';
+import { Player, Phase, MatchRecord, Exercise, SkillCategory } from '../types';
 
 interface RosterProps {
     onSimulatePlayerLogin?: (player: Player) => void;
 }
 
 export const SKILL_COLORS: Record<string, string> = {
-    'Skytte': 'bg-rose-500', 'Dribbling': 'bg-amber-500', 'Passning': 'bg-blue-500',
-    'Försvar': 'bg-emerald-500', 'Spelförståelse': 'bg-purple-500', 'Kondition': 'bg-cyan-500', 'Fysik': 'bg-indigo-500'
+    'Skytte': 'accent-rose-500', 
+    'Dribbling': 'accent-amber-500', 
+    'Passning': 'accent-blue-500',
+    'Försvar': 'accent-emerald-500', 
+    'Spelförståelse': 'accent-purple-500', 
+    'Kondition': 'accent-cyan-500', 
+    'Fysik': 'accent-indigo-500'
 };
 
 const RadarChart = ({ skills }: { skills: Record<string, number> }) => {
@@ -43,6 +48,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   const [modalState, setModalState] = useState<{ show: boolean, mode: 'add' | 'edit', player?: Player }>({ show: false, mode: 'add' });
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [showHomeworkInput, setShowHomeworkInput] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [newHomework, setNewHomework] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
@@ -141,6 +147,14 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
       setPlayers(updated);
       if (updated.length > 0) setSelectedPlayerId(updated[0].id);
       else setSelectedPlayerId(null);
+  };
+
+  const handleAddHomework = async () => {
+      if(!newHomework.trim() || !player) return;
+      await dataService.addHomework(player.id, newHomework);
+      setNewHomework("");
+      setShowHomeworkInput(false);
+      loadData();
   };
 
   if (loading && players.length === 0) return <div className="h-full w-full flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
@@ -243,11 +257,18 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl">
-                   <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Dumbbell size={14} className="text-blue-400" /> Aktiva Uppdrag</h3>
-                   <div className="flex gap-2">
-                       <input type="text" value={newHomework} onChange={(e) => setNewHomework(e.target.value)} placeholder="Skriv ett nytt uppdrag..." className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-blue-500" />
-                       <button onClick={async () => { if(!newHomework.trim()) return; await dataService.addHomework(player.id, newHomework); setNewHomework(""); loadData(); }} className="px-6 py-3 bg-blue-600 rounded-xl text-white font-black text-[10px] uppercase shadow-lg shadow-blue-900/20">Lägg till</button>
+                   <div className="flex justify-between items-center">
+                        <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Dumbbell size={14} className="text-blue-400" /> Aktiva Uppdrag</h3>
+                        <button onClick={() => setShowHomeworkInput(!showHomeworkInput)} className="p-2 bg-blue-600/10 text-blue-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><ClipboardPlus size={16}/></button>
                    </div>
+                   
+                   {showHomeworkInput && (
+                       <div className="flex gap-2 animate-in slide-in-from-top duration-200">
+                           <input autoFocus type="text" value={newHomework} onChange={(e) => setNewHomework(e.target.value)} placeholder="Skriv ett nytt uppdrag..." className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-blue-500" />
+                           <button onClick={handleAddHomework} className="px-6 py-3 bg-blue-600 rounded-xl text-white font-black text-[10px] uppercase shadow-lg shadow-blue-900/20">Lägg till</button>
+                       </div>
+                   )}
+
                    <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                        {(player.homework || []).map(hw => (
                            <div key={hw.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-4 group">
@@ -301,7 +322,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                                           max="10" 
                                           value={val} 
                                           onChange={(e) => handleUpdateAssessment(skill, parseInt(e.target.value))} 
-                                          className="w-full h-1.5 bg-slate-950 rounded-full appearance-none accent-orange-600 cursor-pointer shadow-inner" 
+                                          className={`w-full h-1.5 bg-slate-950 rounded-full appearance-none ${SKILL_COLORS[skill] || 'accent-orange-600'} cursor-pointer shadow-inner`} 
                                       />
                                   </div>
                               </div>
