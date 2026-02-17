@@ -126,9 +126,12 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
   };
 
+  const getMatchLink = (id: string) => `${window.location.origin}?match=${id}`;
+
   const getQrUrl = (id: string) => {
-    const link = `${window.location.origin}?match=${id}`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(link)}&bgcolor=ffffff`;
+    const link = getMatchLink(id);
+    // qzone=4 ger en vit ram runt koden som hjälper skannern
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}&bgcolor=ffffff&qzone=4&ecc=M`;
   };
 
   return (
@@ -142,26 +145,27 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
                   
                   <div>
                       <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Skanna för att Scouta</h3>
-                      <p className="text-xs text-slate-400 mt-2 leading-relaxed">Låt föräldern skanna koden nedan för att öppna sekretariat-panelen.</p>
+                      <p className="text-xs text-slate-400 mt-2 leading-relaxed">Öppna kameran och rikta den mot koden för att öppna scout-panelen direkt.</p>
                   </div>
                   
                   <div className="flex flex-col items-center gap-6">
-                      <div className="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.1)] animate-in zoom-in duration-500 delay-200">
+                      <div className="p-3 bg-white rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.1)] animate-in zoom-in duration-500 delay-200">
                           <img 
                             src={getQrUrl(matchId)} 
                             alt="Match QR Code" 
-                            className="w-48 h-48 md:w-56 md:h-56"
+                            className="w-56 h-56 md:w-64 md:h-64 rounded-xl"
                           />
                       </div>
                       
                       <div className="w-full p-6 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
-                          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Alternativt Match-ID</div>
-                          <div className="text-3xl font-mono font-black text-white tracking-[0.2em]">{matchId.split('_')[1].slice(0, 6).toUpperCase()}</div>
+                          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Alternativt: Kopiera länk</div>
+                          <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-[9px] font-mono text-blue-400 break-all select-all">
+                              {getMatchLink(matchId)}
+                          </div>
                           <button 
                             onClick={() => {
-                                const link = `${window.location.origin}?match=${matchId}`;
-                                navigator.clipboard.writeText(link);
-                                alert("Länk kopierad!");
+                                navigator.clipboard.writeText(getMatchLink(matchId));
+                                alert("Scout-länk kopierad!");
                             }}
                             className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
                           >
@@ -244,7 +248,7 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-md z-10 text-left">
                                 <div className="p-5 bg-slate-950 border border-slate-800 rounded-[2rem]">
                                     <h4 className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1 flex items-center gap-2"><QrCode size={14} className="text-emerald-500"/> 1. Dela länk</h4>
-                                    <p className="text-[9px] text-slate-500 leading-tight">Matchscouten får en interaktiv kontrollpanel.</p>
+                                    <p className="text-[9px] text-slate-500 leading-tight">Matchscouten får en länk som QR-kod.</p>
                                 </div>
                                 <div className="p-5 bg-slate-950 border border-slate-800 rounded-[2rem]">
                                     <h4 className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1 flex items-center gap-2"><Check size={14} className="text-emerald-500"/> 2. Följ Live</h4>

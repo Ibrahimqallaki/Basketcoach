@@ -28,9 +28,11 @@ export const CoachLiveDashboard: React.FC<CoachLiveDashboardProps> = ({ matchId,
     </div>
   );
 
+  const getMatchLink = (id: string) => `${window.location.origin}?match=${id}`;
+
   const getQrUrl = (id: string) => {
-    const link = `${window.location.origin}?match=${id}`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(link)}&bgcolor=ffffff`;
+    const link = getMatchLink(id);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}&bgcolor=ffffff&qzone=4&ecc=M`;
   };
 
   return (
@@ -164,19 +166,21 @@ export const CoachLiveDashboard: React.FC<CoachLiveDashboardProps> = ({ matchId,
                </div>
                
                <div className="flex flex-col items-center gap-6">
-                  <div className="p-4 bg-white rounded-3xl shadow-2xl">
+                  <div className="p-3 bg-white rounded-3xl shadow-2xl">
                       <img 
                         src={getQrUrl(matchId)} 
                         alt="Match QR Code" 
-                        className="w-48 h-48"
+                        className="w-56 h-56 rounded-xl"
                       />
                   </div>
 
                   <div className="w-full p-6 bg-slate-950 rounded-2xl border border-slate-800 space-y-4 shadow-inner">
-                      <div className="text-4xl font-mono font-black text-white tracking-[0.25em]">{matchId.split('_')[1].slice(0, 6).toUpperCase()}</div>
+                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Alternativt: Kopiera länk</div>
+                      <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-[8px] font-mono text-blue-400 break-all select-all">
+                          {getMatchLink(matchId)}
+                      </div>
                       <button onClick={() => {
-                          const link = `${window.location.origin}?match=${matchId}`;
-                          navigator.clipboard.writeText(link);
+                          navigator.clipboard.writeText(getMatchLink(matchId));
                           alert("Länk kopierad!");
                       }} className="w-full py-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-[10px] font-black uppercase border border-slate-800 transition-all flex items-center justify-center gap-2">
                           <Share2 size={16}/> Kopiera Direktlänk
