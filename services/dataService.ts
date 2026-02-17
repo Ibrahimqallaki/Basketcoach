@@ -2,6 +2,8 @@
 import { Player, TrainingSession, MatchRecord, Homework, Phase, Exercise, AppTicket, TicketStatus } from '../types';
 import { mockPlayers, mockPhases } from './mockData';
 import { db, auth, isFirebaseConfigured } from './firebase';
+// Fix: Added @ts-ignore to bypass environment-specific resolution issues with Firebase exports
+// @ts-ignore
 import { 
   collection, 
   getDocs, 
@@ -174,6 +176,19 @@ export const dataService = {
       const newS: TrainingSession = { ...session, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() };
       dataService.saveLocal(SESSIONS_KEY, [newS, ...sessions]);
       return newS;
+    }
+  },
+
+  deleteSession: async (id: string): Promise<TrainingSession[]> => {
+    const path = dataService.getUserPath();
+    if (path && db) {
+      await deleteDoc(doc(db, `${path}/sessions`, id));
+      return dataService.getSessions();
+    } else {
+      const sessions = await dataService.getSessions();
+      const updated = sessions.filter(s => s.id !== id);
+      dataService.saveLocal(SESSIONS_KEY, updated);
+      return updated;
     }
   },
 

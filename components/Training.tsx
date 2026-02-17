@@ -5,7 +5,7 @@ import {
   Play, Pause, RotateCcw, X, ChevronRight, Save, Check, Trophy, Loader2, 
   Dumbbell, Layout, ChevronLeft, UserCheck, Activity, BrainCircuit, 
   Target, Zap, MessageSquare, Mic, Eye, Shield, Flame, Timer, Star, 
-  ArrowUpCircle, Scaling
+  ArrowUpCircle, Scaling, Trash2
 } from 'lucide-react';
 import { Exercise, Player, Evaluation, Phase, TrainingSession } from '../types';
 
@@ -135,6 +135,14 @@ export const Training: React.FC = () => {
     }
   };
 
+  const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!confirm("Är du säker på att du vill ta bort detta pass? Historiken och XP försvinner för spelarna.")) return;
+      const updated = await dataService.deleteSession(id);
+      setAllSessions(updated);
+      if (selectedSession?.id === id) setSelectedSession(null);
+  };
+
   if (loading && players.length === 0) return <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
 
   return (
@@ -158,12 +166,21 @@ export const Training: React.FC = () => {
           <div className="grid lg:grid-cols-12 gap-6 animate-in slide-in-from-right duration-500">
               <div className={`${selectedSession ? 'hidden lg:block' : ''} lg:col-span-4 space-y-2`}>
                 {allSessions.length > 0 ? allSessions.map(s => (
-                  <div key={s.id} onClick={() => setSelectedSession(s)} className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${selectedSession?.id === s.id ? 'bg-orange-600/10 border-orange-500' : 'bg-slate-900 border-slate-800 hover:border-slate-600'}`}>
+                  <div key={s.id} onClick={() => setSelectedSession(s)} className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all group ${selectedSession?.id === s.id ? 'bg-orange-600/10 border-orange-500' : 'bg-slate-900 border-slate-800 hover:border-slate-600'}`}>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-slate-950 flex items-center justify-center font-black text-xs text-white border border-slate-800">{s.date.split('-')[2]}</div>
                         <div className="text-xs font-black text-slate-300 uppercase tracking-tighter">Fas {s.phaseId} Pass</div>
                     </div>
-                    <ChevronRight size={14} className="text-slate-700" />
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={(e) => handleDeleteSession(s.id, e)}
+                            className="p-2 text-slate-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Ta bort pass"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                        <ChevronRight size={14} className="text-slate-700" />
+                    </div>
                   </div>
                 )) : <p className="text-slate-600 p-8 text-center text-xs font-bold uppercase tracking-widest border-2 border-dashed border-slate-900 rounded-3xl">Inga sparade pass än.</p>}
               </div>

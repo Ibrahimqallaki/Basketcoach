@@ -2,9 +2,7 @@
 import { Player, Phase, Exercise, TrainingSession } from '../types';
 
 export const mockPlayers: Player[] = [
-  { id: '101', name: 'Aldrin', number: 1, position: 'Guard', age: 13, level: 'Medel', skillAssessment: { 'Skytte': 7, 'Dribbling': 8, 'Passning': 8, 'Försvar': 6, 'Spelförståelse': 9, 'Kondition': 7, 'Fysik': 6 }, individualPlan: ['f1e2', 'f2e1'], accessCode: 'P-1-XY3Z', homework: [{ id: 'h1', title: '50 Straffkast', completed: true, dateAssigned: '2024-03-20' }] },
-  { id: '102', name: 'Blarand', number: 2, position: 'Forward', age: 13, level: 'Avancerad', skillAssessment: { 'Skytte': 8, 'Dribbling': 7, 'Passning': 7, 'Försvar': 7, 'Spelförståelse': 8, 'Kondition': 8, 'Fysik': 9 }, individualPlan: ['f3e1'] },
-  { id: '103', name: 'Dion', number: 3, position: 'Center', age: 13, level: 'Nybörjare', skillAssessment: { 'Skytte': 5, 'Dribbling': 5, 'Passning': 6, 'Försvar': 9, 'Spelförståelse': 6, 'Kondition': 9, 'Fysik': 8 }, individualPlan: ['f1e3'] }
+  // Startar med tom lista för en ren coach-upplevelse
 ];
 
 export const mockPhases: Phase[] = [
@@ -77,7 +75,7 @@ export const mockPhases: Phase[] = [
     exercises: [
       { id: 'f5e1', title: 'Defensive Slide Drill', category: 'Försvar', overview: { setup: "Mellan två koner", action: "Sida till sida utan att korsa fötter", coachingPoint: "Sitt lågt" }, pedagogy: { what: "Lateral snabbhet", how: "Tryck ifrån med bakre foten", why: "Hålla sig framför motståndaren" }, criteria: ['Låg rumpa', 'Inga korsade fötter', 'Händer ute'], videoUrl: 'https://www.youtube.com/watch?v=O70R86o-YTo', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Defensive slides' },
       { id: 'f5e2', title: 'Closeout Drills', category: 'Försvar', overview: { setup: "Från färg till 3p-linje", action: "Sprinta ut, korta steg på slutet", coachingPoint: "Hand i skyttens sikte" }, pedagogy: { what: "Minska skyttens tid", how: "Choppy steps sista biten", why: "Förhindra både skott och drive" }, criteria: ['Sprintstart', 'Balans vid stopp', 'Röst (Ball!)'], videoUrl: 'https://www.youtube.com/watch?v=zD_Yv1YV-4I', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Closeout drill' },
-      { id: 'f5e3', title: 'Box Out (1v1)', category: 'Returtagning', overview: { setup: "Anfallare vs Försvarare", action: "Vid skott, hitta kontakt", coachingPoint: "Sök rumpa mot lår" }, pedagogy: { what: "Vinn insidan", how: "Armar breda, flytta inte fötter", why: "Ge laget fler chanser" }, criteria: ['Hitta gubben', 'Kontakt', 'Aggressivitet'], videoUrl: 'https://www.youtube.com/watch?v=0X9M1c8t1c8', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Box out' },
+      { id: 'f5e3', title: 'Box Out (1v1)', category: 'Returtagning', overview: { setup: "Anfallare vs Försvarare", action: "Vid skott, hitta kontakt", coachingPoint: "Sök rumpa mot lår" }, pedagogy: { what: "Vinn insidan", how: "Armar breda, flytta inte fötter", why: "Give laget fler chanser" }, criteria: ['Hitta gubben', 'Kontakt', 'Aggressivitet'], videoUrl: 'https://www.youtube.com/watch?v=0X9M1c8t1c8', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Box out' },
       { id: 'f5e4', title: 'Help Side Shell', category: 'Försvar', overview: { setup: "4v4 uppställning", action: "Flytta vid varje pass", coachingPoint: "Se boll och gubbe" }, pedagogy: { what: "Lagförsvar", how: "Stå i triangeln", why: "Stoppa layups från drives" }, criteria: ['Positionering', 'Kommunikation', 'Hjälpvilja'], videoUrl: 'https://www.youtube.com/watch?v=uOqF5O0C8O8', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Shell drill' },
       { id: 'f5fys1', title: 'Lateral Lunges', category: 'Fysik', overview: { setup: "Bred stance", action: "Gå djupt åt ena sidan", coachingPoint: "Håll hälen i marken" }, pedagogy: { what: "Sidledsstyrka", how: "Knä över tå", why: "Djupare försvarsställning" }, criteria: ['Djup', 'Rak rygg', 'Balans'], videoUrl: 'https://www.youtube.com/watch?v=TyE9G3fW_2o', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Lateral lunge' },
       { id: 'f5fys2', title: 'Burpees (Matchtempo)', category: 'Fysik', overview: { setup: "Fri yta", action: "Ner på mage till hopp", coachingPoint: "Hela vägen ner" }, pedagogy: { what: "Total uthållighet", how: "Maximalt tempo", why: "Orka försvara i fjärde perioden" }, criteria: ['Fart', 'Form', 'Andning'], videoUrl: 'https://www.youtube.com/watch?v=dZfeHe69O_I', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Burpee' }
@@ -130,6 +128,4 @@ export const mockPhases: Phase[] = [
   }
 ];
 
-export const mockSessions: TrainingSession[] = [
-  { id: 's1', date: '2024-03-01', phaseId: 1, exerciseIds: ['f1e1'], attendance: mockPlayers.map(p => ({ playerId: p.id, status: 'närvarande' })), evaluations: mockPlayers.map(p => ({ playerId: p.id, exerciseId: 'f1e1', scores: [3, 3], timestamp: new Date().toISOString() })) }
-];
+export const mockSessions: TrainingSession[] = [];
