@@ -35,6 +35,7 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
     const rect = container.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
 
+    // Spara ritningen tillfälligt för att inte rensa vid resize
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     tempCanvas.width = canvas.width;
@@ -62,7 +63,9 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const observer = new ResizeObserver(() => window.requestAnimationFrame(updateCanvasSize));
+    const observer = new ResizeObserver(() => {
+        window.requestAnimationFrame(updateCanvasSize);
+    });
     observer.observe(container);
     setTimeout(updateCanvasSize, 100);
     return () => observer.disconnect();
@@ -70,8 +73,9 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
 
   const toggleFullscreen = () => {
     setIsPseudoFullscreen(!isPseudoFullscreen);
-    // Liten delay för att låta DOM-ändringen slå igenom innan vi mäter om canvasen
-    setTimeout(updateCanvasSize, 100);
+    // Vi använder CSS fixed inset-0 istället för requestFullscreen API
+    // för att slippa webbläsarens egna "X" på vänster sida.
+    setTimeout(updateCanvasSize, 50);
   };
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
@@ -145,17 +149,17 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
   return (
     <div 
       ref={containerRef} 
-      className={`flex flex-col bg-slate-950 select-none overflow-hidden ${isPseudoFullscreen ? 'fixed inset-0 z-[10000]' : 'h-full w-full'}`}
+      className={`flex flex-col bg-slate-950 select-none overflow-hidden transition-all duration-300 ${isPseudoFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full w-full'}`}
       style={{ touchAction: 'none' }}
     >
-      {/* FLYTTAT KRYSSET TILL MITTEN LÄNGST UPP - Endast i helskärm */}
+      {/* FLYTTAT KRYSSET TILL MITTEN LÄNGST UPP (Endast i helskärm) */}
       {isPseudoFullscreen && (
         <button 
           onClick={toggleFullscreen}
-          className="absolute top-2 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-2 px-6 py-2 bg-rose-600/90 backdrop-blur-md border border-white/20 rounded-full text-white shadow-[0_0_30px_rgba(225,29,72,0.4)] active:scale-95 transition-all"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-3 px-6 py-3 bg-rose-600 border border-white/20 rounded-full text-white shadow-[0_0_40px_rgba(225,29,72,0.4)] active:scale-95 transition-all"
         >
-          <X size={18} />
-          <span className="text-[10px] font-black uppercase tracking-tighter">Stäng Ritläge</span>
+          <X size={20} />
+          <span className="text-[11px] font-black uppercase tracking-widest">Stäng Ritläge</span>
         </button>
       )}
 
@@ -164,20 +168,20 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {/* Drawing Tools */}
           <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
-            <button onClick={() => setMode('pencil')} className={`p-1.5 rounded-lg transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+            <button onClick={() => setMode('pencil')} className={`p-1.5 md:p-2 rounded-lg transition-all ${mode === 'pencil' ? 'bg-white text-black shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
               <Pencil size={isPseudoFullscreen ? 20 : 16} />
             </button>
-            <button onClick={() => setMode('player')} className={`p-1.5 rounded-lg transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+            <button onClick={() => setMode('player')} className={`p-1.5 md:p-2 rounded-lg transition-all ${mode === 'player' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
               <User size={isPseudoFullscreen ? 20 : 16} />
             </button>
-            <button onClick={() => setMode('eraser')} className={`p-1.5 rounded-lg transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}>
+            <button onClick={() => setMode('eraser')} className={`p-1.5 md:p-2 rounded-lg transition-all ${mode === 'eraser' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}>
               <Eraser size={isPseudoFullscreen ? 20 : 16} />
             </button>
           </div>
 
-          {/* Player Numbers */}
+          {/* Player Numbers Selection */}
           {mode === 'player' && (
-              <div className="hidden sm:flex bg-indigo-950/30 p-1 rounded-xl border border-indigo-500/20 gap-1">
+              <div className="hidden sm:flex bg-indigo-950/30 p-1 rounded-xl border border-indigo-500/20 gap-1 animate-in slide-in-from-left duration-200">
                   {[1, 2, 3, 4, 5].map(n => (
                       <button key={n} onClick={() => setSelectedNumber(n)} className={`w-7 h-7 rounded-lg font-black text-[9px] transition-all ${selectedNumber === n ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 hover:bg-indigo-500/10'}`}>
                         {n}
@@ -186,8 +190,8 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
               </div>
           )}
 
-          {/* Colors - 2 Darkest removed */}
-          <div className="flex items-center gap-1.5 px-1 overflow-x-auto hide-scrollbar">
+          {/* Color Palette + Integrated Trash Can */}
+          <div className="flex items-center gap-1.5 px-1 overflow-x-auto hide-scrollbar border-l border-slate-800 ml-1 pl-2">
             {COLORS.map(c => (
                 <button 
                     key={c.name}
@@ -196,30 +200,35 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({ onSave, 
                     style={{ backgroundColor: c.value }}
                 />
             ))}
+            
+            {/* SOPTUNNAN - Lyft upp och samma höjd som färgerna */}
+            <button 
+                onClick={clearCanvas} 
+                className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-800 text-rose-500 flex items-center justify-center border border-slate-700 hover:bg-rose-500 hover:text-white transition-all ml-1 shadow-inner shrink-0" 
+                title="Rensa"
+            >
+                <Trash2 size={14} />
+            </button>
           </div>
         </div>
 
         {/* Global Actions on the RIGHT */}
         <div className="flex items-center gap-2 shrink-0 border-l border-slate-800 pl-2">
-          {/* SOPTUNNA - LYFT UPP OCH SAMMA HÖJD */}
-          <button onClick={clearCanvas} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all" title="Rensa">
-            <Trash2 size={20} />
-          </button>
-
           {onSave && (
               <button onClick={() => onSave(canvasRef.current!.toDataURL())} className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-lg transition-all active:scale-95">
-                <Check size={20} />
+                <Check size={18} />
               </button>
           )}
 
-          <button onClick={toggleFullscreen} className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg">
-            {isPseudoFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+          <button onClick={toggleFullscreen} className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg" title={isPseudoFullscreen ? "Minimera" : "Helskärm"}>
+            {isPseudoFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
         </div>
       </div>
 
       {/* Drawing Area - Maximized */}
       <div className="flex-1 relative cursor-crosshair bg-slate-900 overflow-hidden">
+        {/* Bakgrundsplan */}
         <div className="absolute inset-0 pointer-events-none opacity-[0.12] flex items-center justify-center p-4">
           <div className="w-full h-full border-2 border-white relative max-w-[850px] aspect-[1/1.4]">
              <div className="absolute inset-1.5 border border-white/30"></div>
