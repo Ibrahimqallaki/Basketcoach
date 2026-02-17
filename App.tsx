@@ -18,14 +18,14 @@ import { dataService } from './services/dataService';
 // @ts-ignore
 import { onAuthStateChanged, signInWithPopup, signOut, signInAnonymously } from 'firebase/auth';
 // @ts-ignore
-import type { User } from 'firebase/auth';
-import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff, Shield, DatabaseZap, Clock, Radio } from 'lucide-react';
+import type { User as FirebaseUser } from 'firebase/auth';
+import { Trophy, AlertCircle, UserCheck, Smartphone, Check, ArrowRight, Gamepad2, Loader2, Globe, Copy, ShieldAlert, LogIn, Info, AlertTriangle, CloudLightning, HardDrive, ShieldCheck, Lock, WifiOff, Shield, DatabaseZap, Clock, Radio, User } from 'lucide-react';
 import { View, Player } from './types';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(View.DASHBOARD);
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isDenied, setIsDenied] = useState(false);
   
@@ -331,6 +331,18 @@ const App: React.FC = () => {
                 {currentView === View.ACCOUNT ? 'Inställningar' : currentView.replace('_', ' ')}
               </h2>
             </div>
+            
+            <button
+                onClick={() => setCurrentView(View.ACCOUNT)}
+                className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center hover:border-orange-500 transition-all shadow-lg active:scale-95"
+                title="Mitt Konto"
+            >
+                {user?.photoURL ? (
+                    <img src={user.photoURL} alt="P" className="w-full h-full object-cover" />
+                ) : (
+                    <User size={20} className="text-slate-400" />
+                )}
+            </button>
           </header>
         )}
 
