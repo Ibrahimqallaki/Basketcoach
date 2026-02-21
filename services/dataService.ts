@@ -18,7 +18,8 @@ import {
   setDoc,
   where,
   collectionGroup,
-  limit
+  limit,
+  onSnapshot
 } from 'firebase/firestore';
 
 const PLAYERS_KEY = 'basket_coach_players_v4';
@@ -108,6 +109,27 @@ export const dataService = {
     }
     const stored = localStorage.getItem(PLAYERS_KEY);
     return stored ? JSON.parse(stored) : mockPlayers;
+  },
+
+  subscribeToPlayers: (callback: (players: Player[]) => void, coachId?: string): (() => void) => {
+    const path = coachId ? `users/${coachId}` : dataService.getUserPath();
+    if (path && db) {
+      try {
+        const q = query(collection(db, `${path}/players`), orderBy('number', 'asc'));
+        return onSnapshot(q, (snapshot) => {
+          const players = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Player));
+          callback(players);
+        });
+      } catch (err) {
+        console.error("Firestore subscribe error (players):", err);
+        return () => {};
+      }
+    }
+    // Fallback for local storage (just initial load)
+    const stored = localStorage.getItem(PLAYERS_KEY);
+    if (stored) callback(JSON.parse(stored));
+    else callback(mockPlayers);
+    return () => {};
   },
 
   addPlayer: async (player: Omit<Player, 'id'>): Promise<Player[]> => {

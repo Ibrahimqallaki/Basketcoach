@@ -79,14 +79,31 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [p, ph] = await Promise.all([dataService.getPlayers(), dataService.getUnifiedPhases()]);
-      setPlayers(p);
+      const ph = await dataService.getUnifiedPhases();
       setPhases(ph);
-      if (p.length > 0 && !selectedPlayerId) setSelectedPlayerId(p[0].id);
-    } finally { setLoading(false); }
+      
+      // Initial fetch to ensure we have data before subscription kicks in (optional but good for loading state)
+      // Actually, subscription will fire immediately with current data, so we can just rely on that.
+      // But we need to handle the unsubscribe.
+    } finally { 
+      // setLoading(false); // We'll let the subscription handle loading state for players
+    }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { 
+      loadData(); 
+      
+      const unsubscribe = dataService.subscribeToPlayers((updatedPlayers) => {
+          setPlayers(updatedPlayers);
+          setLoading(false);
+          // Preserve selection if possible, otherwise select first
+          if (updatedPlayers.length > 0 && !selectedPlayerId) {
+              setSelectedPlayerId(updatedPlayers[0].id);
+          }
+      });
+
+      return () => unsubscribe();
+  }, []);
 
   const player = useMemo(() => players.find(p => p.id === selectedPlayerId), [players, selectedPlayerId]);
   const currentSkills = useMemo(() => player?.skillAssessment || { 'Skytte': 5, 'Dribbling': 5, 'Passning': 5, 'Försvar': 5, 'Spelförståelse': 5, 'Kondition': 5, 'Fysik': 5 }, [player]);
