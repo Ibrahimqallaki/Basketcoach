@@ -142,6 +142,19 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
     .map(id => allExercises.find(e => e.id === id))
     .filter((e): e is Exercise => !!e), [myPlayer.individualPlan, allExercises]);
 
+  const handleToggleHomework = async (homeworkId: string) => {
+      const updatedHomework = (myPlayer.homework || []).map(h => 
+          h.id === homeworkId ? { ...h, completed: !h.completed } : h
+      );
+      setMyPlayer(prev => ({ ...prev, homework: updatedHomework }));
+      
+      try {
+          await dataService.toggleHomework(myPlayer.id, homeworkId, coachId);
+      } catch (err) {
+          console.error("Failed to toggle homework", err);
+      }
+  };
+
   const handleAiAsk = async (e?: React.FormEvent) => {
       e?.preventDefault();
       if (!chatInput.trim() || !selectedExercise) return;
@@ -227,7 +240,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
                     </div>
                     <div className="space-y-3">
                         {(myPlayer.homework || []).map((hw) => (
-                            <div key={hw.id} className="p-5 rounded-[2rem] bg-[#0a0f1d] border border-slate-800/50 flex items-center gap-5 group shadow-lg">
+                            <div key={hw.id} onClick={() => handleToggleHomework(hw.id)} className="p-5 rounded-[2rem] bg-[#0a0f1d] border border-slate-800/50 flex items-center gap-5 group shadow-lg cursor-pointer hover:bg-slate-900 transition-colors">
                                 <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${hw.completed ? 'bg-blue-600 border-blue-600' : 'border-slate-800'}`}>
                                     {hw.completed ? <CheckCircle2 size={16} className="text-white" /> : <Circle size={16} className="text-slate-800" />}
                                 </div>

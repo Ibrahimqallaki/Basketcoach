@@ -124,13 +124,13 @@ export const dataService = {
     }
   },
 
-  updatePlayer: async (id: string, updates: Partial<Player>): Promise<Player[]> => {
-    const path = dataService.getUserPath();
+  updatePlayer: async (id: string, updates: Partial<Player>, coachId?: string): Promise<Player[]> => {
+    const path = coachId ? `users/${coachId}` : dataService.getUserPath();
     if (path && db) {
       await updateDoc(doc(db, `${path}/players`, id), updates);
-      return dataService.getPlayers();
+      return dataService.getPlayers(coachId);
     } else {
-      const players = await dataService.getPlayers();
+      const players = await dataService.getPlayers(coachId);
       const updated = players.map(p => p.id === id ? { ...p, ...updates } : p);
       dataService.saveLocal(PLAYERS_KEY, updated);
       return updated;
@@ -393,12 +393,12 @@ export const dataService = {
     return null;
   },
 
-  toggleHomework: async (playerId: string, homeworkId: string): Promise<void> => {
-     const players = await dataService.getPlayers();
+  toggleHomework: async (playerId: string, homeworkId: string, coachId?: string): Promise<void> => {
+     const players = await dataService.getPlayers(coachId);
      const player = players.find(p => p.id === playerId);
      if (player && player.homework) {
          const updated = player.homework.map(h => h.id === homeworkId ? { ...h, completed: !h.completed } : h);
-         await dataService.updatePlayer(playerId, { homework: updated });
+         await dataService.updatePlayer(playerId, { homework: updated }, coachId);
      }
   },
 
