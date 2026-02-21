@@ -13,6 +13,7 @@ import { KeySelectionOverlay } from './components/KeySelectionOverlay';
 import { AICoach } from './components/AICoach';
 import { CoachTools } from './components/CoachTools';
 import { MatchLiveScout } from './components/MatchLiveScout';
+import { WarmupLibrary } from './components/WarmupLibrary';
 import { auth, isFirebaseConfigured, googleProvider } from './services/firebase';
 import { dataService } from './services/dataService';
 // @ts-ignore
@@ -50,22 +51,39 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isFirebaseConfigured && auth) {
-      const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
-        if (currentUser && !currentUser.isAnonymous) {
-            const isAllowed = await dataService.isEmailWhitelisted(currentUser.email);
-            if (!isAllowed) {
-                setIsDenied(true);
-            } else {
-                setIsDenied(false);
-            }
-        }
-        setUser(currentUser);
+    // Safety timeout for loading state
+    const timeout = setTimeout(() => {
+      if (authLoading) {
         setAuthLoading(false);
-      });
-      return () => unsubscribe();
+      }
+    }, 5000);
+
+    if (isFirebaseConfigured && auth) {
+      try {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
+          if (currentUser && !currentUser.isAnonymous) {
+              try {
+                const isAllowed = await dataService.isEmailWhitelisted(currentUser.email);
+                setIsDenied(!isAllowed);
+              } catch (err) {
+                console.error("Whitelist check failed", err);
+              }
+          }
+          setUser(currentUser);
+          setAuthLoading(false);
+          clearTimeout(timeout);
+        });
+        return () => {
+          unsubscribe();
+          clearTimeout(timeout);
+        };
+      } catch (err) {
+        setAuthLoading(false);
+        clearTimeout(timeout);
+      }
     } else {
       setAuthLoading(false);
+      clearTimeout(timeout);
     }
   }, []);
 
@@ -226,7 +244,7 @@ const App: React.FC = () => {
       }} />;
   }
 
-  if (!user || (user.isAnonymous && !loggedInPlayer)) {
+  if (!user || (user.isAnonymous && !loggedInPlayer && user.uid !== 'guest')) {
     return (
       <div className="min-h-screen w-full bg-[#020617] flex items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] z-0"></div>
@@ -267,7 +285,10 @@ const App: React.FC = () => {
                                 <ArrowRight size={20} className="group-hover/btn:translate-x-1 transition-transform" />
                             </button>
 
-                            <button onClick={handleGuestLogin} className="w-full py-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 text-[10px] font-black uppercase tracking-widest transition-all">Starta utan konto (Lokal)</button>
+                            <button onClick={handleGuestLogin} className="w-full py-4 rounded-2xl bg-slate-800/40 hover:bg-slate-800 border border-slate-700/50 text-slate-300 text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group/guest">
+                                <HardDrive size={14} className="text-slate-500 group-hover/guest:text-orange-500 transition-colors" />
+                                <span>Starta utan konto (Spara lokalt)</span>
+                            </button>
 
                             <div className="relative flex py-2 items-center">
                                 <div className="flex-grow border-t border-slate-700"></div>
@@ -352,10 +373,17 @@ const App: React.FC = () => {
             ) : (
                 (() => {
                     switch (currentView) {
-                      case View.DASHBOARD: return <Dashboard onNavigateToHistory={() => setCurrentView(View.TRAINING)} />;
+                      case View.DASHBOARD: return (
+                        <Dashboard 
+                          onNavigateToHistory={() => setCurrentView(View.TRAINING)} 
+                          onNavigateToWarmup={() => setCurrentView(View.WARMUP_LIBRARY)}
+                          onNavigateToMatch={() => setCurrentView(View.MATCH_EVAL)}
+                        />
+                      );
                       case View.ROSTER: return <Roster onSimulatePlayerLogin={handleSimulatePlayerLogin} />;
                       case View.PLAN: return <Plan />;
                       case View.TRAINING: return <Training />;
+                      case View.WARMUP_LIBRARY: return <WarmupLibrary />;
                       case View.MATCH_EVAL: return <MatchEvaluation />;
                       case View.VIDEO_ANALYSIS: return <VideoAnalysis />;
                       case View.AI_COACH: return <AICoach />;

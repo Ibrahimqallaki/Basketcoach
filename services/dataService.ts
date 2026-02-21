@@ -1,6 +1,6 @@
 
-import { Player, TrainingSession, MatchRecord, Homework, Phase, Exercise, AppTicket, TicketStatus } from '../types';
-import { mockPlayers, mockPhases } from './mockData';
+import { Player, TrainingSession, MatchRecord, Homework, Phase, Exercise, AppTicket, TicketStatus, WarmupExercise } from '../types';
+import { mockPlayers, mockPhases, mockWarmupExercises } from './mockData';
 import { db, auth, isFirebaseConfigured } from './firebase';
 // Fix: Added @ts-ignore to bypass environment-specific resolution issues with Firebase exports
 // @ts-ignore
@@ -453,5 +453,11 @@ export const dataService = {
       playerCount: players.length,
       timestamp: new Date().toISOString()
     };
+  },
+
+  getWarmupExercises: async (): Promise<WarmupExercise[]> => {
+    // För enkelhetens skull kör vi bara mock-data för uppvärmning just nu, 
+    // men förberett för Firestore om det behövs senare.
+    return mockWarmupExercises;
   }
 };

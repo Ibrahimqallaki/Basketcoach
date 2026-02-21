@@ -140,6 +140,41 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
     } catch (err) { setCodeSyncStatus('error'); } finally { setIsGeneratingCode(false); }
   };
 
+  const handleSavePlayer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (modalState.mode === 'add') {
+        const newPlayer: Omit<Player, 'id'> = {
+          name: formData.name,
+          number: parseInt(formData.number) || 0,
+          position: formData.position,
+          age: parseInt(formData.age) || 13,
+          notes: formData.notes,
+          skillAssessment: { 'Skytte': 5, 'Dribbling': 5, 'Passning': 5, 'Försvar': 5, 'Spelförståelse': 5, 'Kondition': 5, 'Fysik': 5 },
+          individualPlan: [],
+          homework: [],
+          accessCode: dataService.generateSecureCode(formData.number)
+        };
+        const updated = await dataService.addPlayer(newPlayer);
+        setPlayers(updated);
+        if (updated.length > 0) setSelectedPlayerId(updated[updated.length - 1].id);
+      } else if (modalState.mode === 'edit' && modalState.player) {
+        const updated = await dataService.updatePlayer(modalState.player.id, {
+          name: formData.name,
+          number: parseInt(formData.number) || 0,
+          position: formData.position,
+          age: parseInt(formData.age) || 13,
+          notes: formData.notes
+        });
+        setPlayers(updated);
+      }
+      setModalState({ show: false, mode: 'add' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading && players.length === 0) return <div className="h-full w-full flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
 
   return (
@@ -283,6 +318,63 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
           )}
         </div>
       </div>
+
+      {/* Player Modal */}
+      {modalState.show && (
+        <div className="fixed inset-0 z-[800] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95">
+            <form onSubmit={handleSavePlayer}>
+              <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+                <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">
+                  {modalState.mode === 'add' ? 'Ny Spelare' : 'Redigera Spelare'}
+                </h3>
+                <button type="button" onClick={() => setModalState({ show: false, mode: 'add' })} className="p-2 text-slate-500 hover:text-white transition-colors"><X size={20}/></button>
+              </div>
+              
+              <div className="p-8 space-y-4">
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-3 space-y-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Namn</label>
+                    <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white text-sm focus:border-orange-500 outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Nr</label>
+                    <input required type="number" value={formData.number} onChange={e => setFormData({...formData, number: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white text-sm focus:border-orange-500 outline-none" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Position</label>
+                    <select value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white text-sm focus:border-orange-500 outline-none">
+                      <option>Point Guard (1)</option>
+                      <option>Shooting Guard (2)</option>
+                      <option>Small Forward (3)</option>
+                      <option>Power Forward (4)</option>
+                      <option>Center (5)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Ålder</label>
+                    <input type="number" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white text-sm focus:border-orange-500 outline-none" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Noteringar</label>
+                  <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white text-sm focus:border-orange-500 outline-none h-24 resize-none" />
+                </div>
+              </div>
+
+              <div className="p-8 bg-slate-950/60 border-t border-slate-800">
+                <button type="submit" className="w-full py-4 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-orange-900/20 transition-all">
+                  Spara Spelare
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Exercise Picker Modal */}
       {showExercisePicker && (

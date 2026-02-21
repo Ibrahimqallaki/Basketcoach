@@ -7,7 +7,9 @@ import {
   Target, Zap, MessageSquare, Mic, Eye, Shield, Flame, Timer, Star, 
   ArrowUpCircle, Scaling, Trash2
 } from 'lucide-react';
-import { Exercise, Player, Evaluation, Phase, TrainingSession } from '../types';
+import { Exercise, Player, Evaluation, Phase, TrainingSession, WarmupExercise } from '../types';
+import { mockWarmupExercises } from '../services/mockData';
+import { WarmupLibrary } from './WarmupLibrary';
 
 type TrainingStep = 'selection' | 'checkin' | 'live';
 
@@ -45,6 +47,8 @@ export const Training: React.FC = () => {
   const [attendance, setAttendance] = useState<Record<string, 'närvarande' | 'delvis' | 'frånvarande'>>({});
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [allSessions, setAllSessions] = useState<TrainingSession[]>([]);
+  const [selectedWarmupIds, setSelectedWarmupIds] = useState<string[]>([]);
+  const [showWarmupLibrary, setShowWarmupLibrary] = useState(false);
 
   const [currentScores, setCurrentScores] = useState<number[]>([]);
   const [currentNote, setCurrentNote] = useState<string>("");
@@ -115,6 +119,7 @@ export const Training: React.FC = () => {
       await dataService.saveSession({
         date: new Date().toISOString().split('T')[0],
         phaseId: selectedPhase.id,
+        warmupExerciseIds: selectedWarmupIds,
         exerciseIds: [selectedExercise.id],
         attendance: players.map(p => ({ playerId: p.id, status: attendance[p.id] || 'frånvarande' })),
         evaluations: evaluations
@@ -124,6 +129,7 @@ export const Training: React.FC = () => {
         setShowSaveSuccess(false);
         setStep('selection');
         setEvaluations([]);
+        setSelectedWarmupIds([]);
         setTimer(0);
         setActiveTab('sessions');
       }, 1500);
@@ -238,18 +244,49 @@ export const Training: React.FC = () => {
                           </div>
                       </div>
                       <div className="grid md:grid-cols-12 gap-8 relative z-10">
-                          <div className="md:col-span-4 grid grid-cols-4 gap-2">
-                              {phases.map(p => (
-                                  <button key={p.id} onClick={() => setSelectedPhase(p)} className={`py-4 rounded-xl font-black text-sm border transition-all ${selectedPhase?.id === p.id ? (viewMode === 'fys' ? 'bg-blue-600 border-blue-400' : 'bg-orange-600 border-orange-400') + ' text-white shadow-lg scale-105' : 'bg-slate-950 border-slate-800 text-slate-600 hover:border-slate-600'}`}>{p.id}</button>
-                              ))}
+                          <div className="md:col-span-4 space-y-6">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Välj Fas</label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {phases.map(p => (
+                                        <button key={p.id} onClick={() => setSelectedPhase(p)} className={`py-4 rounded-xl font-black text-sm border transition-all ${selectedPhase?.id === p.id ? (viewMode === 'fys' ? 'bg-blue-600 border-blue-400' : 'bg-orange-600 border-orange-400') + ' text-white shadow-lg scale-105' : 'bg-slate-950 border-slate-800 text-slate-600 hover:border-slate-600'}`}>{p.id}</button>
+                                    ))}
+                                </div>
+                              </div>
+
+                              <div className="p-5 rounded-3xl bg-slate-950 border border-slate-800 space-y-4">
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2"><Flame size={14} className="text-orange-500" /> Uppvärmning</h4>
+                                  <span className="text-[10px] font-black text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-lg">{selectedWarmupIds.length} valda</span>
+                                </div>
+                                <button 
+                                  onClick={() => setShowWarmupLibrary(true)}
+                                  className="w-full py-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-[10px] font-black uppercase hover:border-orange-500/50 transition-all flex items-center justify-center gap-2"
+                                >
+                                  {selectedWarmupIds.length > 0 ? 'Ändra Uppvärmning' : 'Välj från SBBF-arkiv'}
+                                  <ChevronRight size={14} />
+                                </button>
+                                {selectedWarmupIds.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {selectedWarmupIds.map(id => (
+                                      <div key={id} className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[8px] font-black text-slate-500 uppercase">
+                                        {id.startsWith('w') ? 'SBBF Övning' : 'Övning'}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                           </div>
-                          <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {selectedPhase?.exercises.filter(ex => {
-                                  const isFys = ex.category === 'Fysik' || ex.category === 'Kondition';
-                                  return viewMode === 'fys' ? isFys : !isFys;
-                              }).map(ex => (
-                                  <button key={ex.id} onClick={() => setSelectedExercise(ex)} className={`p-4 rounded-xl text-left border text-[10px] font-black uppercase transition-all ${selectedExercise?.id === ex.id ? 'border-orange-500 bg-orange-500/10 text-orange-400 shadow-inner' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}>{ex.title}</button>
-                              ))}
+                          <div className="md:col-span-8 space-y-2">
+                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Välj Huvudövning</label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {selectedPhase?.exercises.filter(ex => {
+                                      const isFys = ex.category === 'Fysik' || ex.category === 'Kondition';
+                                      return viewMode === 'fys' ? isFys : !isFys;
+                                  }).map(ex => (
+                                      <button key={ex.id} onClick={() => setSelectedExercise(ex)} className={`p-4 rounded-xl text-left border text-[10px] font-black uppercase transition-all ${selectedExercise?.id === ex.id ? 'border-orange-500 bg-orange-500/10 text-orange-400 shadow-inner' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}>{ex.title}</button>
+                                  ))}
+                              </div>
                           </div>
                       </div>
                       <button disabled={!selectedExercise} onClick={() => setStep('checkin')} className="w-full py-6 rounded-[2rem] bg-slate-800 hover:bg-slate-700 text-white font-black uppercase text-xs shadow-xl active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3">Fortsätt till närvaro <ChevronRight size={18}/></button>
@@ -297,6 +334,29 @@ export const Training: React.FC = () => {
                                       {isPaused ? 'Pausad' : 'Träning Pågår'}
                                   </div>
                                   <h3 className="text-3xl md:text-4xl font-black text-white italic uppercase tracking-tighter leading-none">{selectedExercise.title}</h3>
+                                  
+                                  {selectedWarmupIds.length > 0 && (
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                      <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-500/10 px-2 py-1 rounded-lg border border-orange-500/20">Uppvärmningsplan:</span>
+                                      {selectedWarmupIds.map(id => {
+                                        const w = mockWarmupExercises.find(ex => ex.id === id);
+                                        return (
+                                          <div key={id} className="group relative">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 cursor-help">
+                                              {w?.title || 'Övning'}
+                                            </span>
+                                            {/* Tooltip-liknande info vid hover */}
+                                            <div className="absolute bottom-full left-0 mb-2 w-48 p-3 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50">
+                                              <div className="text-[10px] font-black text-orange-500 uppercase mb-1">{w?.phase}</div>
+                                              <div className="text-[9px] text-white leading-tight">{w?.description}</div>
+                                              <div className="mt-2 text-[8px] font-bold text-slate-400 uppercase">Tips: {w?.coachingPoints[0]}</div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
                                   <div className="flex gap-2 mt-4 justify-center md:justify-start overflow-x-auto hide-scrollbar pb-1">
                                       {activeCriteria.map((c, i) => (
                                           <div key={i} className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2 shrink-0">
@@ -425,6 +485,43 @@ export const Training: React.FC = () => {
                   </div>
               )}
           </div>
+      )}
+      {showWarmupLibrary && (
+        <div className="fixed inset-0 z-[700] bg-slate-950/95 backdrop-blur-xl p-4 md:p-10 overflow-y-auto custom-scrollbar">
+          <div className="max-w-6xl mx-auto space-y-8">
+            <div className="flex justify-between items-center">
+              <button 
+                onClick={() => setShowWarmupLibrary(false)}
+                className="px-6 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white text-xs font-black uppercase flex items-center gap-2 hover:bg-slate-800 transition-all"
+              >
+                <ChevronLeft size={16} /> Tillbaka till setup
+              </button>
+              <div className="text-right">
+                <div className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Valda övningar</div>
+                <div className="text-2xl font-black text-white italic uppercase">{selectedWarmupIds.length} st</div>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/50 border border-slate-800 rounded-[3rem] p-8 md:p-12">
+              <WarmupLibrary 
+                isSelectionMode={true}
+                selectedIds={selectedWarmupIds}
+                onSelect={(ex) => {
+                  setSelectedWarmupIds(prev => 
+                    prev.includes(ex.id) ? prev.filter(id => id !== ex.id) : [...prev, ex.id]
+                  );
+                }}
+              />
+            </div>
+
+            <button 
+              onClick={() => setShowWarmupLibrary(false)}
+              className="w-full py-6 rounded-[2rem] bg-orange-600 text-white font-black uppercase text-sm shadow-2xl shadow-orange-900/40 flex items-center justify-center gap-3 active:scale-95 transition-all"
+            >
+              Bekräfta Uppvärmningsplan <Check size={20} />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

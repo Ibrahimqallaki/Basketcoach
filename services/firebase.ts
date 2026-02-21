@@ -35,15 +35,14 @@ export const getEnvVar = (key: string) => {
 };
 
 // Configuration using ONLY environment variables for security on GitHub
-// NOTE: Hardcoded fallback strings removed for safety.
 const firebaseConfig = {
-  apiKey: getEnvVar('VITE_FIREBASE_API_KEY'),
-  authDomain: getEnvVar('VITE_FIREBASE_AUTH_DOMAIN'),
-  projectId: getEnvVar('VITE_FIREBASE_PROJECT_ID'),
-  storageBucket: getEnvVar('VITE_FIREBASE_STORAGE_BUCKET'),
-  messagingSenderId: getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID'),
-  appId: getEnvVar('VITE_FIREBASE_APP_ID'),
-  measurementId: getEnvVar('VITE_FIREBASE_MEASUREMENT_ID')
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || getEnvVar('VITE_FIREBASE_API_KEY'),
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || getEnvVar('VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || getEnvVar('VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || getEnvVar('VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || getEnvVar('VITE_FIREBASE_APP_ID'),
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || getEnvVar('VITE_FIREBASE_MEASUREMENT_ID')
 };
 
 // Check if config is valid (has at least API key and Project ID)
@@ -52,29 +51,26 @@ export const isFirebaseConfigured = !!firebaseConfig.apiKey && !!firebaseConfig.
 let app: FirebaseApp | undefined;
 let auth: Auth;
 let db: Firestore;
-const googleProvider = new GoogleAuthProvider();
-
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});
-
+let googleProvider: any;
 if (isFirebaseConfigured) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
     auth = getAuth(app);
     db = getFirestore(app);
-    console.log("Firebase initialized securely.");
+    googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({
+      prompt: 'select_account'
+    });
   } catch (error) {
-    console.error("Firebase init error:", error);
-    // Fallback if init fails
+    console.error("Firebase init error", error);
     auth = { currentUser: null, onAuthStateChanged: () => () => {}, signOut: async () => {} } as any;
     db = {} as any;
+    googleProvider = {};
   }
 } else {
-  console.log("Firebase not configured. App running in offline/demo mode.");
-  // Mock objects to prevent crashes
   auth = { currentUser: null, onAuthStateChanged: () => () => {}, signOut: async () => {} } as any;
   db = {} as any;
+  googleProvider = {};
 }
 
 export { auth, db, googleProvider };

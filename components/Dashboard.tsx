@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, Users, Activity, Star, Zap, ChevronRight, Calendar, Lightbulb, Trophy, Loader2, Dumbbell, TrendingUp, Timer, Heart, BrainCircuit, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Target, Users, Activity, Star, Zap, ChevronRight, Calendar, Lightbulb, Trophy, Loader2, Dumbbell, TrendingUp, Timer, Heart, BrainCircuit, ArrowUpRight, ArrowDownRight, Flame } from 'lucide-react';
 import { dataService } from '../services/dataService';
-import { mockPhases } from '../services/mockData';
-import { Player, TrainingSession, MatchRecord, Exercise } from '../types';
+import { mockPhases, mockWarmupExercises } from '../services/mockData';
+import { Player, TrainingSession, MatchRecord, Exercise, WarmupExercise } from '../types';
 
 interface ChartDataPoint {
   label: string;
@@ -11,7 +11,11 @@ interface ChartDataPoint {
   rawDate?: string;
 }
 
-export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNavigateToHistory }) => {
+export const Dashboard: React.FC<{ 
+  onNavigateToHistory?: () => void,
+  onNavigateToWarmup?: () => void,
+  onNavigateToMatch?: () => void
+}> = ({ onNavigateToHistory, onNavigateToWarmup, onNavigateToMatch }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [matches, setMatches] = useState<MatchRecord[]>([]);
@@ -287,8 +291,29 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
         {/* Sidebar Insights */}
         <div className="lg:col-span-4 space-y-6">
           <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-40 h-40 bg-orange-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+             <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white mb-6 relative z-10"><Flame className="text-orange-500" size={18} /> Dagens Uppvärmning</h3>
+             <div className="space-y-4 relative z-10">
+                <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
+                    <div className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1">{mockWarmupExercises[0].phase}</div>
+                    <h4 className="text-sm font-black text-white uppercase italic">{mockWarmupExercises[0].title}</h4>
+                    <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">{mockWarmupExercises[0].description}</p>
+                    <div className="mt-3 flex items-center gap-2">
+                        <div className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[8px] font-black text-slate-500 uppercase">Fokus: {mockWarmupExercises[0].sbbfFocus}</div>
+                    </div>
+                </div>
+                <button 
+                    onClick={() => onNavigateToWarmup?.()}
+                    className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
+                >
+                    Visa i arkivet <ChevronRight size={14} />
+                </button>
+             </div>
+          </div>
+
+          <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-             <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white mb-6 relative z-10"><BrainCircuit className="text-indigo-400" size={18} /> Match Intelligence</h3>
+             <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white mb-6 relative z-10"><Trophy className="text-indigo-400" size={18} /> Match Intelligence</h3>
              {sisuStats ? (
                 <div className="space-y-6 relative z-10">
                    <div className="space-y-4">
@@ -311,6 +336,12 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                            <p className="text-xs text-slate-300 leading-relaxed italic line-clamp-3">"{sisuStats.latestSummary}"</p>
                        </div>
                    )}
+                   <button 
+                        onClick={() => onNavigateToMatch?.()}
+                        className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
+                    >
+                        Visa alla matcher <ChevronRight size={14} />
+                    </button>
                 </div>
              ) : (
                 <div className="py-12 text-center space-y-2 opacity-30">
@@ -350,7 +381,7 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                     const m = item.data as MatchRecord;
                     const isWin = m.score > m.opponentScore;
                     return (
-                        <div key={`m-${m.id}`} className="p-3 md:p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 flex justify-between items-center group hover:border-slate-600 hover:bg-slate-800 transition-all">
+                        <div key={`m-${m.id}`} onClick={() => onNavigateToMatch?.()} className="p-3 md:p-4 rounded-2xl bg-slate-950/50 border border-slate-800/50 flex justify-between items-center group cursor-pointer hover:border-slate-600 hover:bg-slate-800 transition-all">
                             <div className="flex items-center gap-4 min-w-0">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${isWin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}>
                                     <Trophy size={14} />
@@ -360,6 +391,7 @@ export const Dashboard: React.FC<{ onNavigateToHistory?: () => void }> = ({ onNa
                                     <div className="text-[9px] text-slate-600 font-bold uppercase truncate">{m.score} - {m.opponentScore}</div>
                                 </div>
                             </div>
+                            <ChevronRight size={14} className="text-slate-700 group-hover:text-white transition-all shrink-0" />
                         </div>
                     );
                  }

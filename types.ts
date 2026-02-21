@@ -12,7 +12,8 @@ export enum View {
   ABOUT = 'ABOUT',
   ACCOUNT = 'ACCOUNT',
   PLAYER_PORTAL = 'PLAYER_PORTAL',
-  LIVE_SCOUT = 'LIVE_SCOUT'
+  LIVE_SCOUT = 'LIVE_SCOUT',
+  WARMUP_LIBRARY = 'WARMUP_LIBRARY'
 }
 
 export interface LiveMatchData {
@@ -55,7 +56,25 @@ export interface AppTicket {
   };
 }
 
-export type SkillCategory = 'Skott' | 'Dribbling' | 'Passningar' | 'Försvar' | 'Kondition' | 'Basket-IQ' | 'Transition' | 'Pick & Roll' | 'Fysik' | 'Taktik' | 'Layups' | 'Returtagning';
+export type SkillCategory = 'Skott' | 'Dribbling' | 'Passningar' | 'Försvar' | 'Kondition' | 'Basket-IQ' | 'Transition' | 'Pick & Roll' | 'Fysik' | 'Taktik' | 'Layups' | 'Returtagning' | 'Uppvärmning';
+
+export enum WarmupPhase {
+  PULS = 'Puls & Koordination',
+  AKTIVERING = 'Aktivering & Mobilitet',
+  TEKNIK = 'Basket-specifik teknik',
+  INTENSITET = 'Intensitetshöjning'
+}
+
+export interface WarmupExercise {
+  id: string;
+  title: string;
+  phase: WarmupPhase;
+  duration: string;
+  description: string;
+  coachingPoints: string[];
+  sbbfFocus: string; // E.g. "Knäkontroll", "Rörelseförståelse"
+  videoUrl?: string;
+}
 
 export interface Homework {
   id: string;
@@ -154,6 +173,7 @@ export interface TrainingSession {
   id: string;
   date: string;
   phaseId: number;
+  warmupExerciseIds?: string[];
   exerciseIds: string[];
   attendance: Attendance[];
   evaluations: Evaluation[];

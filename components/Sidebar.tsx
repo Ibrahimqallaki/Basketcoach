@@ -12,7 +12,8 @@ import {
   Wrench,
   ChevronLeft,
   ChevronRight,
-  Menu
+  Menu,
+  Flame
 } from 'lucide-react';
 // Fix: Added @ts-ignore to bypass environment-specific resolution issues with Firebase exports
 // @ts-ignore
@@ -33,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
     { id: View.ROSTER, label: 'Laget', icon: Users },
     { id: View.PLAN, label: 'Planering', icon: CalendarDays },
     { id: View.TRAINING, label: 'Träna', icon: ClipboardCheck },
+    { id: View.WARMUP_LIBRARY, label: 'Uppvärmning', icon: Flame },
     { id: View.MATCH_EVAL, label: 'Match', icon: Trophy },
     { id: View.VIDEO_ANALYSIS, label: 'Video', icon: MonitorPlay },
     { id: View.AI_COACH, label: 'AI Assistent', icon: Bot, isNew: true },
@@ -76,35 +78,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
           {/* Navigation Items - Nu låst från skroll (overflow-hidden) */}
           <nav className="flex-1 px-3 space-y-2 overflow-hidden py-6">
             {menuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                title={isCollapsed ? item.label : ''}
-                className={`w-full flex items-center rounded-2xl transition-all duration-300 group relative ${
-                  isCollapsed ? 'justify-center py-5' : 'px-5 py-4 gap-4'
-                } ${
-                  activeView === item.id
-                    ? 'bg-gradient-to-r from-orange-600/20 to-transparent border-l-4 border-orange-500 text-white'
-                    : 'text-slate-500 hover:bg-white/5 hover:text-slate-200'
-                }`}
-              >
-                <item.icon className={`transition-all duration-300 shrink-0 ${isCollapsed ? 'w-7 h-7' : 'w-5 h-5'} ${activeView === item.id ? 'text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]' : 'text-slate-600 group-hover:text-slate-300'}`} />
-                
-                {!isCollapsed && (
-                  <span className="font-black text-[11px] uppercase tracking-widest whitespace-nowrap animate-in fade-in slide-in-from-left duration-500">{item.label}</span>
-                )}
-                
-                {!isCollapsed && activeView === item.id && (
-                    <div className="ml-auto flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></div>
-                    </div>
-                )}
-                
-                {/* @ts-ignore */}
-                {item.isNew && (
-                  <span className={`absolute bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)] ${isCollapsed ? 'right-3 top-3 w-2.5 h-2.5' : 'right-4 top-1/2 -translate-y-1/2 w-2 h-2'}`}></span>
-                )}
-              </button>
+              <div key={item.id} className="mb-1">
+                <button
+                  onClick={() => onNavigate(item.id)}
+                  title={isCollapsed ? item.label : ''}
+                  className={`w-full flex items-center rounded-2xl transition-all duration-300 group relative ${
+                    isCollapsed ? 'justify-center py-5' : 'px-5 py-4 gap-4'
+                  } ${
+                    activeView === item.id
+                      ? 'bg-gradient-to-r from-orange-600/20 to-transparent border-l-4 border-orange-500 text-white shadow-lg shadow-orange-900/10'
+                      : 'text-slate-500 hover:bg-white/5 hover:text-slate-200'
+                  }`}
+                >
+                  <item.icon className={`transition-all duration-300 shrink-0 ${isCollapsed ? 'w-7 h-7' : 'w-5 h-5'} ${activeView === item.id ? 'text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]' : 'text-slate-600 group-hover:text-slate-300'}`} />
+                  
+                  {!isCollapsed && (
+                    <span className="font-black text-[11px] uppercase tracking-widest whitespace-nowrap animate-in fade-in slide-in-from-left duration-500">{item.label}</span>
+                  )}
+                  
+                  {!isCollapsed && activeView === item.id && (
+                      <div className="ml-auto flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></div>
+                      </div>
+                  )}
+                  
+                  {/* @ts-ignore */}
+                  {item.isNew && (
+                    <span className={`absolute bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)] ${isCollapsed ? 'right-3 top-3 w-2.5 h-2.5' : 'right-4 top-1/2 -translate-y-1/2 w-2 h-2'}`}></span>
+                  )}
+                </button>
+              </div>
             ))}
           </nav>
 
@@ -135,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-white/10 h-16 rounded-2xl flex items-center z-50 shadow-2xl px-1 overflow-hidden">
         <div className="flex items-center justify-between w-full h-full px-2">
-          {menuItems.slice(0, 5).map((item) => (
+          {menuItems.filter(item => item.id !== View.WARMUP_LIBRARY).slice(0, 5).map((item) => (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
@@ -150,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
            <button
               onClick={() => onNavigate(View.TOOLS)}
               className={`flex flex-col items-center justify-center gap-1 transition-all relative w-12 h-12 rounded-xl ${
-                activeView === View.TOOLS || activeView === View.AI_COACH ? 'text-orange-500 bg-white/5' : 'text-slate-500 hover:text-slate-300'
+                activeView === View.TOOLS || activeView === View.AI_COACH || activeView === View.WARMUP_LIBRARY ? 'text-orange-500 bg-white/5' : 'text-slate-500 hover:text-slate-300'
               }`}
             >
               <Wrench className="w-5 h-5" strokeWidth={activeView === View.TOOLS ? 2.5 : 2} />

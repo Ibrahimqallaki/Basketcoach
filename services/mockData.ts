@@ -1,5 +1,108 @@
 
-import { Player, Phase, Exercise, TrainingSession } from '../types';
+import { Player, Phase, Exercise, TrainingSession, WarmupExercise, WarmupPhase } from '../types';
+
+export const mockWarmupExercises: WarmupExercise[] = [
+  {
+    id: 'w1',
+    title: 'Spegeln (Puls)',
+    phase: WarmupPhase.PULS,
+    duration: '3 min',
+    description: 'Spelarna jobbar parvis. En är ledare och gör basketrörelser, den andra ska spegla exakt.',
+    coachingPoints: ['Låg tyngdpunkt', 'Snabba fötter', 'Ögonkontakt'],
+    sbbfFocus: 'Rörelseförståelse & Reaktion',
+    videoUrl: 'https://www.youtube.com/watch?v=1p_tQy2iX60'
+  },
+  {
+    id: 'w2',
+    title: 'Utfall med rotation',
+    phase: WarmupPhase.AKTIVERING,
+    duration: '4 min',
+    description: 'Stora utfallssteg framåt med en rotation av överkroppen över det främre benet.',
+    coachingPoints: ['Knä över tå', 'Stolt hållning', 'Kontrollerad rotation'],
+    sbbfFocus: 'Knäkontroll & Mobilitet',
+    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw'
+  },
+  {
+    id: 'w3',
+    title: 'Enbenslandningar',
+    phase: WarmupPhase.AKTIVERING,
+    duration: '3 min',
+    description: 'Hoppa framåt/sidled och landa på ett ben. Håll balansen i 2 sekunder.',
+    coachingPoints: ['Mjuk landning', 'Knä i linje med tå', 'Stilla höft'],
+    sbbfFocus: 'Knäkontroll (SBBF Standard)',
+    videoUrl: 'https://www.youtube.com/watch?v=f-S89Bq68L0'
+  },
+  {
+    id: 'w4',
+    title: 'Ballhandling Flow',
+    phase: WarmupPhase.TEKNIK,
+    duration: '5 min',
+    description: 'Kombination av cirklar runt kropp, mellan ben och snabba dribblingar på stället.',
+    coachingPoints: ['Blicken upp', 'Hårda dribblingar', 'Fingertoppskänsla'],
+    sbbfFocus: 'Bollbekantskap',
+    videoUrl: 'https://www.youtube.com/watch?v=S8pB6S7Z3C8'
+  },
+  {
+    id: 'w5',
+    title: 'Snabba fötter (Ladder)',
+    phase: WarmupPhase.INTENSITET,
+    duration: '2 min',
+    description: 'Maximal frekvens i fötterna genom en tänkt stege eller över en linje.',
+    coachingPoints: ['Korta steg', 'Armpendling', 'Andning'],
+    sbbfFocus: 'Explosivitet',
+    videoUrl: 'https://www.youtube.com/watch?v=A8gAP32wK4k'
+  },
+  {
+    id: 'w6',
+    title: 'SBBF Knäkontroll (Bas)',
+    phase: WarmupPhase.AKTIVERING,
+    duration: '5 min',
+    description: 'Fokus på landningsteknik och knästabilitet. Hopp framåt, bakåt och åt sidan med fokus på att knät pekar i samma riktning som tårna.',
+    coachingPoints: ['Knä över tå', 'Mjuk landning', 'Stilla höft'],
+    sbbfFocus: 'Skadeprevention (SBBF Standard)',
+    videoUrl: 'https://www.youtube.com/watch?v=f-S89Bq68L0'
+  },
+  {
+    id: 'w7',
+    title: 'Dribbel-kull',
+    phase: WarmupPhase.PULS,
+    duration: '4 min',
+    description: 'Alla spelare har en boll. Man ska kulla varandra samtidigt som man behåller sin egen dribbling.',
+    coachingPoints: ['Blicken upp', 'Skydda bollen', 'Snabba riktningsförändringar'],
+    sbbfFocus: 'Bollkontroll & Spelförståelse',
+    videoUrl: 'https://www.youtube.com/watch?v=1p_tQy2iX60'
+  },
+  {
+    id: 'w8',
+    title: 'Dynamisk Hamstring-stretch',
+    phase: WarmupPhase.AKTIVERING,
+    duration: '3 min',
+    description: 'Gående stretch där man sträcker ut baksida lår genom att "skopa" marken med händerna vid varje steg.',
+    coachingPoints: ['Rak rygg', 'Flexad fot', 'Kontrollerad rörelse'],
+    sbbfFocus: 'Mobilitet',
+    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw'
+  },
+  {
+    id: 'w9',
+    title: 'Form Shooting (Warmup)',
+    phase: WarmupPhase.TEKNIK,
+    duration: '5 min',
+    description: 'Skott nära korgen med fokus på perfekt release och "svanhals". Ingen hopprörelse, bara arm och hand.',
+    coachingPoints: ['Följ igenom', 'Hög release', 'Bollrotation'],
+    sbbfFocus: 'Skott-fundament',
+    videoUrl: 'https://www.youtube.com/watch?v=BnvGa0I8bMc'
+  },
+  {
+    id: 'w10',
+    title: 'Defensiv Zick-Zack',
+    phase: WarmupPhase.INTENSITET,
+    duration: '4 min',
+    description: 'Jobba i defensiv ställning i sicksack-mönster längs planen. Fokus på snabba fötter och riktningsförändringar.',
+    coachingPoints: ['Låg tyngdpunkt', 'Korsa inte fötterna', 'Händer ute'],
+    sbbfFocus: 'Lateral snabbhet',
+    videoUrl: 'https://www.youtube.com/watch?v=O70R86o-YTo'
+  }
+];
 
 export const mockPlayers: Player[] = [
   // Startar med tom lista för en ren coach-upplevelse

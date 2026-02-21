@@ -20,7 +20,6 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-// Simple Error Boundary to catch render crashes
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public state: ErrorBoundaryState;
   public props: ErrorBoundaryProps;
@@ -47,11 +46,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       return (
         <div style={{ padding: '2rem', color: '#f87171', background: '#0f172a', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <h1 style={{ fontSize: '2rem', marginBottom: '1rem', fontWeight: 'bold' }}>Något gick fel 🏀</h1>
-          <p style={{ maxWidth: '600px', opacity: 0.8 }}>Appen kraschade. Försök ladda om sidan.</p>
-          <pre style={{ marginTop: '2rem', background: '#1e293b', padding: '1rem', borderRadius: '0.5rem', overflow: 'auto', maxWidth: '80vw', textAlign: 'left', fontSize: '0.8rem' }}>
-            {this.state.error?.toString()}
-          </pre>
-          <button onClick={() => window.location.reload()} style={{ marginTop: '2rem', padding: '0.75rem 1.5rem', background: '#ea580c', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', textTransform: 'uppercase' }}>
+          <p style={{ maxWidth: '600px', opacity: 0.8 }}>Appen kraschade: {this.state.error?.message}</p>
+          <button onClick={() => window.location.reload()} style={{ marginTop: '2rem', padding: '0.75rem 1.5rem', background: '#ea580c', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>
             Ladda om
           </button>
         </div>
@@ -62,6 +58,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
+console.log("Rendering App...");
 root.render(
   <React.StrictMode>
     <ErrorBoundary>

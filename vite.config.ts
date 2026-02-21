@@ -12,12 +12,10 @@ export default defineConfig(({ mode }) => {
     // 'define' ersätter globala variabler i koden vid byggtiden.
     // Här ser vi till att process.env.API_KEY faktiskt innehåller värdet från miljön.
     define: {
-      'process.env.API_KEY': JSON.stringify(env.API_KEY),
-      // Vi exponerar även Firebase-variablerna om de används via process.env i koden
-      'process.env.VITE_FIREBASE_API_KEY': JSON.stringify(env.VITE_FIREBASE_API_KEY),
-      'process.env.VITE_FIREBASE_PROJECT_ID': JSON.stringify(env.VITE_FIREBASE_PROJECT_ID),
-      // För säkerhets skull, definiera ett tomt process.env objekt för att undvika kraschar i bibliotek som förväntar sig det
-      'process.env': JSON.stringify(env)
+      'process.env.NODE_ENV': JSON.stringify(mode),
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || ''),
+      'process.env.VITE_FIREBASE_API_KEY': JSON.stringify(env.VITE_FIREBASE_API_KEY || ''),
+      'process.env.VITE_FIREBASE_PROJECT_ID': JSON.stringify(env.VITE_FIREBASE_PROJECT_ID || '')
     },
     build: {
       outDir: 'dist',

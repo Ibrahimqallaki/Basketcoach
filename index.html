@@ -11,44 +11,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-
-    <!-- Tailwind CSS via CDN för garanterad stil -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              slate: {
-                950: '#020617',
-              }
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            }
-          }
-        }
-      }
+        window.process = window.process || { env: { NODE_ENV: 'development' } };
+        window.onerror = function(msg, url, line, col, error) {
+            console.error('Runtime Error:', msg, url, line);
+            return false;
+        };
     </script>
-
-<script type="importmap">
-{
-  "imports": {
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4",
-    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "firebase/": "https://esm.sh/firebase@^12.9.0/",
-    "react-dom": "https://esm.sh/react-dom@^19.2.4"
-  }
-}
-</script>
 </head>
 <body class="bg-[#020617] text-[#f8fafc] antialiased">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <div id="root">
+        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; background: radial-gradient(circle at top, #1e293b 0%, #020617 100%);">
+            <div style="margin-bottom: 2rem; font-size: 4rem; animation: pulse 2s infinite;">🏀</div>
+            <h1 style="font-size: 1.5rem; font-weight: 900; letter-spacing: -0.05em; text-transform: uppercase; font-style: italic; margin-bottom: 0.5rem;">Basketcoach Pro</h1>
+            <p style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2em; color: #f97316; opacity: 0.8;">Laddar Intelligence...</p>
+        </div>
+    </div>
+    <style>
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>
