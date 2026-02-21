@@ -117,18 +117,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
                 onClick={() => onNavigate(View.ACCOUNT)}
                 className={`flex items-center transition-all duration-300 hover:bg-white/5 rounded-2xl w-full ${isCollapsed ? 'justify-center py-4' : 'p-3 gap-3'}`}
               >
-                  <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
-                    {user?.photoURL ? (
-                        <img src={user.photoURL} alt="P" className="w-full h-full object-cover" />
-                    ) : (
-                        <Users size={20} className="text-slate-600" />
-                    )}
-                  </div>
-                  {!isCollapsed && (
+                  {!isCollapsed ? (
                       <div className="text-left animate-in fade-in duration-500">
-                          <div className="text-[10px] font-black text-white uppercase truncate max-w-[100px]">{user?.displayName?.split(' ')[0] || 'Coach'}</div>
-                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Inställningar</div>
+                          <div className="text-[10px] font-black text-white uppercase truncate max-w-[150px]">{user?.displayName || 'Coach'}</div>
+                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Inställningar & Profil</div>
                       </div>
+                  ) : (
+                      <Users size={20} className="text-slate-600" />
                   )}
               </button>
           </div>
