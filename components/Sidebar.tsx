@@ -111,21 +111,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
             ))}
           </nav>
 
-          {/* User Profile Summary (Bottom) */}
+          {/* User Profile Info (Bottom) - Static display, no navigation */}
           <div className={`p-4 border-t border-white/5 transition-all duration-500 shrink-0 ${isCollapsed ? 'items-center px-0' : 'px-6'}`}>
-              <button 
-                onClick={() => onNavigate(View.ACCOUNT)}
-                className={`flex items-center transition-all duration-300 hover:bg-white/5 rounded-2xl w-full ${isCollapsed ? 'justify-center py-4' : 'p-3 gap-3'}`}
-              >
+              <div className={`flex items-center rounded-2xl w-full ${isCollapsed ? 'justify-center py-4' : 'p-3 gap-3'}`}>
                   {!isCollapsed ? (
                       <div className="text-left animate-in fade-in duration-500">
                           <div className="text-[10px] font-black text-white uppercase truncate max-w-[150px]">{user?.displayName || 'Coach'}</div>
-                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Inställningar & Profil</div>
+                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Coach Pro System</div>
                       </div>
                   ) : (
-                      <Users size={20} className="text-slate-600" />
+                      <div className="w-8 h-8 rounded-lg bg-slate-800/50 flex items-center justify-center">
+                        <Users size={16} className="text-slate-600" />
+                      </div>
                   )}
-              </button>
+              </div>
           </div>
         </div>
       </aside>
