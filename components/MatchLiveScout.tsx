@@ -16,10 +16,13 @@ export const MatchLiveScout: React.FC<MatchLiveScoutProps> = ({ matchId, onExit 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     const coachId = matchId.split('_')[1];
     const unsub = liveMatchService.subscribeToMatch(matchId, (data) => {
+      // Only update if we are not in the middle of an optimistic update
+      // or if the server data is newer than our last update
       setMatch(data);
       setLoading(false);
     });
@@ -34,20 +37,45 @@ export const MatchLiveScout: React.FC<MatchLiveScoutProps> = ({ matchId, onExit 
 
   const updateScore = async (side: 'home' | 'away', delta: number) => {
     if (!match) return;
+    
+    // OPTIMISTIC UPDATE
+    const prevMatch = { ...match };
     const newScore = Math.max(0, (side === 'home' ? match.homeScore : match.awayScore) + delta);
     
-    const updates: Partial<LiveMatchData> = {
-      [side === 'home' ? 'homeScore' : 'awayScore']: newScore
-    };
-
-    if (side === 'home' && selectedPlayerId && delta > 0) {
-      const currentPts = match.playerPoints[selectedPlayerId] || 0;
-      updates.playerPoints = { ...match.playerPoints, [selectedPlayerId]: currentPts + delta };
-      showFeedback(`+${delta}p till #${players.find(p => p.id === selectedPlayerId)?.number}`);
+    const optimisticMatch = { ...match };
+    if (side === 'home') {
+        optimisticMatch.homeScore = newScore;
+        if (selectedPlayerId && delta > 0) {
+            optimisticMatch.playerPoints = { 
+                ...match.playerPoints, 
+                [selectedPlayerId]: (match.playerPoints[selectedPlayerId] || 0) + delta 
+            };
+        }
+    } else {
+        optimisticMatch.awayScore = newScore;
     }
+    
+    setMatch(optimisticMatch);
+    setIsSyncing(true);
 
-    await liveMatchService.updateMatch(matchId, updates);
-    if(side === 'home') setSelectedPlayerId(null);
+    try {
+        const updates: any = {
+            [side === 'home' ? 'homeScoreDelta' : 'awayScoreDelta']: delta
+        };
+
+        if (side === 'home' && selectedPlayerId && delta > 0) {
+            updates.playerPoints = { [selectedPlayerId]: delta };
+            showFeedback(`+${delta}p till #${players.find(p => p.id === selectedPlayerId)?.number}`);
+        }
+
+        await liveMatchService.updateMatch(matchId, updates);
+    } catch (err) {
+        console.error("Sync failed", err);
+        setMatch(prevMatch); // Rollback on error
+    } finally {
+        setIsSyncing(false);
+        if(side === 'home') setSelectedPlayerId(null);
+    }
   };
 
   const addFoul = async (playerId: string) => {
@@ -55,11 +83,28 @@ export const MatchLiveScout: React.FC<MatchLiveScoutProps> = ({ matchId, onExit 
     const currentFouls = match.playerFouls[playerId] || 0;
     if (currentFouls >= 5) return;
 
-    await liveMatchService.updateMatch(matchId, {
-      playerFouls: { ...match.playerFouls, [playerId]: currentFouls + 1 },
-      homeFouls: Math.min(9, match.homeFouls + 1)
-    });
-    showFeedback(`Foul på #${players.find(p => p.id === playerId)?.number}`);
+    // OPTIMISTIC UPDATE
+    const prevMatch = { ...match };
+    const optimisticMatch = { 
+        ...match,
+        playerFouls: { ...match.playerFouls, [playerId]: currentFouls + 1 },
+        homeFouls: Math.min(9, match.homeFouls + 1)
+    };
+    
+    setMatch(optimisticMatch);
+    setIsSyncing(true);
+
+    try {
+        await liveMatchService.updateMatch(matchId, {
+            playerFouls: { [playerId]: 1 },
+            homeFoulsDelta: 1
+        });
+        showFeedback(`Foul på #${players.find(p => p.id === playerId)?.number}`);
+    } catch (err) {
+        setMatch(prevMatch);
+    } finally {
+        setIsSyncing(false);
+    }
   };
 
   if (loading) return <div className="h-screen bg-[#020617] flex flex-col items-center justify-center gap-4"><Loader2 className="w-12 h-12 text-emerald-500 animate-spin" /><p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Ansluter till matchen...</p></div>;
@@ -72,7 +117,10 @@ export const MatchLiveScout: React.FC<MatchLiveScoutProps> = ({ matchId, onExit 
              <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center text-white shadow-lg"><Radio size={20}/></div>
              <div>
                 <h2 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">Match Scout</h2>
-                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-1">Live synk aktiv till coach</p>
+                <div className="flex items-center gap-2 mt-1">
+                    <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-orange-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+                    <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{isSyncing ? 'Synkar...' : 'Live synk aktiv'}</p>
+                </div>
              </div>
           </div>
           <button onClick={onExit} className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-white transition-colors"><X size={20}/></button>
@@ -121,14 +169,14 @@ export const MatchLiveScout: React.FC<MatchLiveScoutProps> = ({ matchId, onExit 
           <div className="flex flex-col items-center gap-1">
              <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">LAG-FOULS</span>
              <div className="flex items-center gap-4">
-                <button onClick={() => liveMatchService.updateMatch(matchId, { homeFouls: Math.max(0, match.homeFouls - 1) })} className="p-2 text-slate-600"><Minus size={14}/></button>
+                <button onClick={() => liveMatchService.updateMatch(matchId, { homeFoulsDelta: -1 })} className="p-2 text-slate-600"><Minus size={14}/></button>
                 <span className={`text-2xl font-black font-mono ${match.homeFouls >= 5 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>{match.homeFouls}</span>
-                <button onClick={() => liveMatchService.updateMatch(matchId, { homeFouls: Math.min(9, match.homeFouls + 1) })} className="p-2 text-slate-300"><Plus size={14}/></button>
+                <button onClick={() => liveMatchService.updateMatch(matchId, { homeFoulsDelta: 1 })} className="p-2 text-slate-300"><Plus size={14}/></button>
              </div>
           </div>
           <div className="w-px h-10 bg-slate-900"></div>
           <button 
-            onClick={() => { if(match.homeTimeouts > 0) liveMatchService.updateMatch(matchId, { homeTimeouts: match.homeTimeouts - 1 }); }}
+            onClick={() => { if(match.homeTimeouts > 0) liveMatchService.updateMatch(matchId, { homeTimeoutsDelta: -1 }); }}
             className="flex flex-col items-center gap-2 active:scale-95 transition-transform"
           >
              <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">TIMEOUTS</span>

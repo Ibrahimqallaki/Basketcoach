@@ -9,7 +9,8 @@ import {
   updateDoc, 
   deleteDoc,
   getDoc,
-  serverTimestamp 
+  serverTimestamp,
+  increment
 } from 'firebase/firestore';
 import { LiveMatchData, Player } from '../types';
 
@@ -71,13 +72,50 @@ export const liveMatchService = {
     });
   },
 
-  updateMatch: async (matchId: string, updates: Partial<LiveMatchData>) => {
+  updateMatch: async (matchId: string, updates: any) => {
     if (!db) return;
     const docRef = doc(db, 'live_matches', matchId);
-    await updateDoc(docRef, {
+    
+    // Convert numeric updates to atomic increments for robustness
+    const finalUpdates: any = {
       ...updates,
       lastUpdated: new Date().toISOString()
-    });
+    };
+
+    // Special handling for nested player stats to avoid overwriting the whole object
+    if (updates.playerPoints) {
+      Object.entries(updates.playerPoints).forEach(([pid, delta]) => {
+        finalUpdates[`playerPoints.${pid}`] = increment(delta as number);
+      });
+      delete finalUpdates.playerPoints;
+    }
+    
+    if (updates.playerFouls) {
+      Object.entries(updates.playerFouls).forEach(([pid, delta]) => {
+        finalUpdates[`playerFouls.${pid}`] = increment(delta as number);
+      });
+      delete finalUpdates.playerFouls;
+    }
+
+    // Use increment for global scores too if deltas are provided
+    if (updates.homeScoreDelta !== undefined) {
+      finalUpdates.homeScore = increment(updates.homeScoreDelta);
+      delete finalUpdates.homeScoreDelta;
+    }
+    if (updates.awayScoreDelta !== undefined) {
+      finalUpdates.awayScore = increment(updates.awayScoreDelta);
+      delete finalUpdates.awayScoreDelta;
+    }
+    if (updates.homeFoulsDelta !== undefined) {
+      finalUpdates.homeFouls = increment(updates.homeFoulsDelta);
+      delete finalUpdates.homeFoulsDelta;
+    }
+    if (updates.homeTimeoutsDelta !== undefined) {
+      finalUpdates.homeTimeouts = increment(updates.homeTimeoutsDelta);
+      delete finalUpdates.homeTimeoutsDelta;
+    }
+
+    await updateDoc(docRef, finalUpdates);
   },
 
   finishMatch: async (matchId: string) => {
