@@ -362,32 +362,6 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
           })}
         </svg>
 
-        {/* LEGEND */}
-        <div className="absolute bottom-6 right-6 p-4 bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl pointer-events-none">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-orange-500" />
-              <span className="text-[10px] font-black text-white uppercase tracking-widest">Hemma</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500" />
-              <span className="text-[10px] font-black text-white uppercase tracking-widest">Borta</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-0.5 border-t-2 border-dashed border-slate-500" />
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rörelse</span>
-            </div>
-          </div>
-        </div>
-
-        {/* INSTRUCTIONS */}
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-full pointer-events-none">
-          <p className="text-[9px] font-black text-white/60 uppercase tracking-widest">
-            {mode === 'place' ? 'Klicka på planen för att placera spelare' : 
-             mode === 'move' ? 'Dra spelare för att ändra startposition' : 
-             'Klicka och dra från en spelare för att rita rörelseväg'}
-          </p>
-        </div>
       </div>
     </div>
   );
