@@ -34,9 +34,21 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const animationRef = useRef<number | undefined>(undefined);
 
-  // Court dimensions (relative 0-1000)
-  const COURT_WIDTH = 1000;
-  const COURT_HEIGHT = 600;
+  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
+
+  // Update orientation based on window size
+  useEffect(() => {
+    const checkOrientation = () => {
+      setOrientation(window.innerHeight > window.innerWidth ? 'portrait' : 'landscape');
+    };
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    return () => window.removeEventListener('resize', checkOrientation);
+  }, []);
+
+  // Court dimensions based on orientation
+  const COURT_WIDTH = orientation === 'landscape' ? 1000 : 600;
+  const COURT_HEIGHT = orientation === 'landscape' ? 600 : 1000;
 
   const getRelativeCoords = (e: React.MouseEvent | React.TouchEvent): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -105,6 +117,12 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
         return { ...p, x: coords.x, y: coords.y, path: [{ x: coords.x, y: coords.y }] };
       }
       if (mode === 'draw') {
+        // Throttle points: only add if distance > 5 units to prevent massive arrays/crashes
+        const lastPoint = p.path[p.path.length - 1];
+        if (lastPoint) {
+            const dist = Math.sqrt(Math.pow(coords.x - lastPoint.x, 2) + Math.pow(coords.y - lastPoint.y, 2));
+            if (dist < 5) return p;
+        }
         return { ...p, path: [...p.path, coords] };
       }
       return p;
@@ -257,16 +275,34 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
         >
           {/* BASKETBALL COURT LINES */}
           <rect x="0" y="0" width={COURT_WIDTH} height={COURT_HEIGHT} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-          <line x1={COURT_WIDTH/2} y1="0" x2={COURT_WIDTH/2} y2={COURT_HEIGHT} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-          <circle cx={COURT_WIDTH/2} cy={COURT_HEIGHT/2} r="80" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
           
-          {/* Key areas */}
-          <rect x="0" y={COURT_HEIGHT/2 - 100} width="150" height="200" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-          <rect x={COURT_WIDTH - 150} y={COURT_HEIGHT/2 - 100} width="150" height="200" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-          
-          {/* Three point lines */}
-          <path d={`M 0 ${COURT_HEIGHT/2 - 250} Q 350 ${COURT_HEIGHT/2} 0 ${COURT_HEIGHT/2 + 250}`} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-          <path d={`M ${COURT_WIDTH} ${COURT_HEIGHT/2 - 250} Q ${COURT_WIDTH - 350} ${COURT_HEIGHT/2} ${COURT_WIDTH} ${COURT_HEIGHT/2 + 250}`} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+          {orientation === 'landscape' ? (
+            <>
+                <line x1={COURT_WIDTH/2} y1="0" x2={COURT_WIDTH/2} y2={COURT_HEIGHT} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                <circle cx={COURT_WIDTH/2} cy={COURT_HEIGHT/2} r="80" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                
+                {/* Key areas */}
+                <rect x="0" y={COURT_HEIGHT/2 - 100} width="150" height="200" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                <rect x={COURT_WIDTH - 150} y={COURT_HEIGHT/2 - 100} width="150" height="200" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                
+                {/* Three point lines */}
+                <path d={`M 0 ${COURT_HEIGHT/2 - 250} Q 350 ${COURT_HEIGHT/2} 0 ${COURT_HEIGHT/2 + 250}`} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                <path d={`M ${COURT_WIDTH} ${COURT_HEIGHT/2 - 250} Q ${COURT_WIDTH - 350} ${COURT_HEIGHT/2} ${COURT_WIDTH} ${COURT_HEIGHT/2 + 250}`} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+            </>
+          ) : (
+            <>
+                <line x1="0" y1={COURT_HEIGHT/2} x2={COURT_WIDTH} y2={COURT_HEIGHT/2} stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                <circle cx={COURT_WIDTH/2} cy={COURT_HEIGHT/2} r="80" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                
+                {/* Key areas */}
+                <rect x={COURT_WIDTH/2 - 100} y="0" width="200" height="150" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                <rect x={COURT_WIDTH/2 - 100} y={COURT_HEIGHT - 150} width="200" height="150" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                
+                {/* Three point lines */}
+                <path d={`M ${COURT_WIDTH/2 - 250} 0 Q ${COURT_WIDTH/2} 350 ${COURT_WIDTH/2 + 250} 0`} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                <path d={`M ${COURT_WIDTH/2 - 250} ${COURT_HEIGHT} Q ${COURT_WIDTH/2} ${COURT_HEIGHT - 350} ${COURT_WIDTH/2 + 250} ${COURT_HEIGHT}`} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+            </>
+          )}
 
           {/* DRAWN PATHS */}
           {players.map(player => (
