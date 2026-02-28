@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Play, RotateCcw, Maximize2, Minimize2, Trash2, UserPlus, Move, Pencil, Check, X, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface Point {
@@ -43,10 +44,23 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
     
-    return {
-      x: ((clientX - rect.left) / rect.width) * COURT_WIDTH,
-      y: ((clientY - rect.top) / rect.height) * COURT_HEIGHT
-    };
+    // Calculate the scale and offset of the SVG content within the rect
+    // The SVG preserves aspect ratio (xMidYMid meet)
+    const scaleX = rect.width / COURT_WIDTH;
+    const scaleY = rect.height / COURT_HEIGHT;
+    const scale = Math.min(scaleX, scaleY);
+
+    const drawnWidth = COURT_WIDTH * scale;
+    const drawnHeight = COURT_HEIGHT * scale;
+
+    const offsetX = (rect.width - drawnWidth) / 2;
+    const offsetY = (rect.height - drawnHeight) / 2;
+
+    // Map client coordinates to SVG coordinates
+    const x = (clientX - rect.left - offsetX) / scale;
+    const y = (clientY - rect.top - offsetY) / scale;
+
+    return { x, y };
   };
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
@@ -160,10 +174,10 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
     };
   }, []);
 
-  return (
+  const content = (
     <div 
       ref={containerRef}
-      className={`bg-slate-950 flex flex-col select-none ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full w-full rounded-[2rem] border border-slate-800 overflow-hidden shadow-2xl'}`}
+      className={`bg-slate-950 flex flex-col select-none ${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen' : 'h-full w-full rounded-[2rem] border border-slate-800 overflow-hidden shadow-2xl'}`}
     >
       {/* HEADER / TOOLBAR */}
       <div className="flex flex-wrap items-center justify-between p-4 bg-slate-900 border-b border-slate-800 gap-4 shrink-0">
@@ -227,11 +241,12 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
       </div>
 
       {/* COURT AREA */}
-      <div className="flex-1 relative bg-[#2a1b12] overflow-hidden cursor-crosshair">
+      <div className="flex-1 relative bg-[#2a1b12] overflow-hidden cursor-crosshair flex items-center justify-center">
         <svg 
           ref={svgRef}
           viewBox={`0 0 ${COURT_WIDTH} ${COURT_HEIGHT}`} 
-          className="w-full h-full"
+          className="w-full h-full max-w-full max-h-full"
+          preserveAspectRatio="xMidYMid meet"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -327,4 +342,10 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
       </div>
     </div>
   );
+
+  if (isFullscreen) {
+    return createPortal(content, document.body);
+  }
+
+  return content;
 };
