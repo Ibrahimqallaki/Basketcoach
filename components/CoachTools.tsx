@@ -5,6 +5,7 @@ import { View, Player } from '../types';
 import { dataService } from '../services/dataService';
 import { liveMatchService } from '../services/liveMatchService';
 import { TacticalWhiteboard } from './TacticalWhiteboard';
+import { StrategyBoard } from './StrategyBoard';
 import { SupportModal } from './SupportModal';
 import { CoachLiveDashboard } from './CoachLiveDashboard';
 
@@ -377,10 +378,10 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
              </div>
              <div className="p-4 md:p-6 rounded-[3rem] bg-slate-900 border border-slate-800 shadow-xl min-h-[500px] flex flex-col relative overflow-hidden">
                 <div className="flex items-center justify-between mb-4 px-4 relative z-10">
-                    <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2"><PencilRuler size={18} className="text-blue-500" /> Taktiktavla (Live)</h4>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Skissa spel</span>
+                    <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2"><PencilRuler size={18} className="text-blue-500" /> Taktikbräda (Interaktiv)</h4>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Planera & Animera</span>
                 </div>
-                <div className="flex-1 rounded-[2.5rem] overflow-hidden border border-slate-800 bg-slate-950 relative z-10 shadow-2xl shadow-black/50"><TacticalWhiteboard id="live-match-board" /></div>
+                <div className="flex-1 relative z-10"><StrategyBoard id="live-match-strategy" /></div>
              </div>
           </div>
       )}

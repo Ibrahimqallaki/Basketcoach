@@ -416,11 +416,31 @@ export const dataService = {
   },
 
   toggleHomework: async (playerId: string, homeworkId: string, coachId?: string): Promise<void> => {
-     const players = await dataService.getPlayers(coachId);
-     const player = players.find(p => p.id === playerId);
-     if (player && player.homework) {
-         const updated = player.homework.map(h => h.id === homeworkId ? { ...h, completed: !h.completed } : h);
-         await dataService.updatePlayer(playerId, { homework: updated }, coachId);
+     const path = coachId ? `users/${coachId}` : dataService.getUserPath();
+     
+     if (path && db) {
+         try {
+             const playerRef = doc(db, `${path}/players`, playerId);
+             const snap = await getDoc(playerRef);
+             
+             if (snap.exists()) {
+                 const player = snap.data() as Player;
+                 if (player.homework) {
+                     const updated = player.homework.map(h => h.id === homeworkId ? { ...h, completed: !h.completed } : h);
+                     await updateDoc(playerRef, { homework: updated });
+                 }
+             }
+         } catch (err) {
+             console.error("Error toggling homework:", err);
+             throw err;
+         }
+     } else {
+         const players = await dataService.getPlayers(coachId);
+         const player = players.find(p => p.id === playerId);
+         if (player && player.homework) {
+             const updated = player.homework.map(h => h.id === homeworkId ? { ...h, completed: !h.completed } : h);
+             await dataService.updatePlayer(playerId, { homework: updated }, coachId);
+         }
      }
   },
 
