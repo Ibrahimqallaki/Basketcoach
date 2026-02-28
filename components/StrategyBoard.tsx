@@ -33,6 +33,7 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const animationRef = useRef<number | undefined>(undefined);
+  const ignoreMouseRef = useRef(false);
 
   const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
 
@@ -76,6 +77,16 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
   };
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent double-firing on touch devices (touch + emulated mouse)
+    if (e.type === 'touchstart') {
+      ignoreMouseRef.current = true;
+      // Reset after 500ms to allow mouse usage again if needed (e.g. hybrid devices)
+      setTimeout(() => { ignoreMouseRef.current = false; }, 500);
+    } else if (e.type === 'mousedown' && ignoreMouseRef.current) {
+      e.preventDefault();
+      return;
+    }
+
     if (isAnimating) return;
     const coords = getRelativeCoords(e);
 
