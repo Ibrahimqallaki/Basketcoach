@@ -170,7 +170,7 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
 
   const getAnimatedPos = (player: PlayerMarker) => {
     if (!isAnimating && animationProgress === 0) return { x: player.x, y: player.y };
-    if (player.path.length < 2) return { x: player.x, y: player.y };
+    if (!player.path || player.path.length < 2) return { x: player.x, y: player.y };
 
     const totalPoints = player.path.length;
     const index = Math.floor(animationProgress * (totalPoints - 1));
@@ -179,6 +179,8 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
 
     const p1 = player.path[index];
     const p2 = player.path[nextIndex];
+
+    if (!p1 || !p2) return { x: player.x, y: player.y };
 
     return {
       x: p1.x + (p2.x - p1.x) * segmentProgress,
