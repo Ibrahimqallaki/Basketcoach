@@ -30,7 +30,7 @@ const FYS_CRITERIA = [
 ];
 
 export const Training: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'sessions' | 'active'>('sessions');
+  const [activeTab, setActiveTab] = useState<'sessions' | 'active'>('active');
   const [step, setStep] = useState<TrainingStep>('selection');
   const [phases, setPhases] = useState<Phase[]>([]);
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
