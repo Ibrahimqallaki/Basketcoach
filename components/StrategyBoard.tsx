@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, RotateCcw, Maximize2, Minimize2, Trash2, UserPlus, Move, Pencil, Check, X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Play, RotateCcw, Maximize2, Minimize2, Trash2, UserPlus, Move, Pencil, Check, X, ChevronRight, ChevronLeft, Route, Brush } from 'lucide-react';
 
 interface Point {
   x: number;
@@ -21,14 +21,22 @@ interface StrategyBoardProps {
   id: string;
 }
 
+interface FreePath {
+  id: string;
+  points: Point[];
+  color: string;
+}
+
 export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
   const [players, setPlayers] = useState<PlayerMarker[]>([]);
-  const [mode, setMode] = useState<'place' | 'move' | 'draw'>('place');
+  const [freePaths, setFreePaths] = useState<FreePath[]>([]);
+  const [mode, setMode] = useState<'place' | 'move' | 'draw' | 'freeDraw'>('place');
   const [activeTeam, setActiveTeam] = useState<'home' | 'away'>('home');
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [currentFreePathId, setCurrentFreePathId] = useState<string | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -103,6 +111,15 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
         path: [{ x: coords.x, y: coords.y }]
       };
       setPlayers([...players, newPlayer]);
+    } else if (mode === 'freeDraw') {
+      const newPathId = Math.random().toString(36).substring(2, 11);
+      const newPath: FreePath = {
+        id: newPathId,
+        points: [coords],
+        color: activeTeam === 'home' ? '#f97316' : '#3b82f6'
+      };
+      setFreePaths([...freePaths, newPath]);
+      setCurrentFreePathId(newPathId);
     } else if (mode === 'move' || mode === 'draw') {
       // Find closest player
       const closest = players.find(p => {
@@ -119,8 +136,23 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
   };
 
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!selectedPlayerId || isAnimating) return;
+    if (isAnimating) return;
     const coords = getRelativeCoords(e);
+
+    if (currentFreePathId) {
+      setFreePaths(prev => prev.map(p => {
+        if (p.id !== currentFreePathId) return p;
+        const lastPoint = p.points[p.points.length - 1];
+        if (lastPoint) {
+          const dist = Math.sqrt(Math.pow(coords.x - lastPoint.x, 2) + Math.pow(coords.y - lastPoint.y, 2));
+          if (dist < 5) return p;
+        }
+        return { ...p, points: [...p.points, coords] };
+      }));
+      return;
+    }
+
+    if (!selectedPlayerId) return;
 
     setPlayers(prev => prev.map(p => {
       if (p.id !== selectedPlayerId) return p;
@@ -142,6 +174,7 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
 
   const handleMouseUp = () => {
     setSelectedPlayerId(null);
+    setCurrentFreePathId(null);
   };
 
   const startAnimation = () => {
@@ -169,6 +202,7 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
 
   const resetBoard = () => {
     setPlayers([]);
+    setFreePaths([]);
     setAnimationProgress(0);
     setIsAnimating(false);
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
@@ -176,6 +210,7 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
 
   const clearPaths = () => {
     setPlayers(players.map(p => ({ ...p, path: [{ x: p.x, y: p.y }] })));
+    setFreePaths([]);
     setAnimationProgress(0);
   };
 
@@ -211,63 +246,79 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
       className={`bg-slate-950 flex flex-col select-none ${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen' : 'h-full w-full rounded-[2rem] border border-slate-800 overflow-hidden shadow-2xl'}`}
     >
       {/* HEADER / TOOLBAR */}
-      <div className="flex flex-wrap items-center justify-between p-4 bg-slate-900 border-b border-slate-800 gap-4 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+      <div className="flex flex-col gap-3 p-3 bg-slate-900 border-b border-slate-800 shrink-0">
+        
+        {/* TOP ROW: TOOLS & TEAM */}
+        <div className="flex items-center justify-between gap-2">
+          {/* TOOLS */}
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 flex-1 max-w-fit">
             <button 
               onClick={() => setMode('place')} 
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${mode === 'place' ? 'bg-orange-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-2 md:px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${mode === 'place' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Placera"
             >
-              <UserPlus size={14} /> Placera
+              <UserPlus size={18} className={mode === 'place' ? 'text-orange-500' : ''} /> 
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Placera</span>
             </button>
             <button 
               onClick={() => setMode('move')} 
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${mode === 'move' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-2 md:px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${mode === 'move' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Flytta"
             >
-              <Move size={14} /> Flytta
+              <Move size={18} className={mode === 'move' ? 'text-blue-500' : ''} /> 
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Flytta</span>
             </button>
             <button 
               onClick={() => setMode('draw')} 
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${mode === 'draw' ? 'bg-purple-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`p-2 md:px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${mode === 'draw' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Rita rörelse"
             >
-              <Pencil size={14} /> Rita rörelse
+              <Route size={18} className={mode === 'draw' ? 'text-purple-500' : ''} /> 
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Rörelse</span>
+            </button>
+            <button 
+              onClick={() => setMode('freeDraw')} 
+              className={`p-2 md:px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${mode === 'freeDraw' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Rita fritt"
+            >
+              <Brush size={18} className={mode === 'freeDraw' ? 'text-yellow-500' : ''} /> 
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Fritt</span>
             </button>
           </div>
 
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
-            <button 
-              onClick={() => setActiveTeam('home')} 
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTeam === 'home' ? 'bg-orange-500/20 text-orange-500' : 'text-slate-600'}`}
-            >
-              Hemma ({players.filter(p => p.team === 'home').length}/5)
-            </button>
-            <button 
-              onClick={() => setActiveTeam('away')} 
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTeam === 'away' ? 'bg-blue-500/20 text-blue-500' : 'text-slate-600'}`}
-            >
-              Borta ({players.filter(p => p.team === 'away').length}/5)
-            </button>
-          </div>
+          {/* TEAM TOGGLE */}
+          <button 
+            onClick={() => setActiveTeam(activeTeam === 'home' ? 'away' : 'home')} 
+            className={`h-10 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 ${activeTeam === 'home' ? 'bg-orange-900/20 border-orange-500/50 text-orange-500' : 'bg-blue-900/20 border-blue-500/50 text-blue-500'}`}
+          >
+            <div className={`w-2 h-2 rounded-full ${activeTeam === 'home' ? 'bg-orange-500' : 'bg-blue-500'}`} />
+            {activeTeam === 'home' ? 'Hemma' : 'Borta'}
+          </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={clearPaths} className="p-2 text-slate-500 hover:text-white transition-colors" title="Rensa rörelser">
-            <RotateCcw size={18} />
-          </button>
-          <button onClick={resetBoard} className="p-2 text-slate-500 hover:text-rose-500 transition-colors" title="Nollställ allt">
-            <Trash2 size={18} />
-          </button>
-          <div className="w-px h-6 bg-slate-800 mx-2" />
-          <button 
-            onClick={startAnimation} 
-            disabled={isAnimating || players.length === 0}
-            className="px-6 py-2 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 shadow-lg shadow-orange-900/20 transition-all active:scale-95"
-          >
-            <Play size={14} fill="currentColor" /> Spela upp
-          </button>
-          <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all">
-            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-          </button>
+        {/* BOTTOM ROW: ACTIONS */}
+        <div className="flex items-center justify-between gap-2">
+           <div className="flex items-center gap-2">
+              <button onClick={clearPaths} className="p-2 bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors" title="Rensa rörelser">
+                <RotateCcw size={18} />
+              </button>
+              <button onClick={resetBoard} className="p-2 bg-slate-800 rounded-lg text-slate-400 hover:text-rose-500 transition-colors" title="Nollställ allt">
+                <Trash2 size={18} />
+              </button>
+           </div>
+
+           <div className="flex items-center gap-2">
+              <button 
+                onClick={startAnimation} 
+                disabled={isAnimating || players.length === 0}
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 shadow-lg transition-all active:scale-95"
+              >
+                <Play size={14} fill="currentColor" /> Spela
+              </button>
+              <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all">
+                {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+              </button>
+           </div>
         </div>
       </div>
 
@@ -316,6 +367,22 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
                 <path d={`M ${COURT_WIDTH/2 - 250} ${COURT_HEIGHT} Q ${COURT_WIDTH/2} ${COURT_HEIGHT - 350} ${COURT_WIDTH/2 + 250} ${COURT_HEIGHT}`} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
             </>
           )}
+
+          {/* FREE DRAWN PATHS */}
+          {freePaths.map(path => (
+            path.points.length > 1 && (
+              <path
+                key={`free-path-${path.id}`}
+                d={`M ${path.points.map(p => `${p.x},${p.y}`).join(' L ')}`}
+                fill="none"
+                stroke={path.color}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="pointer-events-none"
+              />
+            )
+          ))}
 
           {/* DRAWN PATHS */}
           {players.map(player => (
