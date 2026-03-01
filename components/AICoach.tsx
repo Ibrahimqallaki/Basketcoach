@@ -74,7 +74,7 @@ export const AICoach: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col pb-6">
+    <div className="max-w-4xl mx-auto h-full flex flex-col pb-6">
       <div className="flex items-center justify-between mb-4 px-1">
         <div>
           <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2">

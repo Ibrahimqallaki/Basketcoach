@@ -385,8 +385,8 @@ const App: React.FC = () => {
                       case View.TRAINING: return <Training />;
                       case View.WARMUP_LIBRARY: return <WarmupLibrary />;
                       case View.MATCH_EVAL: return <MatchEvaluation />;
-                      case View.VIDEO_ANALYSIS: return <VideoAnalysis />;
-                      case View.AI_COACH: return <AICoach />;
+                      case View.VIDEO_ANALYSIS: return <CoachTools initialTool="video" onNavigate={setCurrentView} />;
+                      case View.AI_COACH: return <CoachTools initialTool="ai" onNavigate={setCurrentView} />;
                       case View.TOOLS: return <CoachTools onNavigate={setCurrentView} />;
                       case View.ACCOUNT: return <Account user={user} />;
                       default: return <Dashboard onNavigateToHistory={() => setCurrentView(View.TRAINING)} />;

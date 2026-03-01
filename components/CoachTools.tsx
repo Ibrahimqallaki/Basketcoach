@@ -8,13 +8,16 @@ import { TacticalWhiteboard } from './TacticalWhiteboard';
 import { StrategyBoard } from './StrategyBoard';
 import { SupportModal } from './SupportModal';
 import { CoachLiveDashboard } from './CoachLiveDashboard';
+import { VideoAnalysis } from './VideoAnalysis';
+import { AICoach } from './AICoach';
 
 interface CoachToolsProps {
   onNavigate?: (view: View) => void;
+  initialTool?: 'scoreboard' | 'timer' | 'live' | 'video' | 'ai' | 'support';
 }
 
-export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
-  const [activeTool, setActiveTool] = useState<'scoreboard' | 'timer' | 'live'>('scoreboard');
+export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate, initialTool }) => {
+  const [activeTool, setActiveTool] = useState<'scoreboard' | 'timer' | 'live' | 'video' | 'ai' | 'support'>(initialTool || 'scoreboard');
   const [showSupport, setShowSupport] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
   
@@ -136,7 +139,7 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-24 px-1">
+    <div className="max-w-7xl mx-auto space-y-4 md:space-y-8 animate-in fade-in duration-500 pb-24 px-1 h-full flex flex-col">
       {showSupport && <SupportModal userRole="coach" onClose={() => setShowSupport(false)} />}
       
       {showOnboarding && matchId && (
@@ -185,39 +188,68 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
           </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2">
-            <Wrench className="text-slate-400" /> Verktygslåda
-          </h3>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Matchcenter & Support</p>
+      <div className="flex flex-col gap-4 shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2">
+              <Wrench className="text-slate-400" /> Verktygslåda
+            </h3>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Matchcenter & Support</p>
+          </div>
+        </div>
+
+        {/* UNIFIED NAVIGATION */}
+        <div className="flex p-1 bg-slate-900 rounded-2xl border border-slate-800 w-full shadow-inner overflow-x-auto hide-scrollbar gap-1">
+            <button 
+              onClick={() => setActiveTool('scoreboard')} 
+              className={`flex-1 min-w-[100px] md:min-w-0 px-3 py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex flex-col md:flex-row items-center justify-center gap-2 ${activeTool === 'scoreboard' ? 'bg-slate-800 text-white shadow-lg border border-white/5' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Hash size={16} className={activeTool === 'scoreboard' ? 'text-orange-500' : ''} /> 
+              <span>Scoreboard</span>
+            </button>
+            <button 
+              onClick={() => setActiveTool('live')} 
+              className={`flex-1 min-w-[100px] md:min-w-0 px-3 py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex flex-col md:flex-row items-center justify-center gap-2 ${activeTool === 'live' ? 'bg-emerald-600/20 text-emerald-400 shadow-lg border border-emerald-500/20' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Radio size={16} className={activeTool === 'live' ? 'text-emerald-400 animate-pulse' : ''} /> 
+              <span>Live</span>
+            </button>
+            <button 
+              onClick={() => setActiveTool('timer')} 
+              className={`flex-1 min-w-[100px] md:min-w-0 px-3 py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex flex-col md:flex-row items-center justify-center gap-2 ${activeTool === 'timer' ? 'bg-amber-600/20 text-amber-400 shadow-lg border border-amber-500/20' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Timer size={16} className={activeTool === 'timer' ? 'text-amber-400' : ''} /> 
+              <span>Taktik</span>
+            </button>
+            <button 
+              onClick={() => setActiveTool('video')} 
+              className={`flex-1 min-w-[100px] md:min-w-0 px-3 py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex flex-col md:flex-row items-center justify-center gap-2 ${activeTool === 'video' ? 'bg-orange-600/20 text-orange-400 shadow-lg border border-orange-500/20' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <MonitorPlay size={16} className={activeTool === 'video' ? 'text-orange-400' : ''} /> 
+              <span>Video</span>
+            </button>
+            <button 
+              onClick={() => setActiveTool('ai')} 
+              className={`flex-1 min-w-[100px] md:min-w-0 px-3 py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex flex-col md:flex-row items-center justify-center gap-2 ${activeTool === 'ai' ? 'bg-blue-600/20 text-blue-400 shadow-lg border border-blue-500/20' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Bot size={16} className={activeTool === 'ai' ? 'text-blue-400' : ''} /> 
+              <span>AI</span>
+            </button>
+            <button 
+              onClick={() => setShowSupport(true)} 
+              className={`flex-1 min-w-[100px] md:min-w-0 px-3 py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex flex-col md:flex-row items-center justify-center gap-2 text-slate-500 hover:text-slate-300`}
+            >
+              <MessageSquareText size={16} /> 
+              <span>Support</span>
+            </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-         <button onClick={() => onNavigate?.(View.VIDEO_ANALYSIS)} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-orange-500/50 flex flex-col gap-2 items-start transition-all group shadow-lg">
-            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform"><MonitorPlay size={20} /></div>
-            <div className="text-left"><div className="text-xs font-black text-white uppercase tracking-tight">Videoanalys</div><div className="text-[9px] text-slate-500 font-bold uppercase">Filmrummet</div></div>
-         </button>
-         <button onClick={() => onNavigate?.(View.AI_COACH)} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-blue-500/50 flex flex-col gap-2 items-start transition-all group shadow-lg">
-            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform"><Bot size={20} /></div>
-            <div className="text-left"><div className="text-xs font-black text-white uppercase tracking-tight">AI Assistent</div><div className="text-[9px] text-slate-500 font-bold uppercase">Din mentor</div></div>
-         </button>
-         <button onClick={() => setShowSupport(true)} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 flex flex-col gap-2 items-start transition-all group shadow-lg">
-            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform"><MessageSquareText size={20} /></div>
-            <div className="text-left"><div className="text-xs font-black text-white uppercase tracking-tight">Feedback</div><div className="text-[9px] text-slate-500 font-bold uppercase">Support</div></div>
-         </button>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex p-1 bg-slate-900 rounded-xl border border-slate-800 w-full md:w-fit shadow-inner overflow-x-auto hide-scrollbar">
-            <button onClick={() => setActiveTool('scoreboard')} className={`whitespace-nowrap px-6 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTool === 'scoreboard' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Hash size={14} /> Manuell Score</button>
-            <button onClick={() => setActiveTool('live')} className={`whitespace-nowrap px-6 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTool === 'live' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Radio size={14} /> Live Scoreboard</button>
-            <button onClick={() => setActiveTool('timer')} className={`whitespace-nowrap px-6 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTool === 'timer' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Timer size={14} /> Klocka & Taktik</button>
-        </div>
-      </div>
-
-      {activeTool === 'live' && (
+      <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar">
+        {activeTool === 'video' && <div className="h-full animate-in slide-in-from-right duration-300"><VideoAnalysis /></div>}
+        {activeTool === 'ai' && <div className="h-full animate-in slide-in-from-right duration-300"><AICoach /></div>}
+        
+        {activeTool === 'live' && (
           <div className="animate-in slide-in-from-bottom duration-500 h-full min-h-[600px]">
               {checkingExisting ? (
                   <div className="h-[400px] flex flex-col items-center justify-center space-y-4">
@@ -275,7 +307,7 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
                   </div>
               )}
           </div>
-      )}
+        )}
 
       {activeTool === 'scoreboard' && (
           <div className="space-y-6 animate-in slide-in-from-bottom duration-300">
@@ -354,32 +386,32 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
           </div>
       )}
 
-      {/* TACTICAL TIMER VIEW */}
+      {/* TACTICAL TIMER VIEW - Optimized for mobile */}
       {activeTool === 'timer' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom duration-300">
-             <div className="p-8 rounded-[3rem] bg-slate-900 border border-slate-800 flex flex-col items-center justify-center shadow-xl min-h-[500px] relative overflow-hidden">
-                 <div className="absolute top-0 left-0 p-12 opacity-5"><Timer size={120}/></div>
-                 <div className="w-64 h-64 md:w-80 md:h-80 rounded-full border-8 border-slate-800 bg-slate-950 flex items-center justify-center shadow-2xl relative mb-12">
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 md:gap-8 animate-in slide-in-from-bottom duration-300 h-full">
+             <div className="p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] bg-slate-900 border border-slate-800 flex flex-col items-center justify-center shadow-xl min-h-[300px] md:min-h-[500px] relative overflow-hidden shrink-0">
+                 <div className="absolute top-0 left-0 p-8 opacity-5"><Timer size={80}/></div>
+                 <div className="w-48 h-48 md:w-80 md:h-80 rounded-full border-8 border-slate-800 bg-slate-950 flex items-center justify-center shadow-2xl relative mb-6 md:mb-12">
                      <div className={`absolute inset-0 rounded-full border-8 border-amber-500 opacity-20 ${isRunning ? 'animate-pulse' : ''}`}></div>
-                     <div className="text-4xl md:text-6xl font-black text-white font-mono tracking-wider tabular-nums z-10">
-                         {formatTime(time).split('.')[0]}<span className="text-xl md:text-3xl text-slate-500">.{formatTime(time).split('.')[1]}</span>
+                     <div className="text-3xl md:text-6xl font-black text-white font-mono tracking-wider tabular-nums z-10">
+                         {formatTime(time).split('.')[0]}<span className="text-lg md:text-3xl text-slate-500">.{formatTime(time).split('.')[1]}</span>
                      </div>
                  </div>
-                 <div className="flex items-center gap-6 z-10">
-                     <button onClick={() => setIsRunning(!isRunning)} className={`w-20 h-20 md:w-24 md:h-24 rounded-[2.5rem] flex flex-col items-center justify-center gap-2 transition-all shadow-xl ${isRunning ? 'bg-amber-500 text-white hover:bg-amber-400 shadow-amber-900/40' : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-900/40'}`}>
-                         {isRunning ? <Pause size={32} fill="currentColor"/> : <Play size={32} fill="currentColor" className="ml-1" />}
-                         <span className="text-[10px] font-black uppercase tracking-widest">{isRunning ? 'Pausa' : 'Starta'}</span>
+                 <div className="flex items-center gap-4 md:gap-6 z-10">
+                     <button onClick={() => setIsRunning(!isRunning)} className={`w-16 h-16 md:w-24 md:h-24 rounded-[2rem] md:rounded-[2.5rem] flex flex-col items-center justify-center gap-1 md:gap-2 transition-all shadow-xl ${isRunning ? 'bg-amber-500 text-white hover:bg-amber-400 shadow-amber-900/40' : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-900/40'}`}>
+                         {isRunning ? <Pause size={24} fill="currentColor"/> : <Play size={24} fill="currentColor" className="ml-1" />}
+                         <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">{isRunning ? 'Pausa' : 'Starta'}</span>
                      </button>
-                     <button onClick={() => { setIsRunning(false); setTime(0); }} className="w-16 h-16 md:w-20 md:h-20 rounded-[2rem] bg-slate-800 text-slate-400 border border-slate-700 flex flex-col items-center justify-center gap-2 hover:bg-slate-700 hover:text-white transition-all">
-                         <RotateCcw size={24} />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Reset</span>
+                     <button onClick={() => { setIsRunning(false); setTime(0); }} className="w-14 h-14 md:w-20 md:h-20 rounded-[1.5rem] md:rounded-[2rem] bg-slate-800 text-slate-400 border border-slate-700 flex flex-col items-center justify-center gap-1 md:gap-2 hover:bg-slate-700 hover:text-white transition-all">
+                         <RotateCcw size={20} />
+                         <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Reset</span>
                      </button>
                  </div>
              </div>
-             <div className="p-4 md:p-6 rounded-[3rem] bg-slate-900 border border-slate-800 shadow-xl min-h-[500px] flex flex-col relative overflow-hidden">
-                <div className="flex items-center justify-between mb-4 px-4 relative z-10">
-                    <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2"><PencilRuler size={18} className="text-blue-500" /> Taktikbräda (Interaktiv)</h4>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Planera & Animera</span>
+             <div className="p-3 md:p-6 rounded-[2.5rem] md:rounded-[3rem] bg-slate-900 border border-slate-800 shadow-xl min-h-[400px] md:min-h-[500px] flex flex-col relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2 md:mb-4 px-4 relative z-10">
+                    <h4 className="text-[10px] md:text-sm font-black text-white uppercase tracking-widest flex items-center gap-2"><PencilRuler size={16} className="text-blue-500" /> Taktikbräda</h4>
+                    <span className="hidden sm:inline text-[9px] font-bold text-slate-500 uppercase tracking-widest">Planera & Animera</span>
                 </div>
                 <div className="flex-1 relative z-10"><StrategyBoard id="live-match-strategy" /></div>
              </div>
@@ -426,6 +458,7 @@ export const CoachTools: React.FC<CoachToolsProps> = ({ onNavigate }) => {
               </div>
           </div>
       )}
+      </div>
     </div>
   );
 };

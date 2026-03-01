@@ -237,7 +237,7 @@ export const VideoAnalysis: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4 md:space-y-6 animate-in fade-in duration-500 pb-24 h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] flex flex-col relative">
+    <div className="max-w-7xl mx-auto space-y-4 md:space-y-6 animate-in fade-in duration-500 pb-24 h-full flex flex-col relative">
       {!videoSrc ? (
          <>
           <div className="flex items-center justify-between px-1 shrink-0">
