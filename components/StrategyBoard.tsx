@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, RotateCcw, Maximize2, Minimize2, Trash2, UserPlus, Move, Pencil, Check, X, ChevronRight, ChevronLeft, Route, Brush, Eraser } from 'lucide-react';
+import { Play, RotateCcw, Maximize2, Minimize2, Trash2, UserPlus, Move, Pencil, Check, X, ChevronRight, ChevronLeft, Route, Brush, Eraser, RefreshCw } from 'lucide-react';
 
 interface Point {
   x: number;
@@ -102,6 +102,7 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
     setMousePos(coords);
 
     if (mode === 'place') {
+      setAnimationProgress(0);
       const teamPlayers = players.filter(p => p.team === activeTeam);
       if (teamPlayers.length >= 5) return;
 
@@ -133,6 +134,7 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
         return !isNear;
       }));
     } else if (mode === 'move' || mode === 'draw') {
+      setAnimationProgress(0);
       // Find closest player
       const closest = players.find(p => {
         const dist = Math.sqrt(Math.pow(p.x - coords.x, 2) + Math.pow(p.y - coords.y, 2));
@@ -346,9 +348,17 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
               <button 
                 onClick={startAnimation} 
                 disabled={isAnimating || players.length === 0}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 shadow-lg transition-all active:scale-95"
+                className={`px-6 py-2 ${animationProgress === 1 ? 'bg-blue-600 hover:bg-blue-500' : 'bg-emerald-600 hover:bg-emerald-500'} disabled:opacity-50 text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 shadow-lg transition-all active:scale-95`}
               >
-                <Play size={14} fill="currentColor" /> Spela
+                {animationProgress === 1 && !isAnimating ? (
+                  <>
+                    <RefreshCw size={14} /> Spela igen
+                  </>
+                ) : (
+                  <>
+                    <Play size={14} fill="currentColor" /> Spela
+                  </>
+                )}
               </button>
               <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all">
                 {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
