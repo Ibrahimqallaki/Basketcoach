@@ -239,11 +239,11 @@ export const Dashboard: React.FC<{
                    ))}
                 </div>
              </div>
-             <div className="relative h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
+             <div className="relative h-64 flex items-end justify-between gap-1 md:gap-4 px-2 overflow-x-auto hide-scrollbar w-full">
                {aggregatedTimeline.length > 0 ? aggregatedTimeline.map((item, i) => {
                  const height = (item.avg / 5) * 100;
                  return (
-                   <div key={i} className="relative flex-1 group flex flex-col items-center gap-2 h-full justify-end">
+                   <div key={i} className="relative flex-1 min-w-[16px] md:min-w-[40px] max-w-[60px] group flex flex-col items-center gap-2 h-full justify-end">
                      <div className="w-full bg-slate-800/30 rounded-t-xl h-full absolute bottom-0 z-0"></div>
                      <div 
                         className="w-full bg-gradient-to-t from-orange-600 to-orange-400 rounded-t-xl transition-all duration-700 shadow-[0_0_20px_rgba(249,115,22,0.2)] relative z-10 hover:brightness-125" 
@@ -275,9 +275,9 @@ export const Dashboard: React.FC<{
              </div>
              <div className="relative pt-4">
                 <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-800 -translate-y-1/2 rounded-full"></div>
-                <div className="flex justify-between relative z-10 overflow-x-auto pb-4 hide-scrollbar">
+                <div className="flex justify-between relative z-10 overflow-x-auto pb-4 hide-scrollbar w-full gap-1 md:gap-2">
                    {mockPhases.map((phase) => (
-                      <div key={phase.id} className="flex flex-col items-center gap-3 min-w-[45px]">
+                      <div key={phase.id} className="flex flex-col items-center gap-2 md:gap-3 min-w-[28px] md:min-w-[45px]">
                           <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-black text-xs transition-all border-4 ${phase.id === (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-orange-500 border-slate-900 text-white scale-125 shadow-[0_0_15px_rgba(249,115,22,0.4)]' : phase.id < (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-emerald-500 border-slate-900 text-slate-900' : 'bg-slate-800 border-slate-900 text-slate-600'}`}>
                               {phase.id}
                           </div>
