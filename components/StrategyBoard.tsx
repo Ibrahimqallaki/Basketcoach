@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, RotateCcw, Maximize2, Minimize2, Trash2, UserPlus, Move, Pencil, Check, X, ChevronRight, ChevronLeft, Route, Brush } from 'lucide-react';
+import { Play, RotateCcw, Maximize2, Minimize2, Trash2, UserPlus, Move, Pencil, Check, X, ChevronRight, ChevronLeft, Route, Brush, Eraser } from 'lucide-react';
 
 interface Point {
   x: number;
@@ -30,13 +30,15 @@ interface FreePath {
 export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
   const [players, setPlayers] = useState<PlayerMarker[]>([]);
   const [freePaths, setFreePaths] = useState<FreePath[]>([]);
-  const [mode, setMode] = useState<'place' | 'move' | 'draw' | 'freeDraw'>('place');
+  const [mode, setMode] = useState<'place' | 'move' | 'draw' | 'freeDraw' | 'eraser'>('place');
   const [activeTeam, setActiveTeam] = useState<'home' | 'away'>('home');
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [currentFreePathId, setCurrentFreePathId] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState<Point | null>(null);
+  const isErasingRef = useRef(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -97,6 +99,7 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
 
     if (isAnimating) return;
     const coords = getRelativeCoords(e);
+    setMousePos(coords);
 
     if (mode === 'place') {
       const teamPlayers = players.filter(p => p.team === activeTeam);
@@ -120,6 +123,15 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
       };
       setFreePaths([...freePaths, newPath]);
       setCurrentFreePathId(newPathId);
+    } else if (mode === 'eraser') {
+      isErasingRef.current = true;
+      setFreePaths(prev => prev.filter(path => {
+        const isNear = path.points.some(p => {
+          const dist = Math.sqrt(Math.pow(p.x - coords.x, 2) + Math.pow(p.y - coords.y, 2));
+          return dist < 20;
+        });
+        return !isNear;
+      }));
     } else if (mode === 'move' || mode === 'draw') {
       // Find closest player
       const closest = players.find(p => {
@@ -138,6 +150,7 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (isAnimating) return;
     const coords = getRelativeCoords(e);
+    setMousePos(coords);
 
     if (currentFreePathId) {
       setFreePaths(prev => prev.map(p => {
@@ -148,6 +161,18 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
           if (dist < 5) return p;
         }
         return { ...p, points: [...p.points, coords] };
+      }));
+      return;
+    }
+
+    if (mode === 'eraser' && isErasingRef.current) {
+      setFreePaths(prev => prev.filter(path => {
+        // Check if any point in the path is near the eraser
+        const isNear = path.points.some(p => {
+          const dist = Math.sqrt(Math.pow(p.x - coords.x, 2) + Math.pow(p.y - coords.y, 2));
+          return dist < 20;
+        });
+        return !isNear;
       }));
       return;
     }
@@ -175,6 +200,8 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
   const handleMouseUp = () => {
     setSelectedPlayerId(null);
     setCurrentFreePathId(null);
+    isErasingRef.current = false;
+    setMousePos(null);
   };
 
   const startAnimation = () => {
@@ -284,6 +311,14 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
               <Brush size={18} className={mode === 'freeDraw' ? 'text-yellow-500' : ''} /> 
               <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Fritt</span>
             </button>
+            <button 
+              onClick={() => setMode('eraser')} 
+              className={`p-2 md:px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${mode === 'eraser' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Suddgummi"
+            >
+              <Eraser size={18} className={mode === 'eraser' ? 'text-rose-500' : ''} /> 
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Sudd</span>
+            </button>
           </div>
 
           {/* TEAM TOGGLE */}
@@ -332,7 +367,10 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onMouseLeave={() => {
+            handleMouseUp();
+            setMousePos(null);
+          }}
           onTouchStart={handleMouseDown}
           onTouchMove={handleMouseMove}
           onTouchEnd={handleMouseUp}
@@ -427,6 +465,20 @@ export const StrategyBoard: React.FC<StrategyBoardProps> = ({ id }) => {
               </g>
             );
           })}
+
+          {/* ERASER INDICATOR */}
+          {mode === 'eraser' && mousePos && (
+            <circle 
+              cx={mousePos.x} 
+              cy={mousePos.y} 
+              r="20" 
+              fill="rgba(255, 255, 255, 0.2)" 
+              stroke="white" 
+              strokeWidth="1" 
+              strokeDasharray="4,4"
+              className="pointer-events-none"
+            />
+          )}
         </svg>
 
       </div>
