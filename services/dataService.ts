@@ -26,6 +26,7 @@ const PLAYERS_KEY = 'basket_coach_players_v4';
 const SESSIONS_KEY = 'basket_coach_sessions_v4';
 const MATCHES_KEY = 'basket_coach_matches_v4';
 const CUSTOM_EXERCISES_KEY = 'basket_coach_custom_exercises_v1';
+const CUSTOM_PHASE_NAME_KEY = 'basket_coach_custom_phase_name_v1';
 const INIT_KEY = 'basket_coach_initialized_v4';
 
 // Din unika access-nyckel
@@ -353,13 +354,37 @@ export const dataService = {
     }
   },
 
+  getCustomPhaseName: async (): Promise<string> => {
+    const path = dataService.getUserPath();
+    if (path && db) {
+      try {
+        const docRef = doc(db, `${path}/settings`, 'custom_phase');
+        const snap = await getDoc(docRef);
+        return snap.exists() ? snap.data().name : "Egna Övningar";
+      } catch (err) {
+        return "Egna Övningar";
+      }
+    }
+    return localStorage.getItem(CUSTOM_PHASE_NAME_KEY) || "Egna Övningar";
+  },
+
+  saveCustomPhaseName: async (name: string): Promise<void> => {
+    const path = dataService.getUserPath();
+    if (path && db) {
+      await setDoc(doc(db, `${path}/settings`, 'custom_phase'), { name });
+    } else {
+      localStorage.setItem(CUSTOM_PHASE_NAME_KEY, name);
+    }
+  },
+
   getUnifiedPhases: async (): Promise<Phase[]> => {
     const custom = await dataService.getCustomExercises();
+    const customName = await dataService.getCustomPhaseName();
     const phases = JSON.parse(JSON.stringify(mockPhases));
     if (custom.length > 0) {
         phases.push({
             id: 9,
-            title: "Egna Övningar",
+            title: customName,
             duration: "Säsong",
             color: "from-indigo-600 to-blue-500",
             description: "Dina skräddarsydda övningar.",

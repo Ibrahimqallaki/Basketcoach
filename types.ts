@@ -144,6 +144,7 @@ export interface Exercise {
   criteria: string[];
   diagramPrompt: string;
   videoUrl?: string; 
+  linkedFysExerciseId?: string;
 }
 
 export interface Phase {
