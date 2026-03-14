@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  Flame
+  Flame,
+  BarChart3
 } from 'lucide-react';
 // Fix: Added @ts-ignore to bypass environment-specific resolution issues with Firebase exports
 // @ts-ignore
@@ -34,17 +35,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
     { id: View.ROSTER, label: 'Laget', icon: Users },
     { id: View.PLAN, label: 'Planering', icon: CalendarDays },
     { id: View.TRAINING, label: 'Träna', icon: ClipboardCheck },
+    { id: View.STATISTICS, label: 'Statistik', icon: BarChart3, isNew: true },
     { id: View.WARMUP_LIBRARY, label: 'Uppvärmning', icon: Flame },
     { id: View.MATCH_EVAL, label: 'Match', icon: Trophy },
     { id: View.VIDEO_ANALYSIS, label: 'Video', icon: MonitorPlay },
-    { id: View.AI_COACH, label: 'AI Assistent', icon: Bot, isNew: true },
+    { id: View.AI_COACH, label: 'AI Assistent', icon: Bot },
     { id: View.TOOLS, label: 'Verktyg', icon: Wrench },
   ];
 
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) p-4 flex-col h-full shrink-0 relative ${isCollapsed ? 'w-24' : 'w-72'}`}>
+      <aside 
+        role="navigation" 
+        aria-label="Huvudnavigation"
+        className={`hidden md:flex transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) p-4 flex-col h-full shrink-0 relative ${isCollapsed ? 'w-24' : 'w-72'}`}
+      >
         
         {/* Sleek Long Edge Toggle Handle - Nu längre (h-64) för bättre kontroll */}
         <button 
@@ -76,11 +82,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
           </div>
 
           {/* Navigation Items - Nu låst från skroll (overflow-hidden) */}
-          <nav className="flex-1 px-3 space-y-2 overflow-hidden py-6">
+          <nav className="flex-1 px-3 space-y-2 overflow-hidden py-6" aria-label="Huvudmeny">
             {menuItems.map((item) => (
               <div key={item.id} className="mb-1">
                 <button
                   onClick={() => onNavigate(item.id)}
+                  aria-label={item.label}
+                  aria-current={activeView === item.id ? 'page' : undefined}
                   title={isCollapsed ? item.label : ''}
                   className={`w-full flex items-center rounded-2xl transition-all duration-300 group relative ${
                     isCollapsed ? 'justify-center py-5' : 'px-5 py-4 gap-4'

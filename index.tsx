@@ -2,6 +2,7 @@ import React, { ReactNode, ErrorInfo } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
+import { ToastProvider } from './components/Toast';
 
 const rootElement = document.getElementById('root');
 
@@ -62,7 +63,9 @@ console.log("Rendering App...");
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

@@ -3,6 +3,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { dataService } from '../services/dataService';
 import { User, Plus, X, Trash2, Star, PenTool, Target, Check, Save, Loader2, Eye, BookPlus, BrainCircuit, Trophy, Dumbbell, ChevronRight, BookOpen, Search, Copy, Key, RefreshCcw, Cloud, ClipboardPlus } from 'lucide-react';
 import { Player, Phase, MatchRecord, Exercise } from '../types';
+import { useToast } from './Toast';
+import { PlayerCardSkeleton } from './Skeleton';
 
 interface RosterProps {
     onSimulatePlayerLogin?: (player: Player) => void;
@@ -64,6 +66,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [modalState, setModalState] = useState<{ show: boolean, mode: 'add' | 'edit', player?: Player }>({ show: false, mode: 'add' });
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
@@ -138,10 +141,15 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
 
   const handleDeletePlayer = async (id: string) => {
       if (!confirm("Radera spelare permanent?")) return;
-      const updated = await dataService.deletePlayer(id);
-      setPlayers(updated);
-      if (updated.length > 0) setSelectedPlayerId(updated[0].id);
-      else setSelectedPlayerId(null);
+      try {
+        const updated = await dataService.deletePlayer(id);
+        setPlayers(updated);
+        if (updated.length > 0) setSelectedPlayerId(updated[0].id);
+        else setSelectedPlayerId(null);
+        toast.success('Spelare raderad', 'Spelaren har tagits bort från truppen.');
+      } catch (err) {
+        toast.error('Kunde inte radera', 'Försök igen senare.');
+      }
   };
 
   const handleGenerateNewCode = async () => {
@@ -176,6 +184,7 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
         const updated = await dataService.addPlayer(newPlayer);
         setPlayers(updated);
         if (updated.length > 0) setSelectedPlayerId(updated[updated.length - 1].id);
+        toast.success('Spelare tillagd', `${formData.name} har lagts till i truppen!`);
       } else if (modalState.mode === 'edit' && modalState.player) {
         const updated = await dataService.updatePlayer(modalState.player.id, {
           name: formData.name,
@@ -185,14 +194,38 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
           notes: formData.notes
         });
         setPlayers(updated);
+        toast.success('Spelare uppdaterad', 'Ändringarna har sparats.');
       }
       setModalState({ show: false, mode: 'add' });
+    } catch (err) {
+      toast.error('Något gick fel', 'Kunde inte spara spelare. Försök igen.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && players.length === 0) return <div className="h-full w-full flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
+  if (loading && players.length === 0) return (
+    <div className="max-w-6xl mx-auto space-y-6 pb-24">
+      <div className="flex items-center justify-between px-1">
+        <div className="skeleton w-32 h-8 rounded-xl" />
+        <div className="skeleton w-40 h-12 rounded-xl" />
+      </div>
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-3 space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="skeleton h-16 rounded-2xl" />
+          ))}
+        </div>
+        <div className="lg:col-span-9 space-y-6">
+          <PlayerCardSkeleton />
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="skeleton h-48 rounded-[2rem]" />
+            <div className="skeleton h-48 rounded-[2rem]" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-24">

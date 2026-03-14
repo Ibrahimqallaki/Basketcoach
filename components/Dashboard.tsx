@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, Users, Activity, Star, Zap, ChevronRight, Calendar, Lightbulb, Trophy, Loader2, Dumbbell, TrendingUp, Timer, Heart, BrainCircuit, ArrowUpRight, ArrowDownRight, Flame } from 'lucide-react';
+import { Target, Users, Activity, Star, Zap, ChevronRight, Calendar, Lightbulb, Trophy, Dumbbell, TrendingUp, Timer, Heart, BrainCircuit, ArrowUpRight, ArrowDownRight, Flame } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { mockPhases, mockWarmupExercises } from '../services/mockData';
 import { Player, TrainingSession, MatchRecord, Exercise, WarmupExercise } from '../types';
+import { DashboardSkeleton } from './Skeleton';
+import { useToast } from './Toast';
 
 interface ChartDataPoint {
   label: string;
@@ -23,6 +25,7 @@ export const Dashboard: React.FC<{
   const [loading, setLoading] = useState(true);
   const [chartTimeRange, setChartTimeRange] = useState<'Vecka' | 'Månad' | 'Säsong'>('Säsong');
   const storageMode = dataService.getStorageMode();
+  const toast = useToast();
 
   useEffect(() => {
     const loadData = async () => {
@@ -40,6 +43,7 @@ export const Dashboard: React.FC<{
         setAllExercises(ph.flatMap(p => p.exercises));
       } catch (err) {
         console.error(err);
+        toast.error('Kunde inte ladda data', 'Kontrollera din anslutning och försök igen.');
       } finally {
         setLoading(false);
       }
@@ -184,7 +188,7 @@ export const Dashboard: React.FC<{
     { label: 'Utvecklingsindex', value: developmentInsights.index, subtext: 'Genomsnittlig nivå', trend: developmentInsights.trend, icon: TrendingUp, gradient: 'from-purple-600 to-purple-400', border: 'border-purple-500/20', bg: 'bg-purple-500/10' },
   ];
 
-  if (loading) return <div className="h-full w-full flex flex-col items-center justify-center space-y-4"><Loader2 className="w-12 h-12 text-orange-500 animate-spin" /><p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Laddar statistik...</p></div>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in pb-24">

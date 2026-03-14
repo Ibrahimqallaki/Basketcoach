@@ -14,6 +14,8 @@ import { AICoach } from './components/AICoach';
 import { CoachTools } from './components/CoachTools';
 import { MatchLiveScout } from './components/MatchLiveScout';
 import { WarmupLibrary } from './components/WarmupLibrary';
+import { Statistics } from './components/Statistics';
+import { NetworkStatus } from './components/NetworkStatus';
 import { auth, isFirebaseConfigured, googleProvider } from './services/firebase';
 import { dataService } from './services/dataService';
 // @ts-ignore
@@ -341,10 +343,11 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#020617] overflow-hidden text-slate-200 font-sans selection:bg-orange-500/30">
+      <NetworkStatus />
       {!hasApiKey && <KeySelectionOverlay onKeySelected={handleKeySelected} />}
       {!loggedInPlayer && <Sidebar activeView={currentView} onNavigate={setCurrentView} user={user} />}
       
-      <main className="flex-1 flex flex-col overflow-x-hidden relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] w-full max-w-[100vw]">
+      <main id="main-content" role="main" aria-label="Huvudinnehåll" className="flex-1 flex flex-col overflow-x-hidden relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] w-full max-w-[100vw]">
         {!loggedInPlayer && (
           <header className="h-20 flex items-center justify-between px-4 md:px-10 shrink-0 z-40">
             <div className="flex items-center gap-4">
@@ -383,6 +386,7 @@ const App: React.FC = () => {
                       case View.ROSTER: return <Roster onSimulatePlayerLogin={handleSimulatePlayerLogin} />;
                       case View.PLAN: return <Plan />;
                       case View.TRAINING: return <Training />;
+                      case View.STATISTICS: return <Statistics />;
                       case View.WARMUP_LIBRARY: return <WarmupLibrary />;
                       case View.MATCH_EVAL: return <MatchEvaluation />;
                       case View.VIDEO_ANALYSIS: return <CoachTools initialTool="video" onNavigate={setCurrentView} />;
