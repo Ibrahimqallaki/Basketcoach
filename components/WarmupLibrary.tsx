@@ -195,9 +195,38 @@ export const WarmupLibrary: React.FC<WarmupLibraryProps> = ({ onSelect, selected
              </div>
              
              <div className="p-8 overflow-y-auto custom-scrollbar space-y-8">
-                <div className="space-y-4">
-                   <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Info size={14} /> Beskrivning</h4>
-                   <p className="text-sm text-slate-300 leading-relaxed font-medium">{selectedDetailExercise.description}</p>
+                <div className="grid md:grid-cols-2 gap-8">
+                   <div className="space-y-6">
+                      <div className="space-y-4">
+                         <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Info size={14} /> Beskrivning</h4>
+                         <p className="text-sm text-slate-300 leading-relaxed font-medium">{selectedDetailExercise.description}</p>
+                      </div>
+
+                      {selectedDetailExercise.setup && (
+                         <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Target size={14} className="text-blue-500" /> Organisation</h4>
+                            <div className="p-4 rounded-2xl bg-blue-600/5 border border-blue-500/20">
+                               <p className="text-xs font-bold text-slate-300 uppercase">{selectedDetailExercise.setup}</p>
+                            </div>
+                         </div>
+                      )}
+                   </div>
+
+                   <div className="space-y-6">
+                      {selectedDetailExercise.visualSteps && selectedDetailExercise.visualSteps.length > 0 && (
+                         <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Activity size={14} className="text-purple-500" /> Steg-för-steg</h4>
+                            <div className="space-y-2">
+                               {selectedDetailExercise.visualSteps.map((step, i) => (
+                                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-950 border border-slate-800">
+                                     <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-black text-purple-500 shrink-0 border border-purple-500/20">{i + 1}</div>
+                                     <span className="text-xs font-bold text-slate-300 uppercase">{step}</span>
+                                  </div>
+                               ))}
+                            </div>
+                         </div>
+                      )}
+                   </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8">

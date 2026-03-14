@@ -74,6 +74,8 @@ export interface WarmupExercise {
   coachingPoints: string[];
   sbbfFocus: string; // E.g. "Knäkontroll", "Rörelseförståelse"
   videoUrl?: string;
+  setup?: string;
+  visualSteps?: string[];
 }
 
 export interface Homework {

@@ -10,7 +10,9 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'En interaktiv övning för att höja pulsen och skärpa fokuset. Spelarna jobbar parvis där en agerar ledare och utför explosiva basketrörelser (slides, hopp, fakes) medan den andra måste spegla rörelserna omedelbart med bibehållen låg tyngdpunkt.',
     coachingPoints: ['Låg tyngdpunkt', 'Snabba fötter', 'Ögonkontakt'],
     sbbfFocus: 'Rörelseförståelse & Reaktion',
-    videoUrl: 'https://www.youtube.com/watch?v=1p_tQy2iX60'
+    videoUrl: 'https://www.youtube.com/watch?v=1p_tQy2iX60',
+    setup: 'Parvis, mitt emot varandra på en linje.',
+    visualSteps: ['Stå i grundposition', 'Ledaren rör sig fritt', 'Följaren speglar direkt']
   },
   {
     id: 'w2',
@@ -20,7 +22,9 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'Aktiverar sätet, låren och core-stabiliteten. Spelaren tar ett kontrollerat utfallssteg framåt och roterar överkroppen långsamt över det främre benet för att öppna upp höften och aktivera bålmuskulaturen inför träningens belastning.',
     coachingPoints: ['Knä över tå', 'Stolt hållning', 'Kontrollerad rotation'],
     sbbfFocus: 'Knäkontroll & Mobilitet',
-    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw'
+    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw',
+    setup: 'Stående på led eller fritt på planen.',
+    visualSteps: ['Kliv fram i utfall', 'Håll balansen', 'Rotera över främre benet']
   },
   {
     id: 'w3',
@@ -30,7 +34,9 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'Kritisk övning för skadeprevention enligt SBBF-standard. Spelaren hoppar framåt eller i sidled och landar på ett ben med fokus på att "frysa" landningen i 2 sekunder. Målet är att eliminera knä-valgus (att knät faller inåt).',
     coachingPoints: ['Mjuk landning', 'Knä i linje med tå', 'Stilla höft'],
     sbbfFocus: 'Knäkontroll (SBBF Standard)',
-    videoUrl: 'https://www.youtube.com/watch?v=f-S89Bq68L0'
+    videoUrl: 'https://www.youtube.com/watch?v=f-S89Bq68L0',
+    setup: 'Fritt på golvet, fokus på balans.',
+    visualSteps: ['Hoppa framåt/sidled', 'Landa mjukt på ett ben', 'Frys i 2 sekunder']
   },
   {
     id: 'w4',
@@ -40,7 +46,9 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'Värmer upp fingertoppskänslan och handlederna. En serie flytande rörelser som kombinerar cirklar runt huvud, midja och ben med snabba, låga dribblingar. Syftet är att göra spelaren bekväm med bollen i alla positioner.',
     coachingPoints: ['Blicken upp', 'Hårda dribblingar', 'Fingertoppskänsla'],
     sbbfFocus: 'Bollbekantskap',
-    videoUrl: 'https://www.youtube.com/watch?v=S8pB6S7Z3C8'
+    videoUrl: 'https://www.youtube.com/watch?v=S8pB6S7Z3C8',
+    setup: 'Varje spelare med en boll.',
+    visualSteps: ['Cirklar runt kroppen', 'Åttor mellan benen', 'Låga snabba dribblingar']
   },
   {
     id: 'w5',
@@ -50,7 +58,9 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'Högintensiv övning för att aktivera nervsystemet. Genom korta, snabba steg i en tänkt stege eller över en linje tränas fotarbetets frekvens. Detta förbereder spelarna för de snabba riktningsförändringar som krävs i matchspel.',
     coachingPoints: ['Korta steg', 'Armpendling', 'Andning'],
     sbbfFocus: 'Explosivitet',
-    videoUrl: 'https://www.youtube.com/watch?v=A8gAP32wK4k'
+    videoUrl: 'https://www.youtube.com/watch?v=A8gAP32wK4k',
+    setup: 'Använd linjer på planen eller koordinationsstege.',
+    visualSteps: ['Snabba steg i/ur rutor', 'Håll tyngdpunkten låg', 'Maximal frekvens']
   },
   {
     id: 'w6',
@@ -60,7 +70,9 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'En systematisk genomgång av landningsteknik och knästabilitet. Innehåller hopp i olika riktningar där varje landning utvärderas utifrån knäts position i förhållande till tårna. Grundbulten i svensk baskets skadeprevention.',
     coachingPoints: ['Knä över tå', 'Mjuk landning', 'Stilla höft'],
     sbbfFocus: 'Skadeprevention (SBBF Standard)',
-    videoUrl: 'https://www.youtube.com/watch?v=f-S89Bq68L0'
+    videoUrl: 'https://www.youtube.com/watch?v=f-S89Bq68L0',
+    setup: 'Ledvis eller parvis.',
+    visualSteps: ['Hoppa jämfota', 'Landa med kontroll', 'Kontrollera knäposition']
   },
   {
     id: 'w7',
@@ -70,7 +82,9 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'En lekfull men krävande övning som tränar simultankapacitet. Alla spelare dribblar i ett avgränsat område och ska försöka kulla varandra utan att tappa kontrollen över sin egen boll eller sluta dribbla.',
     coachingPoints: ['Blicken upp', 'Skydda bollen', 'Snabba riktningsförändringar'],
     sbbfFocus: 'Bollkontroll & Spelförståelse',
-    videoUrl: 'https://www.youtube.com/watch?v=1p_tQy2iX60'
+    videoUrl: 'https://www.youtube.com/watch?v=1p_tQy2iX60',
+    setup: 'Inom trepoängslinjen eller mittcirkeln.',
+    visualSteps: ['Dribbla konstant', 'Kulla andra spelare', 'Skydda din egen boll']
   },
   {
     id: 'w8',
@@ -80,7 +94,9 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'Förbereder baksida lår för explosiva sprinter. Genom en gående rörelse där spelaren "skopar" marken med händerna vid varje steg sträcks hamstrings ut dynamiskt utan att förlora muskelspänning inför träningen.',
     coachingPoints: ['Rak rygg', 'Flexad fot', 'Kontrollerad rörelse'],
     sbbfFocus: 'Mobilitet',
-    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw'
+    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw',
+    setup: 'Gående över planen.',
+    visualSteps: ['Ett steg fram', 'Skopa marken med händerna', 'Håll benet rakt']
   },
   {
     id: 'w9',
@@ -90,7 +106,9 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'Fokuserar på skottets mekanik. Spelarna står nära korgen och utför skottrörelsen med en hand för att isolera handledens release och "svanhalsen". En perfekt övning för att bygga muskelminne för korrekt bollrotation.',
     coachingPoints: ['Följ igenom', 'Hög release', 'Bollrotation'],
     sbbfFocus: 'Skott-fundament',
-    videoUrl: 'https://www.youtube.com/watch?v=BnvGa0I8bMc'
+    videoUrl: 'https://www.youtube.com/watch?v=BnvGa0I8bMc',
+    setup: '1 meter från korgen.',
+    visualSteps: ['Enhandsskott', 'Fokus på handleden', 'Frys svanhalsen']
   },
   {
     id: 'w10',
@@ -100,7 +118,69 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'Tränar den laterala snabbheten och uthålligheten i försvarsställning. Spelarna jobbar i sicksack-mönster över planen med fokus på att inte korsa fötterna och att behålla en låg, stabil tyngdpunkt genom hela rörelsen.',
     coachingPoints: ['Låg tyngdpunkt', 'Korsa inte fötterna', 'Händer ute'],
     sbbfFocus: 'Lateral snabbhet',
-    videoUrl: 'https://www.youtube.com/watch?v=O70R86o-YTo'
+    videoUrl: 'https://www.youtube.com/watch?v=O70R86o-YTo',
+    setup: 'Sicksack-mönster mellan baslinje och mittlinje.',
+    visualSteps: ['Defensiv slide', 'Byt riktning vid linjen', 'Håll blicken framåt']
+  },
+  {
+    id: 'w11',
+    title: 'Björngång',
+    phase: WarmupPhase.AKTIVERING,
+    duration: '3 min',
+    description: 'En helkroppsövning som aktiverar axlar, core och höfter. Spelaren går på alla fyra utan att knäna rör marken, med fokus på en stabil rygg och koordinerade rörelser.',
+    coachingPoints: ['Knän nära marken', 'Stabil core', 'Koordinera hand/fot'],
+    sbbfFocus: 'Stabilitet & Mobilitet',
+    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw',
+    setup: 'Från baslinje till mittlinje.',
+    visualSteps: ['Ställ dig på alla fyra', 'Lyft knäna 2cm', 'Gå framåt kontrollerat']
+  },
+  {
+    id: 'w12',
+    title: 'Skridskohopp',
+    phase: WarmupPhase.INTENSITET,
+    duration: '3 min',
+    description: 'Tränar lateral explosivitet och landningskontroll. Spelaren hoppar från sida till sida och landar på ett ben, likt en skridskoåkare, med fokus på kraft och balans.',
+    coachingPoints: ['Explodera i hoppet', 'Djup landning', 'Använd armarna'],
+    sbbfFocus: 'Lateral Kraft',
+    videoUrl: 'https://www.youtube.com/watch?v=LqUeX_y9o6g',
+    setup: 'Fritt på golvet eller längs en linje.',
+    visualSteps: ['Hoppa långt åt sidan', 'Landa på ett ben', 'Håll balansen innan nästa hopp']
+  },
+  {
+    id: 'w13',
+    title: 'Masken (Inchworm)',
+    phase: WarmupPhase.AKTIVERING,
+    duration: '4 min',
+    description: 'Sträcker ut baksida lår och aktiverar axlar och core. Spelaren går ut med händerna till en plankposition och går sedan efter med fötterna med raka ben.',
+    coachingPoints: ['Raka ben', 'Små steg', 'Spänn magen'],
+    sbbfFocus: 'Mobilitet & Core',
+    videoUrl: 'https://www.youtube.com/watch?v=ASdVnBL2X8E',
+    setup: 'Gående rörelse framåt.',
+    visualSteps: ['Fäll framåt med raka ben', 'Gå ut med händerna till planka', 'Gå fram med fötterna till händerna']
+  },
+  {
+    id: 'w14',
+    title: 'Krabba (Baklänges)',
+    phase: WarmupPhase.PULS,
+    duration: '3 min',
+    description: 'Aktiverar baksida axlar och triceps samtidigt som det höjer pulsen. Spelaren rör sig baklänges på händer och fötter med höften lyft från marken.',
+    coachingPoints: ['Höften högt', 'Blicken framåt', 'Snabba steg'],
+    sbbfFocus: 'Koordination',
+    videoUrl: 'https://www.youtube.com/watch?v=1p_tQy2iX60',
+    setup: 'Bana på 10-15 meter.',
+    visualSteps: ['Sitt på golvet', 'Lyft upp rumpan', 'Gå baklänges med händer/fötter']
+  },
+  {
+    id: 'w15',
+    title: 'SBBF Utfall med sidoböj',
+    phase: WarmupPhase.AKTIVERING,
+    duration: '4 min',
+    description: 'Kombinerar höftmobilitet med rörlighet i bröstryggen. Ett djupt utfallssteg följs av en böjning av överkroppen åt sidan för att sträcka ut psoas och lats.',
+    coachingPoints: ['Stabilitet i knät', 'Djup stretch', 'Andas ut'],
+    sbbfFocus: 'Mobilitet (SBBF Standard)',
+    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw',
+    setup: 'Stående på led.',
+    visualSteps: ['Kliv fram i djupt utfall', 'Sträck upp armarna', 'Böj överkroppen åt sidan']
   }
 ];
 

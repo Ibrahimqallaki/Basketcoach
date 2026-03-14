@@ -5,7 +5,7 @@ import {
   Play, Pause, RotateCcw, X, ChevronRight, Save, Check, Trophy, Loader2, 
   Dumbbell, Layout, ChevronLeft, UserCheck, Activity, BrainCircuit, 
   Target, Zap, MessageSquare, Mic, Eye, Shield, Flame, Timer, Star, 
-  ArrowUpCircle, Scaling, Trash2, Info
+  ArrowUpCircle, Scaling, Trash2, Info, CheckCircle2
 } from 'lucide-react';
 import { Exercise, Player, Evaluation, Phase, TrainingSession, WarmupExercise } from '../types';
 import { mockWarmupExercises } from '../services/mockData';
@@ -592,20 +592,55 @@ export const Training: React.FC = () => {
                                       </div>
                                   </div>
                                   <p className="text-sm text-slate-300 leading-relaxed font-medium">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).description}</p>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                      <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
-                                          <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Coaching Points</div>
-                                          <ul className="space-y-1">
-                                              {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).coachingPoints.map((cp, i) => (
-                                                  <li key={i} className="text-[10px] text-slate-300 flex items-start gap-2">
-                                                      <span className="text-orange-500 mt-1">•</span> {cp}
-                                                  </li>
-                                              ))}
-                                          </ul>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div className="space-y-4">
+                                          {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).setup && (
+                                              <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
+                                                  <div className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                      <Target size={12} /> Organisation
+                                                  </div>
+                                                  <p className="text-[10px] font-bold text-slate-300 uppercase">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).setup}</p>
+                                              </div>
+                                          )}
+
+                                          <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
+                                              <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                  <CheckCircle2 size={12} className="text-emerald-500" /> Coaching Points
+                                              </div>
+                                              <ul className="space-y-1">
+                                                  {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).coachingPoints.map((cp, i) => (
+                                                      <li key={i} className="text-[10px] text-slate-300 flex items-start gap-2">
+                                                          <span className="text-orange-500 mt-1">•</span> {cp}
+                                                      </li>
+                                                  ))}
+                                              </ul>
+                                          </div>
                                       </div>
-                                      <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
-                                          <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">SBBF Fokus</div>
-                                          <div className="text-[10px] font-black text-white uppercase italic">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).sbbfFocus}</div>
+
+                                      <div className="space-y-4">
+                                          {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).visualSteps && (playlist[activePlaylistItemIndex].exercise as WarmupExercise).visualSteps!.length > 0 && (
+                                              <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
+                                                  <div className="text-[8px] font-black text-purple-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                      <Activity size={12} /> Steg-för-steg
+                                                  </div>
+                                                  <div className="space-y-2">
+                                                      {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).visualSteps!.map((step, i) => (
+                                                          <div key={i} className="flex items-center gap-2">
+                                                              <div className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[8px] font-black text-purple-500 shrink-0 border border-purple-500/20">{i + 1}</div>
+                                                              <span className="text-[10px] font-bold text-slate-300 uppercase">{step}</span>
+                                                          </div>
+                                                      ))}
+                                                  </div>
+                                              </div>
+                                          )}
+
+                                          <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
+                                              <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                  <Flame size={12} className="text-orange-500" /> SBBF Fokus
+                                              </div>
+                                              <div className="text-[10px] font-black text-white uppercase italic">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).sbbfFocus}</div>
+                                          </div>
                                       </div>
                                   </div>
                               </div>
