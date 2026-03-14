@@ -5,13 +5,21 @@ import {
   Play, Pause, RotateCcw, X, ChevronRight, Save, Check, Trophy, Loader2, 
   Dumbbell, Layout, ChevronLeft, UserCheck, Activity, BrainCircuit, 
   Target, Zap, MessageSquare, Mic, Eye, Shield, Flame, Timer, Star, 
-  ArrowUpCircle, Scaling, Trash2
+  ArrowUpCircle, Scaling, Trash2, Info
 } from 'lucide-react';
 import { Exercise, Player, Evaluation, Phase, TrainingSession, WarmupExercise } from '../types';
 import { mockWarmupExercises } from '../services/mockData';
 import { WarmupLibrary } from './WarmupLibrary';
 
-type TrainingStep = 'selection' | 'checkin' | 'live';
+type TrainingStep = 'selection' | 'planning' | 'checkin' | 'live';
+
+interface PlaylistItem {
+  id: string;
+  title: string;
+  duration: number; // seconds
+  type: 'warmup' | 'main';
+  exercise: Exercise | WarmupExercise;
+}
 
 const BASKET_CRITERIA = [
   { label: 'Teknik', icon: Target, desc: 'Precision & utförande' },
@@ -34,7 +42,8 @@ export const Training: React.FC = () => {
   const [step, setStep] = useState<TrainingStep>('selection');
   const [phases, setPhases] = useState<Phase[]>([]);
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
-  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
+  const [activeExerciseIndex, setActiveExerciseIndex] = useState<number>(0);
   const [gradingPlayer, setGradingPlayer] = useState<Player | null>(null);
   const [selectedSession, setSelectedSession] = useState<TrainingSession | null>(null);
   const [viewMode, setViewMode] = useState<'basket' | 'fys'>('basket');
@@ -49,9 +58,51 @@ export const Training: React.FC = () => {
   const [allSessions, setAllSessions] = useState<TrainingSession[]>([]);
   const [selectedWarmupIds, setSelectedWarmupIds] = useState<string[]>([]);
   const [showWarmupLibrary, setShowWarmupLibrary] = useState(false);
+  const [timerMode, setTimerMode] = useState<'stopwatch' | 'countdown'>('stopwatch');
+  const [countdownTime, setCountdownTime] = useState(600);
+  const [showCheatSheet, setShowCheatSheet] = useState(false);
+
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [newExerciseTime, setNewExerciseTime] = useState(10);
+  const [newExerciseSelection, setNewExerciseSelection] = useState<Exercise | null>(null);
+
+  const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
+  const [activePlaylistItemIndex, setActivePlaylistItemIndex] = useState(0);
 
   const [currentScores, setCurrentScores] = useState<number[]>([]);
   const [currentNote, setCurrentNote] = useState<string>("");
+
+  const handleStartPlanning = () => {
+    const newPlaylist: PlaylistItem[] = [];
+    
+    // Add warmups
+    selectedWarmupIds.forEach(id => {
+        const warmup = mockWarmupExercises.find(w => w.id === id);
+        if (warmup) {
+            newPlaylist.push({
+                id: warmup.id,
+                title: warmup.title,
+                duration: parseInt(warmup.duration) * 60 || 300,
+                type: 'warmup',
+                exercise: warmup
+            });
+        }
+    });
+    
+    // Add main exercises
+    selectedExercises.forEach(ex => {
+        newPlaylist.push({
+            id: ex.id,
+            title: ex.title,
+            duration: parseInt(ex.duration || '10') * 60 || 600,
+            type: 'main',
+            exercise: ex
+        });
+    });
+    
+    setPlaylist(newPlaylist);
+    setStep('planning');
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -79,17 +130,31 @@ export const Training: React.FC = () => {
   useEffect(() => {
     let interval: number;
     if (step === 'live' && !isPaused) {
-      interval = window.setInterval(() => setTimer(t => t + 1), 1000);
+      interval = window.setInterval(() => {
+        if (timerMode === 'stopwatch') {
+          setTimer(t => t + 1);
+        } else {
+          setCountdownTime(t => {
+            if (t <= 1) {
+              setIsPaused(true);
+              return 0;
+            }
+            return t - 1;
+          });
+        }
+      }, 1000);
     }
     return () => clearInterval(interval);
-  }, [step, isPaused]);
+  }, [step, isPaused, timerMode]);
 
   const activeCriteria = viewMode === 'basket' ? BASKET_CRITERIA : FYS_CRITERIA;
 
   const handleStartGradingPlayer = (p: Player) => {
-    if(!selectedExercise) return;
+    if(playlist.length === 0) return;
+    const currentItem = playlist[activePlaylistItemIndex];
+    if (currentItem.type !== 'main') return;
     setGradingPlayer(p);
-    const existing = evaluations.find(e => e.playerId === p.id);
+    const existing = evaluations.find(e => e.playerId === p.id && e.exerciseId === currentItem.id);
     if (existing) {
       setCurrentScores([...existing.scores]);
       setCurrentNote(existing.note || "");
@@ -100,27 +165,29 @@ export const Training: React.FC = () => {
   };
 
   const savePlayerEvaluation = () => {
-    if (!gradingPlayer || !selectedExercise) return;
+    if (!gradingPlayer || playlist.length === 0) return;
+    const currentItem = playlist[activePlaylistItemIndex];
+    if (currentItem.type !== 'main') return;
     const newEval: Evaluation = { 
         playerId: gradingPlayer.id, 
-        exerciseId: selectedExercise.id, 
+        exerciseId: currentItem.id, 
         scores: currentScores, 
         note: currentNote, 
         timestamp: new Date().toISOString() 
     };
-    setEvaluations(prev => [...prev.filter(e => e.playerId !== gradingPlayer.id), newEval]);
+    setEvaluations(prev => [...prev.filter(e => !(e.playerId === gradingPlayer.id && e.exerciseId === currentItem.id)), newEval]);
     setGradingPlayer(null);
   };
 
   const handleFinalizeSession = async () => {
-    if(!selectedPhase || !selectedExercise) return;
+    if(!selectedPhase || playlist.length === 0) return;
     setIsSaving(true);
     try {
       await dataService.saveSession({
         date: new Date().toISOString().split('T')[0],
         phaseId: selectedPhase.id,
-        warmupExerciseIds: selectedWarmupIds,
-        exerciseIds: [selectedExercise.id],
+        warmupExerciseIds: playlist.filter(i => i.type === 'warmup').map(i => i.id),
+        exerciseIds: playlist.filter(i => i.type === 'main').map(i => i.id),
         attendance: players.map(p => ({ playerId: p.id, status: attendance[p.id] || 'frånvarande' })),
         evaluations: evaluations
       });
@@ -130,6 +197,9 @@ export const Training: React.FC = () => {
         setStep('selection');
         setEvaluations([]);
         setSelectedWarmupIds([]);
+        setSelectedExercises([]);
+        setPlaylist([]);
+        setActivePlaylistItemIndex(0);
         setTimer(0);
         setActiveTab('sessions');
       }, 1500);
@@ -278,31 +348,108 @@ export const Training: React.FC = () => {
                               </div>
                           </div>
                           <div className="md:col-span-8 space-y-2">
-                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Välj Huvudövning</label>
+                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Välj Huvudövning(ar)</label>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                   {selectedPhase?.exercises.filter(ex => {
                                       const isFys = ex.category === 'Fysik' || ex.category === 'Kondition';
                                       return viewMode === 'fys' ? isFys : !isFys;
-                                  }).map(ex => (
-                                      <button key={ex.id} onClick={() => setSelectedExercise(ex)} className={`p-4 rounded-xl text-left border text-[10px] font-black uppercase transition-all ${selectedExercise?.id === ex.id ? 'border-orange-500 bg-orange-500/10 text-orange-400 shadow-inner' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}>{ex.title}</button>
-                                  ))}
+                                  }).map(ex => {
+                                      const isSelected = selectedExercises.some(e => e.id === ex.id);
+                                      return (
+                                          <button 
+                                              key={ex.id} 
+                                              onClick={() => {
+                                                  if (isSelected) setSelectedExercises(prev => prev.filter(e => e.id !== ex.id));
+                                                  else setSelectedExercises(prev => [...prev, ex]);
+                                              }} 
+                                              className={`p-4 rounded-xl text-left border text-[10px] font-black uppercase transition-all ${isSelected ? 'border-orange-500 bg-orange-500/10 text-orange-400 shadow-inner' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                                          >
+                                              {ex.title}
+                                          </button>
+                                      );
+                                  })}
                               </div>
                           </div>
                       </div>
-                      <button disabled={!selectedExercise} onClick={() => setStep('checkin')} className="w-full py-6 rounded-[2rem] bg-slate-800 hover:bg-slate-700 text-white font-black uppercase text-xs shadow-xl active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3">Fortsätt till närvaro <ChevronRight size={18}/></button>
+                      <button disabled={selectedExercises.length === 0} onClick={handleStartPlanning} className="w-full py-6 rounded-[2rem] bg-slate-800 hover:bg-slate-700 text-white font-black uppercase text-xs shadow-xl active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3">Planera passet <ChevronRight size={18}/></button>
                   </div>
               )}
 
-              {step === 'checkin' && selectedExercise && (
+              {step === 'planning' && (
                   <div className="p-8 md:p-12 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-8 shadow-2xl animate-in slide-in-from-right">
                       <div className="flex justify-between items-center border-b border-slate-800 pb-6">
                         <div>
-                            <button onClick={() => setStep('selection')} className="text-slate-500 hover:text-white flex items-center gap-1 text-[9px] font-black uppercase mb-2"><ChevronLeft size={14}/> Ändra övning</button>
+                            <button onClick={() => setStep('selection')} className="text-slate-500 hover:text-white flex items-center gap-1 text-[9px] font-black uppercase mb-2"><ChevronLeft size={14}/> Tillbaka till val</button>
+                            <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none">Planera Tidslinje</h3>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2">Sätt tider för varje moment</p>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Tid</div>
+                            <div className="text-2xl font-black text-orange-500 italic uppercase">{Math.round(playlist.reduce((acc, curr) => acc + curr.duration, 0) / 60)} min</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                          {playlist.map((item, idx) => (
+                              <div key={`${item.id}-${idx}`} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-slate-600 transition-all">
+                                  <div className="flex items-center gap-4">
+                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${item.type === 'warmup' ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                          {idx + 1}
+                                      </div>
+                                      <div>
+                                          <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{item.type === 'warmup' ? 'Uppvärmning' : 'Huvudövning'}</div>
+                                          <div className="text-sm font-black text-white uppercase">{item.title}</div>
+                                      </div>
+                                  </div>
+                                  <div className="flex items-center gap-3 bg-slate-900 p-2 rounded-xl border border-slate-800">
+                                      <button 
+                                          onClick={() => {
+                                              const newPlaylist = [...playlist];
+                                              newPlaylist[idx].duration = Math.max(60, newPlaylist[idx].duration - 60);
+                                              setPlaylist(newPlaylist);
+                                          }}
+                                          className="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center font-black"
+                                      >-</button>
+                                      <div className="flex items-center gap-2 px-2">
+                                          <input 
+                                              type="number" 
+                                              value={Math.round(item.duration / 60)}
+                                              onChange={(e) => {
+                                                  const newPlaylist = [...playlist];
+                                                  newPlaylist[idx].duration = Math.max(1, parseInt(e.target.value) || 0) * 60;
+                                                  setPlaylist(newPlaylist);
+                                              }}
+                                              className="w-12 bg-transparent text-white font-black text-center outline-none"
+                                          />
+                                          <span className="text-[10px] font-black text-slate-500 uppercase">min</span>
+                                      </div>
+                                      <button 
+                                          onClick={() => {
+                                              const newPlaylist = [...playlist];
+                                              newPlaylist[idx].duration += 60;
+                                              setPlaylist(newPlaylist);
+                                          }}
+                                          className="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center font-black"
+                                      >+</button>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+
+                      <button onClick={() => setStep('checkin')} className="w-full py-6 rounded-[2rem] bg-orange-600 hover:bg-orange-500 text-white font-black uppercase text-xs shadow-xl shadow-orange-900/20 active:scale-95 transition-all flex items-center justify-center gap-3">Fortsätt till närvaro <ChevronRight size={18}/></button>
+                  </div>
+              )}
+
+              {step === 'checkin' && playlist.length > 0 && (
+                  <div className="p-8 md:p-12 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-8 shadow-2xl animate-in slide-in-from-right">
+                      <div className="flex justify-between items-center border-b border-slate-800 pb-6">
+                        <div>
+                            <button onClick={() => setStep('planning')} className="text-slate-500 hover:text-white flex items-center gap-1 text-[9px] font-black uppercase mb-2"><ChevronLeft size={14}/> Ändra planering</button>
                             <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none">Närvarokontroll</h3>
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center">
-                            <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Aktiv Övning</div>
-                            <div className="text-xs font-black text-orange-500 uppercase">{selectedExercise.title}</div>
+                            <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Planerade Moment</div>
+                            <div className="text-xs font-black text-orange-500 uppercase">{playlist.length} st</div>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -324,67 +471,166 @@ export const Training: React.FC = () => {
                   </div>
               )}
 
-              {step === 'live' && selectedExercise && (
-                  <div className="space-y-4">
-                      <div className="p-8 rounded-[3rem] bg-slate-900 border border-slate-800 shadow-2xl relative overflow-hidden">
-                          <div className="flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
-                              <div className="text-center md:text-left">
-                                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-center md:justify-start gap-2 mb-2">
-                                      <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`}></div>
-                                      {isPaused ? 'Pausad' : 'Träning Pågår'}
+              {step === 'live' && playlist.length > 0 && (
+                  <div className="space-y-6">
+                      {/* STICKY HEADER */}
+                      <div className="sticky top-0 z-40 -mx-4 px-4 sm:-mx-8 sm:px-8 pt-4 pb-4 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800 shadow-2xl rounded-b-3xl transition-all">
+                          <div className="flex flex-col md:flex-row justify-between items-center gap-4 relative z-10">
+                              <div className="flex-1 text-center md:text-left">
+                                  <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-amber-500' : (timerMode === 'countdown' && countdownTime === 0 ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]')}`}></div>
+                                          {isPaused ? 'Pausad' : (timerMode === 'countdown' && countdownTime === 0 ? 'Tiden är slut!' : 'Träning Pågår')}
+                                      </div>
+                                      <div className="px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-[9px] font-black text-slate-400 uppercase">
+                                          {playlist[activePlaylistItemIndex]?.type === 'main' ? (
+                                              `${evaluations.filter(e => e.exerciseId === playlist[activePlaylistItemIndex].id).length} / ${players.filter(p => attendance[p.id] === 'närvarande' || attendance[p.id] === 'delvis').length} Bedömda`
+                                          ) : (
+                                              'Uppvärmning'
+                                          )}
+                                      </div>
                                   </div>
-                                  <h3 className="text-3xl md:text-4xl font-black text-white italic uppercase tracking-tighter leading-none">{selectedExercise.title}</h3>
                                   
-                                  {selectedWarmupIds.length > 0 && (
-                                    <div className="mt-4 flex flex-wrap gap-2">
-                                      <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-500/10 px-2 py-1 rounded-lg border border-orange-500/20">Uppvärmningsplan:</span>
-                                      {selectedWarmupIds.map(id => {
-                                        const w = mockWarmupExercises.find(ex => ex.id === id);
-                                        return (
-                                          <div key={id} className="group relative">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 cursor-help">
-                                              {w?.title || 'Övning'}
-                                            </span>
-                                            {/* Tooltip-liknande info vid hover */}
-                                            <div className="absolute bottom-full left-0 mb-2 w-48 p-3 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50">
-                                              <div className="text-[10px] font-black text-orange-500 uppercase mb-1">{w?.phase}</div>
-                                              <div className="text-[9px] text-white leading-tight">{w?.description}</div>
-                                              <div className="mt-2 text-[8px] font-bold text-slate-400 uppercase">Tips: {w?.coachingPoints[0]}</div>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
+                                  <div className="flex items-center justify-center md:justify-start gap-3">
+                                      <h3 className="text-2xl md:text-3xl font-black text-white italic uppercase tracking-tighter leading-none">{playlist[activePlaylistItemIndex]?.title}</h3>
+                                      {playlist[activePlaylistItemIndex]?.type === 'main' && (
+                                          <button onClick={() => setShowCheatSheet(!showCheatSheet)} className={`p-1.5 rounded-lg transition-colors ${showCheatSheet ? 'bg-orange-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'}`} title="Visa övningsdetaljer">
+                                              <Info size={16} />
+                                          </button>
+                                      )}
+                                  </div>
 
-                                  <div className="flex gap-2 mt-4 justify-center md:justify-start overflow-x-auto hide-scrollbar pb-1">
-                                      {activeCriteria.map((c, i) => (
-                                          <div key={i} className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2 shrink-0">
-                                              <c.icon size={10} className={viewMode === 'basket' ? 'text-orange-500' : 'text-blue-500'} />
-                                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{c.label}</span>
-                                          </div>
+                                  {/* PLAYLIST TABS */}
+                                  <div className="flex items-center gap-2 mt-3 overflow-x-auto hide-scrollbar pb-1">
+                                      {playlist.map((item, idx) => (
+                                          <button 
+                                              key={`${item.id}-${idx}`}
+                                              onClick={() => {
+                                                  setActivePlaylistItemIndex(idx);
+                                                  setTimer(0);
+                                                  setCountdownTime(item.duration);
+                                                  setTimerMode('countdown');
+                                                  setIsPaused(true);
+                                              }}
+                                              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all shrink-0 ${idx === activePlaylistItemIndex ? (item.type === 'warmup' ? 'bg-orange-600' : 'bg-blue-600') + ' text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                          >
+                                              {idx + 1}. {item.title}
+                                          </button>
                                       ))}
+                                      <button 
+                                          onClick={() => {
+                                              setNewExerciseSelection(null);
+                                              setNewExerciseTime(10);
+                                              setShowAddExerciseModal(true);
+                                          }}
+                                          className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all shrink-0 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white flex items-center gap-1 border border-dashed border-slate-700"
+                                      >
+                                          + Välj nästa
+                                      </button>
                                   </div>
                               </div>
-                              <div className="flex flex-col items-center gap-4">
-                                  <div className="text-6xl md:text-7xl font-black text-white font-mono tracking-tighter tabular-nums drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                                      {Math.floor(timer/60)}:{String(timer%60).padStart(2, '0')}
+
+                              <div className="flex flex-col items-center gap-2">
+                                  <div className="flex items-center gap-4">
+                                      {timerMode === 'countdown' && (
+                                          <button onClick={() => setCountdownTime(Math.max(0, countdownTime - 60))} className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all font-black text-xs">-1m</button>
+                                      )}
+                                      
+                                      <div className={`text-5xl md:text-6xl font-black font-mono tracking-tighter tabular-nums drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] cursor-pointer transition-colors ${timerMode === 'countdown' && countdownTime === 0 ? 'text-rose-500 animate-pulse' : 'text-white'}`} onClick={() => setTimerMode(m => m === 'stopwatch' ? 'countdown' : 'stopwatch')} title="Klicka för att byta mellan tidtagarur och nedräkning">
+                                          {timerMode === 'stopwatch' 
+                                              ? `${Math.floor(timer/60)}:${String(timer%60).padStart(2, '0')}`
+                                              : `${Math.floor(countdownTime/60)}:${String(countdownTime%60).padStart(2, '0')}`
+                                          }
+                                      </div>
+
+                                      {timerMode === 'countdown' && (
+                                          <button onClick={() => setCountdownTime(countdownTime + 60)} className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all font-black text-xs">+1m</button>
+                                      )}
                                   </div>
+                                  
                                   <div className="flex gap-2">
-                                      <button onClick={() => setIsPaused(!isPaused)} className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isPaused ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' : 'bg-amber-500 hover:bg-amber-400 shadow-amber-900/20'} text-white shadow-xl transition-all`}>{isPaused ? <Play size={24} fill="currentColor" /> : <Pause size={24} fill="currentColor" />}</button>
-                                      <button onClick={() => { setTimer(0); setIsPaused(true); }} className="w-14 h-14 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 flex items-center justify-center transition-all"><RotateCcw size={20} /></button>
+                                      <button onClick={() => setIsPaused(!isPaused)} className={`w-12 h-10 rounded-xl flex items-center justify-center ${isPaused ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' : 'bg-amber-500 hover:bg-amber-400 shadow-amber-900/20'} text-white shadow-xl transition-all`}>{isPaused ? <Play size={18} fill="currentColor" /> : <Pause size={18} fill="currentColor" />}</button>
+                                      <button onClick={() => { setTimer(0); setCountdownTime(600); setIsPaused(true); }} className="w-12 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 flex items-center justify-center transition-all"><RotateCcw size={16} /></button>
                                   </div>
                               </div>
                           </div>
+
+                          {showCheatSheet && playlist[activePlaylistItemIndex]?.type === 'main' && (
+                              <div className="mt-4 p-4 bg-slate-900 border border-slate-800 rounded-2xl text-left animate-in slide-in-from-top-2 duration-200">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div>
+                                          <h5 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Översikt</h5>
+                                          <ul className="text-xs text-slate-300 space-y-1">
+                                              <li><span className="font-bold text-slate-500">Setup:</span> {(playlist[activePlaylistItemIndex].exercise as Exercise).overview.setup}</li>
+                                              <li><span className="font-bold text-slate-500">Action:</span> {(playlist[activePlaylistItemIndex].exercise as Exercise).overview.action}</li>
+                                              <li><span className="font-bold text-emerald-500">Fokus:</span> {(playlist[activePlaylistItemIndex].exercise as Exercise).overview.coachingPoint}</li>
+                                          </ul>
+                                      </div>
+                                      <div>
+                                          <h5 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Pedagogik</h5>
+                                          <ul className="text-xs text-slate-300 space-y-1">
+                                              <li><span className="font-bold text-slate-500">Vad:</span> {(playlist[activePlaylistItemIndex].exercise as Exercise).pedagogy?.what || 'Ej angivet'}</li>
+                                              <li><span className="font-bold text-slate-500">Hur:</span> {(playlist[activePlaylistItemIndex].exercise as Exercise).pedagogy?.how || 'Ej angivet'}</li>
+                                              <li><span className="font-bold text-slate-500">Varför:</span> {(playlist[activePlaylistItemIndex].exercise as Exercise).pedagogy?.why || 'Ej angivet'}</li>
+                                          </ul>
+                                      </div>
+                                  </div>
+                              </div>
+                          )}
                       </div>
 
-                      <div className="grid md:grid-cols-12 gap-6 items-start">
+                      <div className="px-4 sm:px-0 space-y-4">
+                          {playlist[activePlaylistItemIndex]?.type === 'warmup' && (
+                              <div className="p-6 rounded-[2.5rem] bg-orange-600/10 border border-orange-500/20 space-y-4 animate-in zoom-in-95">
+                                  <div className="flex items-center gap-3">
+                                      <div className="p-3 bg-orange-600 rounded-2xl text-white shadow-lg shadow-orange-900/20">
+                                          <Flame size={24} />
+                                      </div>
+                                      <div>
+                                          <div className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Aktiv Uppvärmning</div>
+                                          <h4 className="text-xl font-black text-white uppercase italic">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).phase}</h4>
+                                      </div>
+                                  </div>
+                                  <p className="text-sm text-slate-300 leading-relaxed font-medium">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).description}</p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
+                                          <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Coaching Points</div>
+                                          <ul className="space-y-1">
+                                              {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).coachingPoints.map((cp, i) => (
+                                                  <li key={i} className="text-[10px] text-slate-300 flex items-start gap-2">
+                                                      <span className="text-orange-500 mt-1">•</span> {cp}
+                                                  </li>
+                                              ))}
+                                          </ul>
+                                      </div>
+                                      <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
+                                          <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">SBBF Fokus</div>
+                                          <div className="text-[10px] font-black text-white uppercase italic">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).sbbfFocus}</div>
+                                      </div>
+                                  </div>
+                              </div>
+                          )}
+
+                          {playlist[activePlaylistItemIndex]?.type === 'main' && (
+                              <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                  {activeCriteria.map((c, i) => (
+                                      <div key={i} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 shrink-0">
+                                          <c.icon size={12} className={viewMode === 'basket' ? 'text-orange-500' : 'text-blue-500'} />
+                                          <span className="text-[10px] font-black text-white uppercase">{c.label}</span>
+                                      </div>
+                                  ))}
+                              </div>
+                          )}
+                      </div>
+
+                      <div className="grid md:grid-cols-12 gap-6 items-start px-4 sm:px-0">
                         <div className="md:col-span-8 p-8 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-6 shadow-2xl relative overflow-hidden">
                             <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 px-2"><UserCheck size={14} /> Spelarbedömning</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {players.filter(p => attendance[p.id] === 'närvarande' || attendance[p.id] === 'delvis').map(p => {
-                                    const isGraded = evaluations.some(e => e.playerId === p.id);
-                                    const scoreAvg = isGraded ? (evaluations.find(e => e.playerId === p.id)?.scores.reduce((a,b)=>a+b,0)! / 5).toFixed(1) : null;
+                                    const isGraded = evaluations.some(e => e.playerId === p.id && e.exerciseId === playlist[activePlaylistItemIndex].id);
+                                    const playerEvals = evaluations.filter(e => e.playerId === p.id && e.exerciseId === playlist[activePlaylistItemIndex].id);
+                                    const scoreAvg = isGraded ? (playerEvals[0].scores.reduce((a,b)=>a+b,0)! / 5).toFixed(1) : null;
                                     return (
                                         <button key={p.id} onClick={() => handleStartGradingPlayer(p)} className={`p-4 rounded-[1.5rem] border flex items-center justify-between transition-all group ${isGraded ? 'border-emerald-500/50 bg-emerald-500/5 shadow-inner' : 'bg-slate-950 border-slate-800 hover:border-orange-500/50'}`}>
                                             <div className="flex items-center gap-4">
@@ -420,7 +666,7 @@ export const Training: React.FC = () => {
                   </div>
               )}
 
-              {gradingPlayer && selectedExercise && (
+              {gradingPlayer && playlist.length > 0 && (
                   <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md">
                       <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                           <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/40 shrink-0">
@@ -428,7 +674,7 @@ export const Training: React.FC = () => {
                                   <div className="w-12 h-12 rounded-2xl bg-orange-600 flex items-center justify-center font-black text-xl text-white shadow-xl italic">#{gradingPlayer.number}</div>
                                   <div>
                                       <h4 className="text-xl font-black text-white uppercase italic leading-none">{gradingPlayer.name}</h4>
-                                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">{selectedExercise.title}</p>
+                                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">{playlist[activePlaylistItemIndex].title}</p>
                                   </div>
                               </div>
                               <button onClick={() => setGradingPlayer(null)} className="p-2.5 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-400 transition-colors"><X size={20}/></button>
@@ -486,6 +732,91 @@ export const Training: React.FC = () => {
               )}
           </div>
       )}
+
+      {showAddExerciseModal && (
+          <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md">
+              <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/40 shrink-0">
+                      <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Välj Nästa Övning</h3>
+                      <button onClick={() => setShowAddExerciseModal(false)} className="p-2.5 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-400 transition-colors"><X size={20}/></button>
+                  </div>
+                  <div className="p-6 md:p-8 space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                      {/* Exercise Selection */}
+                      <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">1. Välj Övning</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {selectedPhase?.exercises.filter(ex => {
+                                  const isFys = ex.category === 'Fysik' || ex.category === 'Kondition';
+                                  return viewMode === 'fys' ? isFys : !isFys;
+                              }).map(ex => (
+                                  <button 
+                                      key={ex.id} 
+                                      onClick={() => setNewExerciseSelection(ex)} 
+                                      className={`p-4 rounded-xl text-left border text-[10px] font-black uppercase transition-all ${newExerciseSelection?.id === ex.id ? 'border-orange-500 bg-orange-500/10 text-orange-400 shadow-inner' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                                  >
+                                      {ex.title}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+
+                      {/* Time Selection */}
+                      <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">2. Sätt Tid (Minuter)</label>
+                          <div className="flex gap-2">
+                              {[5, 10, 15, 20].map(t => (
+                                  <button 
+                                      key={t}
+                                      onClick={() => setNewExerciseTime(t)}
+                                      className={`flex-1 py-4 rounded-xl font-black text-sm border transition-all ${newExerciseTime === t ? 'bg-orange-600 border-orange-400 text-white shadow-lg scale-105' : 'bg-slate-950 border-slate-800 text-slate-600 hover:border-slate-600'}`}
+                                  >
+                                      {t} min
+                                  </button>
+                              ))}
+                          </div>
+                          <div className="flex items-center gap-4 mt-4 p-4 bg-slate-950 rounded-xl border border-slate-800">
+                              <span className="text-xs font-black text-slate-500 uppercase">Annan tid:</span>
+                              <input 
+                                  type="number" 
+                                  value={newExerciseTime} 
+                                  onChange={(e) => setNewExerciseTime(Number(e.target.value))}
+                                  className="w-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-black text-center outline-none focus:border-orange-500"
+                                  min="1"
+                              />
+                              <span className="text-xs font-black text-slate-500 uppercase">minuter</span>
+                          </div>
+                      </div>
+                  </div>
+                  <div className="p-6 md:p-8 bg-slate-950/60 border-t border-slate-800 shrink-0">
+                      <button 
+                          disabled={!newExerciseSelection}
+                          onClick={() => {
+                              if (newExerciseSelection) {
+                                  const newItem: PlaylistItem = {
+                                      id: newExerciseSelection.id,
+                                      title: newExerciseSelection.title,
+                                      duration: newExerciseTime * 60,
+                                      type: 'main',
+                                      exercise: newExerciseSelection
+                                  };
+                                  setPlaylist(prev => [...prev, newItem]);
+                                  setActivePlaylistItemIndex(playlist.length);
+                                  setCountdownTime(newExerciseTime * 60);
+                                  setTimerMode('countdown');
+                                  setTimer(0);
+                                  setIsPaused(true);
+                                  setShowAddExerciseModal(false);
+                              }
+                          }} 
+                          className="w-full py-5 rounded-[2rem] bg-orange-600 hover:bg-orange-500 text-white font-black uppercase text-xs shadow-xl shadow-orange-900/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                          Lägg till & Starta Nästa <Play size={16} fill="currentColor" />
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {showWarmupLibrary && (
         <div className="fixed inset-0 z-[700] bg-slate-950/95 backdrop-blur-xl p-4 md:p-10 overflow-y-auto custom-scrollbar">
           <div className="max-w-6xl mx-auto space-y-8">
