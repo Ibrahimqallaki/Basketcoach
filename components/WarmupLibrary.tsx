@@ -107,7 +107,7 @@ export const WarmupLibrary: React.FC<WarmupLibraryProps> = ({ onSelect, selected
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 pb-4">
         {filteredExercises.map(ex => {
           const isSelected = selectedIds.includes(ex.id);
           return (

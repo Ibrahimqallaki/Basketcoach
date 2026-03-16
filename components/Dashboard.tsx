@@ -224,9 +224,9 @@ export const Dashboard: React.FC<{
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6 md:gap-8">
-        <div className="lg:col-span-8 space-y-6">
-          <div className="p-6 md:p-8 rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md relative overflow-hidden">
-             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-4 relative z-10">
+        <div className="lg:col-span-8 space-y-4 sm:space-y-6">
+          <div className="p-4 sm:p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md relative overflow-hidden">
+             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-10 gap-4 relative z-10">
                 <div>
                   <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Utvecklingskurva</h3>
                   <p className="text-xs text-slate-500 font-medium mt-1">
@@ -239,7 +239,7 @@ export const Dashboard: React.FC<{
                    ))}
                 </div>
              </div>
-             <div className="relative h-64 flex items-end justify-between gap-1 md:gap-4 px-2 overflow-x-auto hide-scrollbar w-full">
+             <div className="relative h-64 flex items-end justify-between gap-1 md:gap-4 px-2 overflow-x-auto custom-scrollbar-horizontal w-full pb-2">
                {aggregatedTimeline.length > 0 ? aggregatedTimeline.map((item, i) => {
                  const height = (item.avg / 5) * 100;
                  return (
@@ -268,17 +268,21 @@ export const Dashboard: React.FC<{
           </div>
           
           {/* Season Roadmap */}
-          <div className="p-6 md:p-8 rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md">
-             <div className="flex justify-between items-center mb-6">
+          <div className="p-4 sm:p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+             <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <h4 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2"><Trophy size={16} className="text-orange-500" /> Season Roadmap</h4>
                 <span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-950 px-3 py-1 rounded-full border border-slate-800">Fas {sessions.length > 0 ? sessions[0].phaseId : 1} av 8</span>
              </div>
              <div className="relative pt-4">
                 <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-800 -translate-y-1/2 rounded-full"></div>
-                <div className="flex justify-between relative z-10 overflow-x-auto pb-4 hide-scrollbar w-full gap-1 md:gap-2">
+                <div className="flex items-center justify-between mb-2 sm:hidden">
+                   <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Säsongens framsteg</span>
+                   <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Svep →</span>
+                </div>
+                <div className="flex justify-between relative z-10 overflow-x-auto pb-4 custom-scrollbar-horizontal w-full gap-2 md:gap-4 snap-x">
                    {mockPhases.map((phase) => (
-                      <div key={phase.id} className="flex flex-col items-center gap-2 md:gap-3 min-w-[28px] md:min-w-[45px]">
-                          <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-black text-xs transition-all border-4 ${phase.id === (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-orange-500 border-slate-900 text-white scale-125 shadow-[0_0_15px_rgba(249,115,22,0.4)]' : phase.id < (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-emerald-500 border-slate-900 text-slate-900' : 'bg-slate-800 border-slate-900 text-slate-600'}`}>
+                      <div key={phase.id} className="flex flex-col items-center gap-2 md:gap-3 min-w-[40px] md:min-w-[60px] snap-center">
+                          <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-black text-xs transition-all border-4 ${phase.id === (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-orange-500 border-slate-900 text-white scale-110 shadow-[0_0_15px_rgba(249,115,22,0.4)]' : phase.id < (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-emerald-500 border-slate-900 text-slate-900' : 'bg-slate-800 border-slate-900 text-slate-600'}`}>
                               {phase.id}
                           </div>
                       </div>
@@ -289,8 +293,8 @@ export const Dashboard: React.FC<{
         </div>
 
         {/* Sidebar Insights */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
+        <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+          <div className="p-5 sm:p-8 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
              <div className="absolute top-0 right-0 w-40 h-40 bg-orange-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
              <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white mb-6 relative z-10"><Flame className="text-orange-500" size={18} /> Dagens Uppvärmning</h3>
              <div className="space-y-4 relative z-10">
@@ -311,7 +315,7 @@ export const Dashboard: React.FC<{
              </div>
           </div>
 
-          <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
+          <div className="p-5 sm:p-8 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
              <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white mb-6 relative z-10"><Trophy className="text-indigo-400" size={18} /> Match Intelligence</h3>
              {sisuStats ? (
@@ -351,8 +355,8 @@ export const Dashboard: React.FC<{
              )}
           </div>
 
-          <div className="p-6 md:p-8 rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md">
-            <div className="flex items-center justify-between mb-6">
+          <div className="p-4 sm:p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white">
                     <Calendar className="text-slate-400" size={18} /> Senaste Aktivitet
                 </h3>

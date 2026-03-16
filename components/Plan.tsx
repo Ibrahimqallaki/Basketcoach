@@ -311,7 +311,7 @@ export const Plan: React.FC = () => {
 
       <div className="grid lg:grid-cols-12 gap-6 md:gap-8">
         <div className={`lg:col-span-4 space-y-3 ${mobileDetailOpen ? 'hidden lg:block' : 'block'}`}>
-          <div className="flex flex-col gap-2 md:gap-3">
+          <div className="flex flex-col gap-2 md:gap-3 max-h-[75vh] overflow-y-auto custom-scrollbar pr-2 pb-4">
             {phases.map((phase) => (
               <button
                 key={phase.id}
@@ -408,7 +408,7 @@ export const Plan: React.FC = () => {
                     </div>
                 </div>
                 
-                <div className="grid gap-8 mt-6">
+                <div className="grid gap-8 mt-6 max-h-[65vh] overflow-y-auto custom-scrollbar pr-2 pb-4">
                   {filteredExercises.length > 0 ? filteredExercises.map(ex => {
                     const currentMode = activeVisual[ex.id] || 'video';
                     const isCustom = ex.id.startsWith('custom_');

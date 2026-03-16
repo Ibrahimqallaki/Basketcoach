@@ -214,107 +214,112 @@ export const AICoach: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto h-full flex flex-col pb-6">
-      <div className="flex items-center justify-between mb-4 px-1">
+    <div className="max-w-4xl mx-auto h-full flex flex-col pb-2 sm:pb-6">
+      <div className="flex items-center justify-between mb-2 sm:mb-4 px-2">
         <div>
-          <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2 text-white">
-            <Bot className="text-blue-500" /> AI Assistent <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full ml-2 normal-case font-bold tracking-normal">Kontext-medveten</span>
+          <h3 className="text-lg sm:text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2 text-white">
+            <Bot className="text-blue-500 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8" /> 
+            AI Assistent 
+            <span className="text-[8px] sm:text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full ml-1 sm:ml-2 normal-case font-bold tracking-normal">Kontext-medveten</span>
           </h3>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Din virtuella assisterande coach med koll på lagets data</p>
+          <p className="text-[8px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 sm:mt-1">Din virtuella assisterande coach</p>
         </div>
         <button 
             onClick={clearChat}
-            className="p-2 rounded-xl text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+            className="p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
             title="Rensa chatt"
         >
-            <Trash2 size={18} />
+            <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
         </button>
       </div>
 
-      <div className="flex-1 bg-slate-900 border border-slate-800 rounded-[2rem] overflow-hidden flex flex-col shadow-2xl relative">
-        {messages.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0">
-            <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6 shadow-inner border border-white/5">
-               <Sparkles size={40} className="text-blue-500 animate-pulse" />
-            </div>
-            <h4 className="text-xl font-black text-white uppercase italic mb-2">Hur kan jag hjälpa laget idag?</h4>
-            <p className="text-sm text-slate-400 max-w-sm mb-8">
-              Jag har analyserat er lagstatistik och är redo att ge specifika råd för era kommande träningar och matcher.
-            </p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
-                {suggestedQuestions.map((q, i) => (
-                  <button 
-                    key={i}
-                    onClick={() => handleSend(undefined, q.text)}
-                    className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-[10px] font-black uppercase text-slate-400 hover:border-blue-500 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-3 text-left group"
-                  >
-                    <div className="p-2 rounded-lg bg-slate-900 group-hover:bg-blue-600 transition-colors">
-                      <q.icon size={14} className="text-blue-500 group-hover:text-white" />
-                    </div>
-                    {q.text}
-                  </button>
-                ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar relative z-10">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-in`}>
-              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg ${msg.role === 'user' ? 'bg-orange-600' : 'bg-blue-600'}`}>
-                {msg.role === 'user' ? <User size={16} className="text-white" /> : <Bot size={16} className="text-white" />}
+      <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl relative">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 custom-scrollbar relative z-10">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center p-4 sm:p-8 min-h-full">
+              <div className="w-14 h-14 sm:w-20 sm:h-20 bg-slate-800 rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-inner border border-white/5">
+                <Sparkles size={28} className="text-blue-500 animate-pulse sm:w-10 sm:h-10" />
               </div>
-              <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap shadow-xl ${msg.role === 'user' ? 'bg-slate-800 text-slate-200 rounded-tr-none border border-white/5' : 'bg-blue-600/10 border border-blue-500/20 text-slate-200 rounded-tl-none'}`}>
-                {msg.text}
+              <h4 className="text-lg sm:text-xl font-black text-white uppercase italic mb-1 sm:mb-2">Hur kan jag hjälpa laget idag?</h4>
+              <p className="text-xs sm:text-sm text-slate-400 max-w-sm mb-6 sm:mb-8">
+                Jag har analyserat er lagstatistik och är redo att ge specifika råd.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full max-w-lg">
+                  {suggestedQuestions.map((q, i) => (
+                    <button 
+                      key={i}
+                      type="button"
+                      onClick={() => handleSend(undefined, q.text)}
+                      className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-950 border border-slate-800 text-[9px] sm:text-[10px] font-black uppercase text-slate-400 hover:border-blue-500 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-2 sm:gap-3 text-left group"
+                    >
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-slate-900 group-hover:bg-blue-600 transition-colors shrink-0">
+                        <q.icon size={12} className="text-blue-500 group-hover:text-white sm:w-3.5 sm:h-3.5" />
+                      </div>
+                      <span className="truncate sm:whitespace-normal">{q.text}</span>
+                    </button>
+                  ))}
               </div>
             </div>
-          ))}
-          {loading && (
-             <div className="flex gap-4 animate-in">
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-lg">
-                    <Loader2 size={16} className="text-white animate-spin" />
+          ) : (
+            <>
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex gap-2 sm:gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-in`}>
+                  <div className={`w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg ${msg.role === 'user' ? 'bg-orange-600' : 'bg-blue-600'}`}>
+                    {msg.role === 'user' ? <User size={14} className="text-white sm:w-4 sm:h-4" /> : <Bot size={14} className="text-white sm:w-4 sm:h-4" />}
+                  </div>
+                  <div className={`max-w-[90%] sm:max-w-[85%] p-3 sm:p-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap shadow-xl ${msg.role === 'user' ? 'bg-slate-800 text-slate-200 rounded-tr-none border border-white/5' : 'bg-blue-600/10 border border-blue-500/20 text-slate-200 rounded-tl-none'}`}>
+                    {msg.text}
+                  </div>
                 </div>
-                <div className="p-4 rounded-2xl bg-blue-600/10 border border-blue-500/20 rounded-tl-none flex flex-col gap-2 min-w-[150px]">
-                    <div className="flex items-center gap-2 text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">
-                      <Database size={12} className="animate-pulse" /> Analyserar lagdata...
+              ))}
+              {loading && (
+                <div className="flex gap-2 sm:gap-4 animate-in">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-lg">
+                        <Loader2 size={14} className="text-white animate-spin sm:w-4 sm:h-4" />
                     </div>
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></span>
-                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-100"></span>
-                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-200"></span>
+                    <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-blue-600/10 border border-blue-500/20 rounded-tl-none flex flex-col gap-1.5 sm:gap-2 min-w-[120px] sm:min-w-[150px]">
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[8px] sm:text-[10px] font-black text-blue-400 uppercase tracking-widest mb-0.5 sm:mb-1">
+                          <Database size={10} className="animate-pulse sm:w-3 sm:h-3" /> Analyserar lagdata...
+                        </div>
+                        <div className="flex gap-1">
+                          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full animate-bounce"></span>
+                          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full animate-bounce delay-100"></span>
+                          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full animate-bounce delay-200"></span>
+                        </div>
                     </div>
                 </div>
-             </div>
+              )}
+            </>
           )}
           <div ref={scrollRef} />
         </div>
 
-        <div className="p-4 bg-slate-950 border-t border-slate-800 relative z-20">
+        <div className="p-3 sm:p-4 bg-slate-950 border-t border-slate-800 relative z-20">
           <form onSubmit={handleSend} className="relative flex items-center gap-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Fråga om lagets utveckling, övningar eller taktik..."
-              className="w-full bg-slate-900 border border-slate-800 text-white placeholder:text-slate-600 rounded-xl py-4 pl-4 pr-12 focus:border-blue-500 outline-none transition-all shadow-inner"
+              placeholder="Fråga om laget..."
+              className="w-full bg-slate-900 border border-slate-800 text-white placeholder:text-slate-600 rounded-xl py-3 sm:py-4 pl-4 pr-10 sm:pr-12 text-xs sm:text-sm focus:border-blue-500 outline-none transition-all shadow-inner"
               disabled={loading}
             />
             <button
               type="submit"
               disabled={!input.trim() || loading}
-              className="absolute right-2 p-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:bg-slate-800 text-white rounded-lg transition-all shadow-lg active:scale-95"
+              className="absolute right-1.5 sm:right-2 p-2 sm:p-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:bg-slate-800 text-white rounded-lg transition-all shadow-lg active:scale-95"
             >
-              <Send size={18} />
+              <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
             </button>
           </form>
-          <div className="mt-2 flex items-center justify-center gap-4">
-             <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${teamData ? 'bg-emerald-500' : 'bg-slate-600'}`}></div>
-                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Lagdata synkad</span>
+          <div className="mt-2 flex items-center justify-center gap-3 sm:gap-4">
+             <div className="flex items-center gap-1 sm:gap-1.5">
+                <div className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${teamData ? 'bg-emerald-500' : 'bg-slate-600'}`}></div>
+                <span className="text-[7px] sm:text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Lagdata synkad</span>
              </div>
-             <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Gemini 3 Flash</span>
+             <div className="flex items-center gap-1 sm:gap-1.5">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-blue-500"></div>
+                <span className="text-[7px] sm:text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Gemini 3 Flash</span>
              </div>
           </div>
         </div>

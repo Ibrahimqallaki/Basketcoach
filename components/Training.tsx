@@ -262,7 +262,7 @@ export const Training: React.FC = () => {
                 )) : <p className="text-slate-600 p-8 text-center text-xs font-bold uppercase tracking-widest border-2 border-dashed border-slate-900 rounded-3xl">Inga sparade pass än.</p>}
               </div>
               {selectedSession && (
-                  <div className="lg:col-span-8 p-6 md:p-10 rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-2xl space-y-8 animate-in slide-in-from-right relative overflow-hidden">
+                  <div className="lg:col-span-8 p-4 sm:p-6 md:p-10 rounded-3xl md:rounded-[2.5rem] bg-slate-900 border border-slate-800 shadow-2xl space-y-6 sm:space-y-8 animate-in slide-in-from-right relative overflow-hidden">
                       <button onClick={() => setSelectedSession(null)} className="lg:hidden absolute top-6 right-6 text-slate-500"><X size={20}/></button>
                       <div className="flex justify-between items-center">
                         <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3"><Activity className="text-orange-500" /> {selectedSession.date}</h3>
@@ -301,7 +301,7 @@ export const Training: React.FC = () => {
       ) : (
           <div className="space-y-6">
               {step === 'selection' && (
-                  <div className="p-8 md:p-12 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-10 shadow-2xl animate-in slide-in-from-bottom relative overflow-hidden">
+                  <div className="p-4 sm:p-8 md:p-12 rounded-3xl md:rounded-[3rem] bg-slate-900 border border-slate-800 space-y-6 sm:space-y-10 shadow-2xl animate-in slide-in-from-bottom relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-8 opacity-5"><BrainCircuit size={120} /></div>
                       <div className="flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
                           <div>
@@ -349,7 +349,7 @@ export const Training: React.FC = () => {
                           </div>
                           <div className="md:col-span-8 space-y-2">
                               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Välj Huvudövning(ar)</label>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
                                   {selectedPhase?.exercises.filter(ex => {
                                       const isFys = ex.category === 'Fysik' || ex.category === 'Kondition';
                                       return viewMode === 'fys' ? isFys : !isFys;
@@ -376,8 +376,8 @@ export const Training: React.FC = () => {
               )}
 
               {step === 'planning' && (
-                  <div className="p-8 md:p-12 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-8 shadow-2xl animate-in slide-in-from-right">
-                      <div className="flex justify-between items-center border-b border-slate-800 pb-6">
+                  <div className="p-4 sm:p-8 md:p-12 rounded-3xl md:rounded-[3rem] bg-slate-900 border border-slate-800 space-y-6 sm:space-y-8 shadow-2xl animate-in slide-in-from-right">
+                      <div className="flex justify-between items-center border-b border-slate-800 pb-4 sm:pb-6">
                         <div>
                             <button onClick={() => setStep('selection')} className="text-slate-500 hover:text-white flex items-center gap-1 text-[9px] font-black uppercase mb-2"><ChevronLeft size={14}/> Tillbaka till val</button>
                             <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none">Planera Tidslinje</h3>
@@ -389,7 +389,7 @@ export const Training: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
                           {playlist.map((item, idx) => (
                               <div key={`${item.id}-${idx}`} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-slate-600 transition-all">
                                   <div className="flex items-center gap-4">
@@ -441,8 +441,8 @@ export const Training: React.FC = () => {
               )}
 
               {step === 'checkin' && playlist.length > 0 && (
-                  <div className="p-8 md:p-12 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-8 shadow-2xl animate-in slide-in-from-right">
-                      <div className="flex justify-between items-center border-b border-slate-800 pb-6">
+                  <div className="p-4 sm:p-8 md:p-12 rounded-3xl md:rounded-[3rem] bg-slate-900 border border-slate-800 space-y-6 sm:space-y-8 shadow-2xl animate-in slide-in-from-right">
+                      <div className="flex justify-between items-center border-b border-slate-800 pb-4 sm:pb-6">
                         <div>
                             <button onClick={() => setStep('planning')} className="text-slate-500 hover:text-white flex items-center gap-1 text-[9px] font-black uppercase mb-2"><ChevronLeft size={14}/> Ändra planering</button>
                             <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none">Närvarokontroll</h3>
@@ -452,7 +452,7 @@ export const Training: React.FC = () => {
                             <div className="text-xs font-black text-orange-500 uppercase">{playlist.length} st</div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
                           {players.map(p => (
                               <div key={p.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between group">
                                   <div className="flex items-center gap-4">
@@ -476,7 +476,7 @@ export const Training: React.FC = () => {
                       {/* STICKY HEADER */}
                       <div className="sticky top-0 z-40 -mx-4 px-4 sm:-mx-8 sm:px-8 pt-4 pb-4 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800 shadow-2xl rounded-b-3xl transition-all">
                           <div className="flex flex-col md:flex-row justify-between items-center gap-4 relative z-10">
-                              <div className="flex-1 text-center md:text-left">
+                              <div className="flex-1 min-w-0 w-full text-center md:text-left">
                                   <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
                                       <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-amber-500' : (timerMode === 'countdown' && countdownTime === 0 ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]')}`}></div>
@@ -492,41 +492,49 @@ export const Training: React.FC = () => {
                                   </div>
                                   
                                   <div className="flex items-center justify-center md:justify-start gap-3">
-                                      <h3 className="text-2xl md:text-3xl font-black text-white italic uppercase tracking-tighter leading-none">{playlist[activePlaylistItemIndex]?.title}</h3>
+                                      <h3 className="text-2xl md:text-3xl font-black text-white italic uppercase tracking-tighter leading-none truncate">{playlist[activePlaylistItemIndex]?.title}</h3>
                                       {playlist[activePlaylistItemIndex]?.type === 'main' && (
-                                          <button onClick={() => setShowCheatSheet(!showCheatSheet)} className={`p-1.5 rounded-lg transition-colors ${showCheatSheet ? 'bg-orange-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'}`} title="Visa övningsdetaljer">
+                                          <button onClick={() => setShowCheatSheet(!showCheatSheet)} className={`p-1.5 rounded-lg transition-colors shrink-0 ${showCheatSheet ? 'bg-orange-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'}`} title="Visa övningsdetaljer">
                                               <Info size={16} />
                                           </button>
                                       )}
                                   </div>
 
-                                  {/* PLAYLIST TABS */}
-                                  <div className="flex items-center gap-2 mt-3 overflow-x-auto hide-scrollbar pb-1">
-                                      {playlist.map((item, idx) => (
+                                  {/* PLAYLIST TABS - Improved for mobile */}
+                                  <div className="w-full mt-3">
+                                      <div className="flex items-center justify-between mb-1 px-1">
+                                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Moment {activePlaylistItemIndex + 1} av {playlist.length}</span>
+                                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest sm:hidden">Svep för fler →</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scroll-smooth custom-scrollbar-horizontal">
+                                          {playlist.map((item, idx) => (
+                                              <button 
+                                                  key={`${item.id}-${idx}`}
+                                                  onClick={() => {
+                                                      setActivePlaylistItemIndex(idx);
+                                                      setTimer(0);
+                                                      setCountdownTime(item.duration);
+                                                      setTimerMode('countdown');
+                                                      setIsPaused(true);
+                                                  }}
+                                                  className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all shrink-0 snap-start border ${idx === activePlaylistItemIndex 
+                                                      ? (item.type === 'warmup' ? 'bg-orange-600 border-orange-400 text-white shadow-lg shadow-orange-900/20' : 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-900/20') 
+                                                      : 'bg-slate-900 border-slate-800 text-slate-500 hover:bg-slate-800 hover:text-slate-300'}`}
+                                              >
+                                                  <span className="opacity-50 mr-1">{idx + 1}.</span> {item.title}
+                                              </button>
+                                          ))}
                                           <button 
-                                              key={`${item.id}-${idx}`}
                                               onClick={() => {
-                                                  setActivePlaylistItemIndex(idx);
-                                                  setTimer(0);
-                                                  setCountdownTime(item.duration);
-                                                  setTimerMode('countdown');
-                                                  setIsPaused(true);
+                                                  setNewExerciseSelection(null);
+                                                  setNewExerciseTime(10);
+                                                  setShowAddExerciseModal(true);
                                               }}
-                                              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all shrink-0 ${idx === activePlaylistItemIndex ? (item.type === 'warmup' ? 'bg-orange-600' : 'bg-blue-600') + ' text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                              className="px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all shrink-0 bg-slate-950 text-slate-500 hover:bg-slate-900 hover:text-white flex items-center gap-1 border border-dashed border-slate-700 snap-start"
                                           >
-                                              {idx + 1}. {item.title}
+                                              + Lägg till
                                           </button>
-                                      ))}
-                                      <button 
-                                          onClick={() => {
-                                              setNewExerciseSelection(null);
-                                              setNewExerciseTime(10);
-                                              setShowAddExerciseModal(true);
-                                          }}
-                                          className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all shrink-0 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white flex items-center gap-1 border border-dashed border-slate-700"
-                                      >
-                                          + Välj nästa
-                                      </button>
+                                      </div>
                                   </div>
                               </div>
 
@@ -658,10 +666,10 @@ export const Training: React.FC = () => {
                           )}
                       </div>
 
-                      <div className="grid md:grid-cols-12 gap-6 items-start px-4 sm:px-0">
-                        <div className="md:col-span-8 p-8 rounded-[3rem] bg-slate-900 border border-slate-800 space-y-6 shadow-2xl relative overflow-hidden">
+                      <div className="grid md:grid-cols-12 gap-4 sm:gap-6 items-start px-4 sm:px-0">
+                        <div className="md:col-span-8 p-4 sm:p-8 rounded-3xl md:rounded-[3rem] bg-slate-900 border border-slate-800 space-y-4 sm:space-y-6 shadow-2xl relative overflow-hidden">
                             <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 px-2"><UserCheck size={14} /> Spelarbedömning</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
                                 {players.filter(p => attendance[p.id] === 'närvarande' || attendance[p.id] === 'delvis').map(p => {
                                     const isGraded = evaluations.some(e => e.playerId === p.id && e.exerciseId === playlist[activePlaylistItemIndex].id);
                                     const playerEvals = evaluations.filter(e => e.playerId === p.id && e.exerciseId === playlist[activePlaylistItemIndex].id);
@@ -688,7 +696,7 @@ export const Training: React.FC = () => {
                                 })}
                             </div>
                         </div>
-                        <div className="md:col-span-4 p-8 rounded-[3rem] bg-slate-900 border border-slate-800 shadow-2xl space-y-6 text-center">
+                        <div className="md:col-span-4 p-5 sm:p-8 rounded-3xl md:rounded-[3rem] bg-slate-900 border border-slate-800 shadow-2xl space-y-4 sm:space-y-6 text-center">
                             <div className="w-16 h-16 bg-emerald-600/10 rounded-2xl flex items-center justify-center mx-auto text-emerald-500 border border-emerald-500/20 shadow-inner"><Save size={32}/></div>
                             <h4 className="text-xl font-black text-white italic uppercase leading-none">Avsluta Träning</h4>
                             <p className="text-[10px] text-slate-500 font-bold uppercase leading-relaxed">Sparar närvaro och {evaluations.length} bedömningar till spelarnas arkiv.</p>
