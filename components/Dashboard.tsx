@@ -279,7 +279,7 @@ export const Dashboard: React.FC<{
   if (loading) return <div className="h-full w-full flex flex-col items-center justify-center space-y-4"><Loader2 className="w-12 h-12 text-orange-500 animate-spin" /><p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Laddar statistik...</p></div>;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in pb-24">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-in pb-24">
       <div className="flex items-center justify-between">
          <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-slate-900 border border-slate-800">
             <div className={`w-2 h-2 rounded-full ${storageMode === 'CLOUD' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`}></div>
@@ -290,18 +290,18 @@ export const Dashboard: React.FC<{
 
       {/* Quick Actions & AI Insight */}
       <div className="grid lg:grid-cols-12 gap-4 md:gap-6">
-        <div className="lg:col-span-8">
-            <div className="p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-indigo-900/40 to-slate-900 border border-indigo-500/20 shadow-xl relative overflow-hidden h-full flex flex-col justify-center">
+        <div className="lg:col-span-8 min-w-0">
+            <div className="p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-indigo-900/40 to-slate-900 border border-indigo-500/20 shadow-xl relative overflow-hidden h-full flex flex-col justify-center min-w-0">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
                 <div className="relative z-10 flex items-start gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
                         {isFetchingInsight ? <Loader2 className="text-indigo-400 animate-spin" size={24} /> : <Bot className="text-indigo-400" size={24} />}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                             <Sparkles size={14} /> Dagens AI-Insikt
                         </h3>
-                        <p className="text-sm md:text-base text-slate-300 leading-relaxed italic">
+                        <p className="text-sm md:text-base text-slate-300 leading-relaxed italic break-words">
                             {isFetchingInsight ? "Analyserar truppens senaste data..." : aiInsight}
                         </p>
                     </div>
@@ -322,7 +322,7 @@ export const Dashboard: React.FC<{
 
       {/* Action Items & Hot/Cold */}
       <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
-          <div className="lg:col-span-1 p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+          <div className="lg:col-span-1 p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md min-w-0">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <AlertCircle size={14} /> Att Göra
               </h3>
@@ -340,8 +340,8 @@ export const Dashboard: React.FC<{
               </div>
           </div>
           
-          <div className="lg:col-span-2 grid grid-cols-2 gap-4">
-              <div className="p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md min-w-0">
                   <h3 className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <TrendingUp size={14} /> Stekheta
                   </h3>
@@ -349,12 +349,12 @@ export const Dashboard: React.FC<{
                       <div className="space-y-3">
                           {hotPlayers.map((h, i) => (
                               <div key={i} className="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-800/50 transition-colors">
-                                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-500 font-black text-xs">
+                                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-500 font-black text-xs shrink-0">
                                       {h.player.number}
                                   </div>
-                                  <div>
-                                      <div className="text-sm font-bold text-white">{h.player.name}</div>
-                                      <div className="text-[10px] text-emerald-400 uppercase tracking-widest">{h.reason}</div>
+                                  <div className="min-w-0">
+                                      <div className="text-sm font-bold text-white truncate">{h.player.name}</div>
+                                      <div className="text-[10px] text-emerald-400 uppercase tracking-widest truncate">{h.reason}</div>
                                   </div>
                               </div>
                           ))}
@@ -363,7 +363,7 @@ export const Dashboard: React.FC<{
                       <p className="text-xs text-slate-500 italic">Behöver mer data för att se trender.</p>
                   )}
               </div>
-              <div className="p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+              <div className="p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md min-w-0">
                   <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <TrendingDown size={14} /> Behöver Stöd
                   </h3>
@@ -371,12 +371,12 @@ export const Dashboard: React.FC<{
                       <div className="space-y-3">
                           {coldPlayers.map((c, i) => (
                               <div key={i} className="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-800/50 transition-colors">
-                                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 font-black text-xs">
+                                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 font-black text-xs shrink-0">
                                       {c.player.number}
                                   </div>
-                                  <div>
-                                      <div className="text-sm font-bold text-white">{c.player.name}</div>
-                                      <div className="text-[10px] text-slate-500 uppercase tracking-widest">{c.reason}</div>
+                                  <div className="min-w-0">
+                                      <div className="text-sm font-bold text-white truncate">{c.player.name}</div>
+                                      <div className="text-[10px] text-slate-500 uppercase tracking-widest truncate">{c.reason}</div>
                                   </div>
                               </div>
                           ))}
@@ -390,7 +390,7 @@ export const Dashboard: React.FC<{
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         {stats.map((s, i) => (
-          <div key={i} className={`p-4 md:p-6 rounded-3xl border ${s.border} ${s.bg} backdrop-blur-sm relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300`}>
+          <div key={i} className={`p-4 md:p-6 rounded-3xl border ${s.border} ${s.bg} backdrop-blur-sm relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 min-w-0`}>
             <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-300 opacity-80">{s.label}</span>
@@ -416,8 +416,8 @@ export const Dashboard: React.FC<{
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6 md:gap-8">
-        <div className="lg:col-span-8 space-y-4 sm:space-y-6">
-          <div className="p-4 sm:p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md relative overflow-hidden">
+        <div className="lg:col-span-8 space-y-4 sm:space-y-6 min-w-0">
+          <div className="p-4 sm:p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md relative overflow-hidden min-w-0">
              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-10 gap-4 relative z-10">
                 <div>
                   <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Utvecklingskurva</h3>
@@ -460,7 +460,7 @@ export const Dashboard: React.FC<{
           </div>
           
           {/* Season Roadmap */}
-          <div className="p-4 sm:p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+          <div className="p-4 sm:p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md relative overflow-hidden min-w-0">
              <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <h4 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2"><Trophy size={16} className="text-orange-500" /> Season Roadmap</h4>
                 <span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-950 px-3 py-1 rounded-full border border-slate-800">Fas {sessions.length > 0 ? sessions[0].phaseId : 1} av 8</span>
@@ -471,7 +471,7 @@ export const Dashboard: React.FC<{
                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Säsongens framsteg</span>
                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Svep →</span>
                 </div>
-                <div className="flex justify-between relative z-10 overflow-x-auto pb-4 custom-scrollbar-horizontal w-full gap-2 md:gap-4 snap-x">
+                <div className="flex relative z-10 overflow-x-auto pb-4 custom-scrollbar-horizontal w-full gap-4 snap-x">
                    {mockPhases.map((phase) => (
                       <div key={phase.id} className="flex flex-col items-center gap-2 md:gap-3 min-w-[40px] md:min-w-[60px] snap-center">
                           <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-black text-xs transition-all border-4 ${phase.id === (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-orange-500 border-slate-900 text-white scale-110 shadow-[0_0_15px_rgba(249,115,22,0.4)]' : phase.id < (sessions.length > 0 ? sessions[0].phaseId : 1) ? 'bg-emerald-500 border-slate-900 text-slate-900' : 'bg-slate-800 border-slate-900 text-slate-600'}`}>
@@ -485,8 +485,8 @@ export const Dashboard: React.FC<{
         </div>
 
         {/* Sidebar Insights */}
-        <div className="lg:col-span-4 space-y-4 sm:space-y-6">
-          <div className="p-5 sm:p-8 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
+        <div className="lg:col-span-4 space-y-4 sm:space-y-6 min-w-0">
+          <div className="p-5 sm:p-8 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden min-w-0">
              <div className="absolute top-0 right-0 w-40 h-40 bg-orange-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
              <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white mb-6 relative z-10"><Flame className="text-orange-500" size={18} /> Dagens Uppvärmning</h3>
              <div className="space-y-4 relative z-10">
@@ -507,7 +507,7 @@ export const Dashboard: React.FC<{
              </div>
           </div>
 
-          <div className="p-5 sm:p-8 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden">
+          <div className="p-5 sm:p-8 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-xl relative overflow-hidden min-w-0">
              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
              <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white mb-6 relative z-10"><Trophy className="text-indigo-400" size={18} /> Match Intelligence</h3>
              {sisuStats ? (
@@ -547,7 +547,7 @@ export const Dashboard: React.FC<{
              )}
           </div>
 
-          <div className="p-4 sm:p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+          <div className="p-4 sm:p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-slate-900/50 border border-slate-800 backdrop-blur-md min-w-0">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <h3 className="text-sm font-black italic uppercase tracking-tighter flex items-center gap-2 text-white">
                     <Calendar className="text-slate-400" size={18} /> Senaste Aktivitet
