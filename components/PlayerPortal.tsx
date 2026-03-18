@@ -99,11 +99,17 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
     return saved ? JSON.parse(saved) : { protein: false, water: false, greens: false, sleep: false };
   });
 
+  const isSniperUnlocked = (myPlayer.skillAssessment?.['Skytte'] || 0) > 8;
+  const isProfessorUnlocked = myPlayer.homework && myPlayer.homework.length > 0 && myPlayer.homework.every(hw => hw.completed);
+
   const [showAiChat, setShowAiChat] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  const [showQuestComplete, setShowQuestComplete] = useState(false);
+  const [questTitle, setQuestTitle] = useState("");
 
   useEffect(() => {
     const loadData = async () => {
@@ -129,7 +135,23 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
     localStorage.setItem(`fuel_${player.id}_${new Date().toISOString().split('T')[0]}`, JSON.stringify(fuelChecks));
   }, [fuelChecks, player.id]);
 
-  const toggleFuel = (key: string) => setFuelChecks(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleFuel = (key: string) => {
+      setFuelChecks(prev => {
+          const isCompleting = !prev[key];
+          if (isCompleting) {
+              const labels: Record<string, string> = {
+                  protein: 'ÄGG/PROTEIN FRUKOST',
+                  water: 'DRICK 1.5L VATTEN',
+                  greens: 'FRUKT/GRÖNT SNACK',
+                  sleep: '8H SÖMN INATT'
+              };
+              setQuestTitle(labels[key] || "FUEL STATION");
+              setShowQuestComplete(true);
+              setTimeout(() => setShowQuestComplete(false), 3000);
+          }
+          return { ...prev, [key]: !prev[key] };
+      });
+  };
 
   const gamification = useMemo(() => {
       const skills = Object.values(myPlayer.skillAssessment || {}) as number[];
@@ -143,11 +165,20 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
     .filter((e): e is Exercise => !!e), [myPlayer.individualPlan, allExercises]);
 
   const handleToggleHomework = async (homeworkId: string) => {
+      const hw = myPlayer.homework?.find(h => h.id === homeworkId);
+      const isCompleting = hw && !hw.completed;
+
       const updatedHomework = (myPlayer.homework || []).map(h => 
           h.id === homeworkId ? { ...h, completed: !h.completed } : h
       );
       setMyPlayer(prev => ({ ...prev, homework: updatedHomework }));
       
+      if (isCompleting) {
+          setQuestTitle(hw.title);
+          setShowQuestComplete(true);
+          setTimeout(() => setShowQuestComplete(false), 3000);
+      }
+
       try {
           await dataService.toggleHomework(myPlayer.id, homeworkId, coachId);
       } catch (err) {
@@ -408,8 +439,20 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
                   <div className="space-y-4">
                       <div className="flex items-center gap-2 px-2"><Medal size={16} className="text-slate-500" /><h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TROFÉSAMLING</h3></div>
                       <div className="grid grid-cols-2 gap-4">
-                          <div className="p-6 rounded-[2.5rem] bg-slate-900/40 border border-slate-800/50 flex flex-col items-center justify-center text-center opacity-40 grayscale"><div className="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center mb-4"><Lock size={20} className="text-slate-600" /></div><h4 className="text-[10px] font-black text-white uppercase tracking-widest">SNIPER</h4><p className="text-[8px] font-bold text-slate-500 uppercase mt-1">Skytte-betyg över 8</p></div>
-                          <div className="p-6 rounded-[2.5rem] bg-slate-900/40 border border-slate-800/50 flex flex-col items-center justify-center text-center opacity-40 grayscale"><div className="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center mb-4"><Lock size={20} className="text-slate-600" /></div><h4 className="text-[10px] font-black text-white uppercase tracking-widest">THE PROFESSOR</h4><p className="text-[8px] font-bold text-slate-500 uppercase mt-1">Gjort alla uppdrag</p></div>
+                          <div className={`p-6 rounded-[2.5rem] flex flex-col items-center justify-center text-center transition-all duration-500 ${isSniperUnlocked ? 'bg-[#1a0f1a] border border-fuchsia-500/20' : 'bg-slate-900/40 border border-slate-800/50 opacity-40 grayscale'}`}>
+                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-inner ${isSniperUnlocked ? 'bg-slate-950 border border-fuchsia-500/30 text-fuchsia-500' : 'bg-slate-950 border border-slate-800'}`}>
+                                  {isSniperUnlocked ? <Target size={24} /> : <Lock size={20} className="text-slate-600" />}
+                              </div>
+                              <h4 className="text-[10px] font-black text-white uppercase tracking-widest">SNIPER</h4>
+                              <p className={`text-[8px] font-bold uppercase mt-1 ${isSniperUnlocked ? 'text-fuchsia-400' : 'text-slate-500'}`}>Skytte-betyg över 8</p>
+                          </div>
+                          <div className={`p-6 rounded-[2.5rem] flex flex-col items-center justify-center text-center transition-all duration-500 ${isProfessorUnlocked ? 'bg-[#0f1a1a] border border-teal-500/20' : 'bg-slate-900/40 border border-slate-800/50 opacity-40 grayscale'}`}>
+                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-inner ${isProfessorUnlocked ? 'bg-slate-950 border border-teal-500/30 text-teal-500' : 'bg-slate-950 border border-slate-800'}`}>
+                                  {isProfessorUnlocked ? <BrainCircuit size={24} /> : <Lock size={20} className="text-slate-600" />}
+                              </div>
+                              <h4 className="text-[10px] font-black text-white uppercase tracking-widest">THE PROFESSOR</h4>
+                              <p className={`text-[8px] font-bold uppercase mt-1 ${isProfessorUnlocked ? 'text-teal-400' : 'text-slate-500'}`}>Gjort alla uppdrag</p>
+                          </div>
                           <div className="p-6 rounded-[2.5rem] bg-[#0a1125] border border-blue-500/20 flex flex-col items-center justify-center text-center"><div className="w-14 h-14 rounded-2xl bg-slate-950 border border-blue-500/30 flex items-center justify-center mb-4 text-blue-500 shadow-inner"><Dumbbell size={24} /></div><h4 className="text-[10px] font-black text-white uppercase tracking-widest">GYM RAT</h4><p className="text-[8px] font-bold text-slate-400 uppercase mt-1">Hög närvaro</p></div>
                           <div className="p-6 rounded-[2.5rem] bg-[#1a0f0a] border border-orange-500/20 flex flex-col items-center justify-center text-center"><div className="w-14 h-14 rounded-2xl bg-slate-950 border border-orange-500/30 flex items-center justify-center mb-4 text-orange-500 shadow-inner"><Heart size={24} /></div><h4 className="text-[10px] font-black text-white uppercase tracking-widest">HEART & SOUL</h4><p className="text-[8px] font-bold text-slate-400 uppercase mt-1">Matchinsatser</p></div>
                       </div>
@@ -525,6 +568,29 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
                         <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Skriv din fråga..." className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-indigo-500" />
                         <button type="submit" disabled={!chatInput.trim() || isAiLoading} className="p-3 bg-indigo-600 text-white rounded-xl disabled:opacity-50"><Send size={18}/></button>
                     </form>
+               </div>
+           </div>
+       )}
+
+       {/* SOLO LEVELING QUEST COMPLETE ANIMATION */}
+       {showQuestComplete && (
+           <div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
+               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
+               <div className="relative z-10 flex flex-col items-center animate-in zoom-in-50 slide-in-from-bottom-10 duration-500">
+                   <div className="absolute inset-0 bg-blue-500 blur-[100px] opacity-50 rounded-full"></div>
+                   <div className="border-y-4 border-blue-500 bg-gradient-to-r from-transparent via-blue-900/80 to-transparent w-screen py-8 flex flex-col items-center justify-center shadow-[0_0_50px_rgba(59,130,246,0.5)]">
+                       <h2 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-blue-100 to-blue-500 tracking-[0.2em] uppercase italic drop-shadow-[0_0_15px_rgba(59,130,246,0.8)]">
+                           Quest Completed
+                       </h2>
+                       <p className="text-blue-200 font-bold tracking-widest uppercase mt-4 text-sm md:text-xl drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]">
+                           {questTitle}
+                       </p>
+                       <div className="mt-6 flex items-center gap-2 text-yellow-400 font-black text-xl animate-pulse">
+                           <Sparkles size={24} />
+                           <span>+ EXP GAINED</span>
+                           <Sparkles size={24} />
+                       </div>
+                   </div>
                </div>
            </div>
        )}
