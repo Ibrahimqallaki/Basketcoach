@@ -117,7 +117,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({ player, coachId, onL
       const [allMatches, allSessions, phases, currentPlayers] = await Promise.all([
           dataService.getMatches(coachId),
           dataService.getSessions(coachId),
-          dataService.getUnifiedPhases(),
+          dataService.getUnifiedPhases(coachId),
           dataService.getPlayers(coachId)
       ]);
       const updatedMe = currentPlayers.find(p => p.id === player.id);

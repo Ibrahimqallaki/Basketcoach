@@ -313,8 +313,8 @@ export const dataService = {
     await deleteDoc(doc(db, 'app_tickets', ticketId));
   },
 
-  getCustomExercises: async (): Promise<Exercise[]> => {
-    const path = dataService.getUserPath();
+  getCustomExercises: async (coachId?: string): Promise<Exercise[]> => {
+    const path = coachId ? `users/${coachId}` : dataService.getUserPath();
     if (path && db) {
       try {
         const q = query(collection(db, `${path}/custom_exercises`), orderBy('title', 'asc'));
@@ -354,8 +354,8 @@ export const dataService = {
     }
   },
 
-  getCustomPhaseName: async (): Promise<string> => {
-    const path = dataService.getUserPath();
+  getCustomPhaseName: async (coachId?: string): Promise<string> => {
+    const path = coachId ? `users/${coachId}` : dataService.getUserPath();
     if (path && db) {
       try {
         const docRef = doc(db, `${path}/settings`, 'custom_phase');
@@ -377,9 +377,9 @@ export const dataService = {
     }
   },
 
-  getUnifiedPhases: async (): Promise<Phase[]> => {
-    const custom = await dataService.getCustomExercises();
-    const customName = await dataService.getCustomPhaseName();
+  getUnifiedPhases: async (coachId?: string): Promise<Phase[]> => {
+    const custom = await dataService.getCustomExercises(coachId);
+    const customName = await dataService.getCustomPhaseName(coachId);
     const phases = JSON.parse(JSON.stringify(mockPhases));
     if (custom.length > 0) {
         phases.push({

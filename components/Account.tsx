@@ -159,9 +159,24 @@ service cloud.firestore {
     // 4. Spelardata (Tillåt publika sökningar för portalkod)
     match /{path=**}/players/{playerId} {
       allow read: if true; 
+      allow update: if request.auth != null;
     }
 
-    // 5. Användardata
+    // 5. Portalen (Tillåt spelare att läsa coach-data)
+    match /{path=**}/sessions/{sessionId} {
+      allow read: if true;
+    }
+    match /{path=**}/matches/{matchId} {
+      allow read: if true;
+    }
+    match /{path=**}/custom_exercises/{exerciseId} {
+      allow read: if true;
+    }
+    match /{path=**}/settings/{settingId} {
+      allow read: if true;
+    }
+
+    // 6. Användardata
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == "ibrahim.qallaki@gmail.com");
     }
