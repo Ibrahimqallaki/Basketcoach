@@ -110,6 +110,8 @@ export interface Player {
   accessCode?: string; 
   homework?: Homework[]; 
   nutrition?: NutritionLog; 
+  aiFeedback?: string;
+  suggestedDrills?: string[];
   created_at?: string;
 }
 
