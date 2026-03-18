@@ -21,12 +21,28 @@ interface PlaylistItem {
   exercise: Exercise | WarmupExercise;
 }
 
-const BASKET_CRITERIA = [
-  { label: 'Teknik', icon: Target, desc: 'Precision & utförande' },
-  { label: 'Intensitet', icon: Flame, desc: 'Tempo & närkamp' },
-  { label: 'Beslut', icon: BrainCircuit, desc: 'Spelförståelse/IQ' },
-  { label: 'Kommunikation', icon: Mic, desc: 'Röst & lagstöd' },
-  { label: 'Fokus', icon: Eye, desc: 'Koncentration' }
+const SBBF_CRITERIA = [
+  { label: 'Spelförståelse', icon: BrainCircuit, desc: 'Beslut & Speluppfattning' },
+  { label: 'Teknik', icon: Target, desc: 'Fundamentals & Utförande' },
+  { label: 'Fysik', icon: Zap, desc: 'Rörelse & Styrka' },
+  { label: 'Attityd', icon: Flame, desc: 'Kämparanda & Inställning' },
+  { label: 'Samarbete', icon: Mic, desc: 'Kommunikation & Lagspel' }
+];
+
+const NBA_CRITERIA = [
+  { label: 'Scoring', icon: Target, desc: 'Avslut & Skytte' },
+  { label: 'Playmaking', icon: BrainCircuit, desc: 'Skapa för andra' },
+  { label: 'Defense', icon: Shield, desc: 'Stopp & Positionering' },
+  { label: 'Athleticism', icon: Zap, desc: 'Explosivitet & Snabbhet' },
+  { label: 'Hustle', icon: Flame, desc: 'Returer & Lösa bollar' }
+];
+
+const COMBO_CRITERIA = [
+  { label: 'Skill & Teknik', icon: Target, desc: 'Bollbehandling & Avslut' },
+  { label: 'IQ & Beslut', icon: BrainCircuit, desc: 'Spelförståelse' },
+  { label: 'Fysik & Motorik', icon: Zap, desc: 'Atletism & Rörelse' },
+  { label: 'Försvar & Effort', icon: Shield, desc: 'Intensitet & Stopp' },
+  { label: 'Ledarskap', icon: Mic, desc: 'Kommunikation & Påverkan' }
 ];
 
 const FYS_CRITERIA = [
@@ -47,6 +63,7 @@ export const Training: React.FC = () => {
   const [gradingPlayer, setGradingPlayer] = useState<Player | null>(null);
   const [selectedSession, setSelectedSession] = useState<TrainingSession | null>(null);
   const [viewMode, setViewMode] = useState<'basket' | 'fys'>('basket');
+  const [gradingFramework, setGradingFramework] = useState<'SBBF' | 'NBA' | 'COMBO'>('SBBF');
   const [timer, setTimer] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
@@ -147,12 +164,13 @@ export const Training: React.FC = () => {
     return () => clearInterval(interval);
   }, [step, isPaused, timerMode]);
 
-  const activeCriteria = viewMode === 'basket' ? BASKET_CRITERIA : FYS_CRITERIA;
+  const activeCriteria = viewMode === 'basket' 
+    ? (gradingFramework === 'SBBF' ? SBBF_CRITERIA : gradingFramework === 'NBA' ? NBA_CRITERIA : COMBO_CRITERIA) 
+    : FYS_CRITERIA;
 
   const handleStartGradingPlayer = (p: Player) => {
     if(playlist.length === 0) return;
     const currentItem = playlist[activePlaylistItemIndex];
-    if (currentItem.type !== 'main') return;
     setGradingPlayer(p);
     const existing = evaluations.find(e => e.playerId === p.id && e.exerciseId === currentItem.id);
     if (existing) {
@@ -167,7 +185,6 @@ export const Training: React.FC = () => {
   const savePlayerEvaluation = () => {
     if (!gradingPlayer || playlist.length === 0) return;
     const currentItem = playlist[activePlaylistItemIndex];
-    if (currentItem.type !== 'main') return;
     const newEval: Evaluation = { 
         playerId: gradingPlayer.id, 
         exerciseId: currentItem.id, 
@@ -308,9 +325,21 @@ export const Training: React.FC = () => {
                             <h3 className="text-3xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none">Tränings-setup</h3>
                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2">Välj passets huvudfokus</p>
                           </div>
-                          <div className="flex p-1.5 bg-slate-950 rounded-2xl border border-slate-800 shadow-inner">
-                              <button onClick={() => setViewMode('basket')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'basket' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Layout size={14}/> Basket</button>
-                              <button onClick={() => setViewMode('fys')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'fys' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Dumbbell size={14}/> Fys</button>
+                          <div className="flex flex-col gap-2 items-center md:items-end">
+                              <div className="flex p-1.5 bg-slate-950 rounded-2xl border border-slate-800 shadow-inner">
+                                  <button onClick={() => setViewMode('basket')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'basket' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Layout size={14}/> Basket</button>
+                                  <button onClick={() => setViewMode('fys')} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'fys' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Dumbbell size={14}/> Fys</button>
+                              </div>
+                              {viewMode === 'basket' && (
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Bedömningsmall:</span>
+                                      <div className="flex p-1 bg-slate-950 rounded-xl border border-slate-800 shadow-inner">
+                                          <button onClick={() => setGradingFramework('SBBF')} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${gradingFramework === 'SBBF' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>SBBF</button>
+                                          <button onClick={() => setGradingFramework('NBA')} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${gradingFramework === 'NBA' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>NBA</button>
+                                          <button onClick={() => setGradingFramework('COMBO')} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${gradingFramework === 'COMBO' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>Combo</button>
+                                      </div>
+                                  </div>
+                              )}
                           </div>
                       </div>
                       <div className="grid md:grid-cols-12 gap-8 relative z-10">
