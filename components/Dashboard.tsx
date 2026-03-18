@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, Users, Activity, Star, Zap, ChevronRight, Calendar, Lightbulb, Trophy, Loader2, Dumbbell, TrendingUp, Timer, Heart, BrainCircuit, ArrowUpRight, ArrowDownRight, Flame } from 'lucide-react';
+import { Target, Users, Activity, Star, Zap, ChevronRight, Calendar, Lightbulb, Trophy, Loader2, Dumbbell, TrendingUp, TrendingDown, Timer, Heart, BrainCircuit, ArrowUpRight, ArrowDownRight, Flame, Sparkles, AlertCircle, Play, Plus, Bot, CheckCircle2 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { mockPhases, mockWarmupExercises } from '../services/mockData';
 import { Player, TrainingSession, MatchRecord, Exercise, WarmupExercise } from '../types';
+import { GoogleGenAI } from "@google/genai";
 
 interface ChartDataPoint {
   label: string;
@@ -22,6 +23,8 @@ export const Dashboard: React.FC<{
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartTimeRange, setChartTimeRange] = useState<'Vecka' | 'Månad' | 'Säsong'>('Säsong');
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [isFetchingInsight, setIsFetchingInsight] = useState(false);
   const storageMode = dataService.getStorageMode();
 
   useEffect(() => {
@@ -46,6 +49,95 @@ export const Dashboard: React.FC<{
     };
     loadData();
   }, []);
+
+  // Fetch AI Insight
+  useEffect(() => {
+    const fetchInsight = async () => {
+      if (players.length === 0 || sessions.length === 0) return;
+      
+      const savedInsight = sessionStorage.getItem('basketcoach_daily_insight');
+      const savedDate = sessionStorage.getItem('basketcoach_daily_insight_date');
+      const today = new Date().toISOString().split('T')[0];
+
+      if (savedInsight && savedDate === today) {
+        setAiInsight(savedInsight);
+        return;
+      }
+
+      setIsFetchingInsight(true);
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const recentMatches = matches.slice(-2).map(m => `${m.score}-${m.opponentScore}`).join(', ');
+        const prompt = `Du är en assisterande basketcoach. Ge en kort, proaktiv och uppmuntrande insikt (max 2 meningar) till huvudtränaren baserat på följande data:
+        Antal spelare: ${players.length}. Antal träningar: ${sessions.length}. Senaste matchresultat: ${recentMatches || 'Inga'}.
+        Fokusera på vad vi bör tänka på idag. Svara på svenska.`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: prompt,
+        });
+
+        const insight = response.text || "Dags för en ny bra träningsvecka. Fokusera på detaljerna idag!";
+        setAiInsight(insight);
+        sessionStorage.setItem('basketcoach_daily_insight', insight);
+        sessionStorage.setItem('basketcoach_daily_insight_date', today);
+      } catch (error) {
+        console.error("Failed to fetch AI insight", error);
+        setAiInsight("Dags för en ny bra träningsvecka. Fokusera på detaljerna idag!");
+      } finally {
+        setIsFetchingInsight(false);
+      }
+    };
+
+    fetchInsight();
+  }, [players.length, sessions.length, matches.length]);
+
+  // Calculate Action Items & Hot/Cold Players
+  const { actionItems, hotPlayers, coldPlayers } = useMemo(() => {
+    const items: { text: string, type: 'warning' | 'info' | 'success', icon: any }[] = [];
+    let hot: { player: Player, reason: string }[] = [];
+    let cold: { player: Player, reason: string }[] = [];
+
+    if (players.length === 0 || sessions.length === 0) return { actionItems: items, hotPlayers: hot, coldPlayers: cold };
+
+    // 1. Action Items: Match without feedback
+    const recentMatch = matches.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    if (recentMatch && recentMatch.feedbacks.length === 0) {
+      items.push({ text: `Utvärdera senaste matchen mot ${recentMatch.opponent}`, type: 'warning', icon: AlertCircle });
+    }
+
+    // 2. Action Items & Cold Players: Low attendance
+    const recentSessions = sessions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 3);
+    if (recentSessions.length > 0) {
+      const attendanceCounts: Record<string, number> = {};
+      players.forEach(p => attendanceCounts[p.id] = 0);
+      
+      recentSessions.forEach(s => {
+        s.attendance.forEach(a => {
+          if (a.status === 'närvarande' || a.status === 'delvis') {
+            if (attendanceCounts[a.playerId] !== undefined) attendanceCounts[a.playerId]++;
+          }
+        });
+      });
+
+      const lowAttendancePlayers = players.filter(p => attendanceCounts[p.id] === 0);
+      if (lowAttendancePlayers.length > 0) {
+        items.push({ text: `${lowAttendancePlayers.length} spelare har missat de senaste 3 passen`, type: 'warning', icon: Users });
+        cold = lowAttendancePlayers.slice(0, 2).map(p => ({ player: p, reason: 'Låg närvaro' }));
+      }
+
+      const perfectAttendancePlayers = players.filter(p => attendanceCounts[p.id] === recentSessions.length);
+      if (perfectAttendancePlayers.length > 0) {
+        hot = perfectAttendancePlayers.slice(0, 2).map(p => ({ player: p, reason: '100% närvaro' }));
+      }
+    }
+
+    if (items.length === 0) {
+      items.push({ text: "Allt ser bra ut! Redo för nästa pass.", type: 'success', icon: CheckCircle2 });
+    }
+
+    return { actionItems: items, hotPlayers: hot, coldPlayers: cold };
+  }, [players, sessions, matches]);
 
   const attendanceRate = useMemo(() => dataService.calculateAttendanceRate(sessions), [sessions]);
 
@@ -194,6 +286,106 @@ export const Dashboard: React.FC<{
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{storageMode === 'CLOUD' ? 'Moln-läge' : 'Lokal lagring'}</span>
          </div>
          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Säsongens Överblick</div>
+      </div>
+
+      {/* Quick Actions & AI Insight */}
+      <div className="grid lg:grid-cols-12 gap-4 md:gap-6">
+        <div className="lg:col-span-8">
+            <div className="p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-indigo-900/40 to-slate-900 border border-indigo-500/20 shadow-xl relative overflow-hidden h-full flex flex-col justify-center">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                <div className="relative z-10 flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                        {isFetchingInsight ? <Loader2 className="text-indigo-400 animate-spin" size={24} /> : <Bot className="text-indigo-400" size={24} />}
+                    </div>
+                    <div>
+                        <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <Sparkles size={14} /> Dagens AI-Insikt
+                        </h3>
+                        <p className="text-sm md:text-base text-slate-300 leading-relaxed italic">
+                            {isFetchingInsight ? "Analyserar truppens senaste data..." : aiInsight}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div className="lg:col-span-4 grid grid-cols-2 gap-4">
+            <button onClick={() => onNavigateToHistory?.()} className="p-4 rounded-3xl bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-600/20 transition-all flex flex-col items-center justify-center gap-3 group">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform"><Play size={20} fill="currentColor" /></div>
+                <span className="text-[10px] font-black uppercase tracking-widest">Starta Pass</span>
+            </button>
+            <button onClick={() => onNavigateToMatch?.()} className="p-4 rounded-3xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-all flex flex-col items-center justify-center gap-3 group">
+                <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={20} /></div>
+                <span className="text-[10px] font-black uppercase tracking-widest">Ny Match</span>
+            </button>
+        </div>
+      </div>
+
+      {/* Action Items & Hot/Cold */}
+      <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
+          <div className="lg:col-span-1 p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <AlertCircle size={14} /> Att Göra
+              </h3>
+              <div className="space-y-3">
+                  {actionItems.map((item, i) => (
+                      <div key={i} className={`p-3 rounded-2xl border flex items-start gap-3 ${
+                          item.type === 'warning' ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' :
+                          item.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                          'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                      }`}>
+                          <item.icon size={16} className="shrink-0 mt-0.5" />
+                          <span className="text-xs font-medium leading-snug">{item.text}</span>
+                      </div>
+                  ))}
+              </div>
+          </div>
+          
+          <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+              <div className="p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+                  <h3 className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <TrendingUp size={14} /> Stekheta
+                  </h3>
+                  {hotPlayers.length > 0 ? (
+                      <div className="space-y-3">
+                          {hotPlayers.map((h, i) => (
+                              <div key={i} className="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-800/50 transition-colors">
+                                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-500 font-black text-xs">
+                                      {h.player.number}
+                                  </div>
+                                  <div>
+                                      <div className="text-sm font-bold text-white">{h.player.name}</div>
+                                      <div className="text-[10px] text-emerald-400 uppercase tracking-widest">{h.reason}</div>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <p className="text-xs text-slate-500 italic">Behöver mer data för att se trender.</p>
+                  )}
+              </div>
+              <div className="p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md">
+                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <TrendingDown size={14} /> Behöver Stöd
+                  </h3>
+                  {coldPlayers.length > 0 ? (
+                      <div className="space-y-3">
+                          {coldPlayers.map((c, i) => (
+                              <div key={i} className="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-800/50 transition-colors">
+                                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 font-black text-xs">
+                                      {c.player.number}
+                                  </div>
+                                  <div>
+                                      <div className="text-sm font-bold text-white">{c.player.name}</div>
+                                      <div className="text-[10px] text-slate-500 uppercase tracking-widest">{c.reason}</div>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <p className="text-xs text-slate-500 italic">Inga spelare flaggade just nu.</p>
+                  )}
+              </div>
+          </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
