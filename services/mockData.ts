@@ -22,7 +22,7 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'Aktiverar sätet, låren och core-stabiliteten. Spelaren tar ett kontrollerat utfallssteg framåt och roterar överkroppen långsamt över det främre benet för att öppna upp höften och aktivera bålmuskulaturen inför träningens belastning.',
     coachingPoints: ['Knä över tå', 'Stolt hållning', 'Kontrollerad rotation'],
     sbbfFocus: 'Knäkontroll & Mobilitet',
-    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw',
+    videoUrl: 'https://www.youtube.com/watch?v=TyE9G3fW_2o',
     setup: 'Stående på led eller fritt på planen.',
     visualSteps: ['Kliv fram i utfall', 'Håll balansen', 'Rotera över främre benet']
   },
@@ -94,7 +94,7 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'Förbereder baksida lår för explosiva sprinter. Genom en gående rörelse där spelaren "skopar" marken med händerna vid varje steg sträcks hamstrings ut dynamiskt utan att förlora muskelspänning inför träningen.',
     coachingPoints: ['Rak rygg', 'Flexad fot', 'Kontrollerad rörelse'],
     sbbfFocus: 'Mobilitet',
-    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw',
+    videoUrl: 'https://www.youtube.com/watch?v=f-S89Bq68L0',
     setup: 'Gående över planen.',
     visualSteps: ['Ett steg fram', 'Skopa marken med händerna', 'Håll benet rakt']
   },
@@ -130,7 +130,7 @@ export const mockWarmupExercises: WarmupExercise[] = [
     description: 'En helkroppsövning som aktiverar axlar, core och höfter. Spelaren går på alla fyra utan att knäna rör marken, med fokus på en stabil rygg och koordinerade rörelser.',
     coachingPoints: ['Knän nära marken', 'Stabil core', 'Koordinera hand/fot'],
     sbbfFocus: 'Stabilitet & Mobilitet',
-    videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw',
+    videoUrl: 'https://www.youtube.com/watch?v=ASdVnBL2X8E',
     setup: 'Från baslinje till mittlinje.',
     visualSteps: ['Ställ dig på alla fyra', 'Lyft knäna 2cm', 'Gå framåt kontrollerat']
   },
@@ -197,10 +197,10 @@ export const mockPhases: Phase[] = [
     description: 'Fokus på kroppskontroll, grundposition och bollbekantskap.',
     exercises: [
       { id: 'f1e1', title: 'Form Shooting (One Hand)', category: 'Skott', overview: { setup: "1 meter från korgen", action: "Enhandsskott utan stödhand", coachingPoint: "Frys svanhalsen" }, pedagogy: { what: "Isolera release-mekaniken", how: "Håll armbågen i 90 grader", why: "Eliminera felkällor i skottet" }, criteria: ['Armbåge in', 'Bollrotation', 'Svanhals', 'Balanserade fötter'], videoUrl: 'https://www.youtube.com/watch?v=BnvGa0I8bMc', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Basketball shooting form' },
-      { id: 'f1e2', title: 'Pound Dribble (High/Low)', category: 'Dribbling', overview: { setup: "Stilla, axelbrett", action: "Dribbla bollen så hårt som möjligt", coachingPoint: "Pausa aldrig bollen" }, pedagogy: { what: "Bollkontroll och kraft", how: "Använd fingertoppar och handled", why: "Öka kontroll vid press" }, criteria: ['Blick upp', 'Dribbelkraft', 'Låg stance', 'Växla höjd'], videoUrl: 'https://www.youtube.com/watch?v=1p_tQy2iX60', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Dribbling drill' },
+      { id: 'f1e2', title: 'Pound Dribble (High/Low)', category: 'Dribbling', overview: { setup: "Stilla, axelbrett", action: "Dribbla bollen så hårt som möjligt", coachingPoint: "Pausa aldrig bollen" }, pedagogy: { what: "Bollkontroll och kraft", how: "Använd fingertoppar och handled", why: "Öka kontroll vid press" }, criteria: ['Blick upp', 'Dribbelkraft', 'Låg stance', 'Växla höjd'], videoUrl: 'https://www.youtube.com/watch?v=S8pB6S7Z3C8', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Dribbling drill' },
       { id: 'f1e3', title: 'Triple Threat Positioning', category: 'Basket-IQ', overview: { setup: "Fånga bollen på hoppstopp", action: "Hitta skott-pass-dribbel hot", coachingPoint: "Bollen vid höften" }, pedagogy: { what: "Anfallsposition", how: "Böjda knän, redo för allt", why: "Göra försvaret osäkert" }, criteria: ['Balans', 'Bollen skyddad', 'Blick mot korg', 'Snabbt fotarbete'], videoUrl: 'https://www.youtube.com/watch?v=uUshU-x_w7I', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Triple threat stance' },
       { id: 'f1e4', title: 'Ball Slaps & Circles', category: 'Dribbling', overview: { setup: "Stilla", action: "Slå på bollen, cirkulera runt midja/ben", coachingPoint: "Snabba händer" }, pedagogy: { what: "Värm upp fingertoppar", how: "Slå bollen mellan händerna", why: "Bättre touch" }, criteria: ['Tempo', 'Hårda slag', 'Full rörlighet'], videoUrl: 'https://www.youtube.com/watch?v=S8pB6S7Z3C8', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Ball handling circles' },
-      { id: 'f1fys1', title: 'Wall Sits (Statisk)', category: 'Fysik', overview: { setup: "Mot vägg", action: "Sitt i 90 grader", coachingPoint: "Pressa ryggen mot väggen" }, pedagogy: { what: "Isometrisk benstyrka", how: "Håll i 45-60 sek", why: "Uthållighet i försvarsställning" }, criteria: ['90 grader vinkel', 'Rak rygg', 'Stilla fötter'], videoUrl: 'https://www.youtube.com/watch?v=y-wV4Venusw', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Wall sit exercise' },
+      { id: 'f1fys1', title: 'Wall Sits (Statisk)', category: 'Fysik', overview: { setup: "Mot vägg", action: "Sitt i 90 grader", coachingPoint: "Pressa ryggen mot väggen" }, pedagogy: { what: "Isometrisk benstyrka", how: "Håll i 45-60 sek", why: "Uthållighet i försvarsställning" }, criteria: ['90 grader vinkel', 'Rak rygg', 'Stilla fötter'], videoUrl: 'https://www.youtube.com/watch?v=mS9755u_S2w', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Wall sit exercise' },
       { id: 'f1fys2', title: 'Plank Variations', category: 'Fysik', overview: { setup: "På golvet", action: "Håll rak kropp", coachingPoint: "Spänn sätet" }, pedagogy: { what: "Core-stabilitet", how: "Växla mellan armbågar/händer", why: "Kraftöverföring i skott och hopp" }, criteria: ['Rak linje', 'Andning', 'Ingen svank'], videoUrl: 'https://www.youtube.com/watch?v=ASdVnBL2X8E', instructions: { warmup: "", main: "", conclusion: "" }, diagramPrompt: 'Plank exercise' }
     ]
   },

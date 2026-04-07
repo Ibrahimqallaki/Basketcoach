@@ -32,9 +32,18 @@ const PHASE_STORAGE_KEY = 'basket_coach_plan_phase_v1';
 // Super-robust YouTube ID extractor for all formats
 const getVideoId = (url: string) => {
   if (!url) return null;
+  
+  // Handle various YouTube URL formats
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
   const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
+  
+  if (match && match[2]) {
+    // Extract exactly 11 characters (standard YouTube ID length)
+    const id = match[2].trim();
+    return id.length >= 11 ? id.substring(0, 11) : null;
+  }
+  
+  return null;
 };
 
 export const Plan: React.FC = () => {
