@@ -125,6 +125,7 @@ export interface ChatMessage {
   senderName: string;
   senderRole: 'coach' | 'player';
   recipientId: string; // Can be a playerId, coachId, or 'TEAM'
+  conversationId: string; // Unique ID for the conversation
   text: string;
   timestamp: string;
   readBy: string[]; // List of user IDs who have read the message

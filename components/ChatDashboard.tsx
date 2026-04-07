@@ -19,6 +19,7 @@ import { Player, ChatMessage, View } from '../types';
 import { dataService } from '../services/dataService';
 import { chatService } from '../services/chatService';
 import { auth } from '../services/firebase';
+import { notificationService } from '../services/notificationService';
 
 interface ChatDashboardProps {
   coachId: string;
@@ -34,7 +35,13 @@ export const ChatDashboard: React.FC<ChatDashboardProps> = ({ coachId }) => {
   const [isMobileListOpen, setIsMobileListOpen] = useState(true);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
   const currentUserId = auth.currentUser?.uid || 'guest';
+
+  // Request notification permission on mount
+  useEffect(() => {
+    notificationService.requestPermission();
+  }, []);
 
   // Load players
   useEffect(() => {
@@ -60,6 +67,22 @@ export const ChatDashboard: React.FC<ChatDashboardProps> = ({ coachId }) => {
       [selectedRecipientId],
       (data) => {
         setMessages(data);
+        
+        // Handle notifications for new messages
+        if (data.length > 0) {
+          const latestMsg = data[data.length - 1];
+          if (latestMsg.id !== lastMessageIdRef.current) {
+            // Only notify if it's not from me and it's actually new (not just initial load)
+            if (latestMsg.senderId !== currentUserId && lastMessageIdRef.current !== null) {
+              notificationService.showNotification(`Nytt meddelande från ${latestMsg.senderName}`, {
+                body: latestMsg.text,
+                tag: latestMsg.conversationId
+              });
+            }
+            lastMessageIdRef.current = latestMsg.id;
+          }
+        }
+
         // Mark as read
         data.forEach(msg => {
           if (msg.recipientId === currentUserId || (msg.recipientId === 'TEAM' && msg.senderRole === 'player')) {
@@ -116,7 +139,7 @@ export const ChatDashboard: React.FC<ChatDashboardProps> = ({ coachId }) => {
   const selectedPlayer = players.find(p => p.id === selectedRecipientId);
 
   return (
-    <div className="flex h-full md:h-[calc(100vh-12rem)] bg-slate-950 rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-2xl relative">
+    <div className="flex h-full pb-24 md:pb-0 md:h-[calc(100vh-12rem)] bg-slate-950 rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-2xl relative">
       
       {/* Sidebar - Player List */}
       <div className={`${isMobileListOpen ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-80 border-r border-slate-800 bg-slate-900/50 backdrop-blur-xl z-20`}>

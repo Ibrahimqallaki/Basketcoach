@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Player, ChatMessage } from '../types';
 import { chatService } from '../services/chatService';
+import { notificationService } from '../services/notificationService';
 
 interface PlayerChatProps {
   player: Player;
@@ -24,8 +25,14 @@ export const PlayerChat: React.FC<PlayerChatProps> = ({ player, coachId }) => {
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
   
   const currentUserId = player.id;
+
+  // Request notification permission on mount
+  useEffect(() => {
+    notificationService.requestPermission();
+  }, []);
 
   // Subscribe to messages (Direct with Coach + Team)
   useEffect(() => {
@@ -39,6 +46,21 @@ export const PlayerChat: React.FC<PlayerChatProps> = ({ player, coachId }) => {
         setMessages(allMsgs);
         setLoading(false);
         
+        // Handle notifications for new messages
+        if (allMsgs.length > 0) {
+          const latestMsg = allMsgs[allMsgs.length - 1];
+          if (latestMsg.id !== lastMessageIdRef.current) {
+            // Only notify if it's from coach/team and it's actually new
+            if (latestMsg.senderRole === 'coach' && lastMessageIdRef.current !== null) {
+              notificationService.showNotification(`Nytt meddelande från Coach`, {
+                body: latestMsg.text,
+                tag: latestMsg.conversationId
+              });
+            }
+            lastMessageIdRef.current = latestMsg.id;
+          }
+        }
+
         // Mark messages as read
         allMsgs.forEach(msg => {
           if (msg.senderRole === 'coach' && !msg.readBy.includes(currentUserId)) {
@@ -78,7 +100,7 @@ export const PlayerChat: React.FC<PlayerChatProps> = ({ player, coachId }) => {
   };
 
   return (
-    <div className="flex flex-col h-full md:h-[600px] bg-[#0a0f1d] rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom duration-500">
+    <div className="flex flex-col h-full pb-24 md:pb-0 md:h-[600px] bg-[#0a0f1d] rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom duration-500">
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
         <div className="flex items-center gap-3">
