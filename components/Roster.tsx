@@ -69,6 +69,9 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [showHomeworkInput, setShowHomeworkInput] = useState(false);
+  const [showHomeworkModal, setShowHomeworkModal] = useState(false);
+  const [editingHomeworkId, setEditingHomeworkId] = useState<string | null>(null);
+  const [editingHomeworkTitle, setEditingHomeworkTitle] = useState("");
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [newHomework, setNewHomework] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
@@ -96,10 +99,17 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
       const unsubscribe = dataService.subscribeToPlayers((updatedPlayers) => {
           setPlayers(updatedPlayers);
           setLoading(false);
+          
           // Preserve selection if possible, otherwise select first
-          if (updatedPlayers.length > 0 && !selectedPlayerId) {
-              setSelectedPlayerId(updatedPlayers[0].id);
-          }
+          setSelectedPlayerId(currentId => {
+              if (updatedPlayers.length === 0) return null;
+              // If no player is selected, select the first one
+              if (!currentId) return updatedPlayers[0].id;
+              // If the selected player still exists, keep it
+              if (updatedPlayers.find(p => p.id === currentId)) return currentId;
+              // Otherwise, fallback to the first player
+              return updatedPlayers[0].id;
+          });
       });
 
       return () => unsubscribe();
@@ -133,11 +143,22 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
       await dataService.addHomework(player.id, newHomework);
       setNewHomework("");
       setShowHomeworkInput(false);
-      loadData();
+      // loadData is handled by subscription
+  };
+
+  const handleDeleteHomework = async (homeworkId: string) => {
+    if (!player) return;
+    await dataService.deleteHomework(player.id, homeworkId);
+  };
+
+  const handleUpdateHomework = async (homeworkId: string, title: string) => {
+    if (!player) return;
+    await dataService.updateHomework(player.id, homeworkId, { title });
+    setEditingHomeworkId(null);
+    setEditingHomeworkTitle("");
   };
 
   const handleDeletePlayer = async (id: string) => {
-      if (!confirm("Radera spelare permanent?")) return;
       const updated = await dataService.deletePlayer(id);
       setPlayers(updated);
       if (updated.length > 0) setSelectedPlayerId(updated[0].id);
@@ -254,7 +275,10 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                 <div className="p-6 md:p-8 rounded-[2rem] bg-slate-900 border border-slate-800 space-y-6 shadow-xl">
                    <div className="flex justify-between items-center">
                         <h3 className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-2 tracking-widest"><Dumbbell size={14} className="text-blue-400" /> Aktiva Uppdrag</h3>
-                        <button onClick={() => setShowHomeworkInput(!showHomeworkInput)} className="p-2 bg-blue-600/10 text-blue-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-lg shadow-blue-900/10"><ClipboardPlus size={16}/></button>
+                        <div className="flex gap-2">
+                            <button onClick={() => setShowHomeworkModal(true)} className="p-2 bg-slate-800 text-slate-400 rounded-lg hover:text-white transition-all" title="Hantera uppdrag"><PenTool size={16}/></button>
+                            <button onClick={() => setShowHomeworkInput(!showHomeworkInput)} className="p-2 bg-blue-600/10 text-blue-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-lg shadow-blue-900/10"><Plus size={16}/></button>
+                        </div>
                    </div>
                    {showHomeworkInput && (
                        <div className="flex gap-2 animate-in slide-in-from-top duration-200">
@@ -425,6 +449,88 @@ export const Roster: React.FC<RosterProps> = ({ onSimulatePlayerLogin }) => {
                       })}
                   </div>
                   <div className="p-8 bg-slate-950/50 border-t border-slate-800 shrink-0"><button onClick={() => setShowExercisePicker(false)} className="w-full py-4 rounded-xl bg-slate-800 text-white font-black uppercase text-[10px] tracking-widest shadow-xl">Färdig</button></div>
+              </div>
+          </div>
+      )}
+
+      {/* Homework Management Modal */}
+      {showHomeworkModal && player && (
+          <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
+              <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95">
+                  <div className="p-8 border-b border-slate-800 flex justify-between items-center shrink-0">
+                      <div>
+                          <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Hantera Uppdrag</h3>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{player.name}</p>
+                      </div>
+                      <button onClick={() => setShowHomeworkModal(false)} className="p-2 bg-slate-800 rounded-full text-slate-500 hover:text-white transition-colors"><X size={20}/></button>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar space-y-4">
+                      {(player.homework || []).map(hw => (
+                          <div key={hw.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4 group">
+                              <div className="flex-1 flex items-center gap-4">
+                                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${hw.completed ? 'bg-emerald-500 border-emerald-500' : 'border-slate-800'}`}>
+                                      {hw.completed && <Check size={12} className="text-white" />}
+                                  </div>
+                                  
+                                  {editingHomeworkId === hw.id ? (
+                                      <div className="flex-1 flex gap-2">
+                                          <input 
+                                              autoFocus
+                                              type="text" 
+                                              value={editingHomeworkTitle} 
+                                              onChange={(e) => setEditingHomeworkTitle(e.target.value)}
+                                              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white outline-none focus:border-blue-500"
+                                          />
+                                          <button 
+                                              onClick={() => handleUpdateHomework(hw.id, editingHomeworkTitle)}
+                                              className="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-all"
+                                          >
+                                              <Check size={14} />
+                                          </button>
+                                          <button 
+                                              onClick={() => setEditingHomeworkId(null)}
+                                              className="p-2 bg-slate-800 text-slate-400 rounded-lg hover:text-white transition-all"
+                                          >
+                                              <X size={14} />
+                                          </button>
+                                      </div>
+                                  ) : (
+                                      <div className={`text-sm font-bold ${hw.completed ? 'text-slate-600 line-through' : 'text-slate-200'}`}>
+                                          {hw.title}
+                                      </div>
+                                  )}
+                              </div>
+                              
+                              {!editingHomeworkId && (
+                                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button 
+                                          onClick={() => { setEditingHomeworkId(hw.id); setEditingHomeworkTitle(hw.title); }}
+                                          className="p-2 bg-slate-800 text-slate-400 rounded-lg hover:text-white transition-all"
+                                      >
+                                          <PenTool size={14} />
+                                      </button>
+                                      <button 
+                                          onClick={() => handleDeleteHomework(hw.id)}
+                                          className="p-2 bg-rose-600/10 text-rose-500 rounded-lg hover:bg-rose-600 hover:text-white transition-all"
+                                      >
+                                          <Trash2 size={14} />
+                                      </button>
+                                  </div>
+                              )}
+                          </div>
+                      ))}
+                      {(player.homework || []).length === 0 && (
+                          <div className="text-center py-12">
+                              <Dumbbell size={48} className="mx-auto text-slate-800 mb-4 opacity-20" />
+                              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Inga aktiva uppdrag</p>
+                          </div>
+                      )}
+                  </div>
+                  
+                  <div className="p-8 bg-slate-950/50 border-t border-slate-800 shrink-0">
+                      <button onClick={() => setShowHomeworkModal(false)} className="w-full py-4 rounded-xl bg-slate-800 text-white font-black uppercase text-[10px] tracking-widest shadow-xl">Färdig</button>
+                  </div>
               </div>
           </div>
       )}

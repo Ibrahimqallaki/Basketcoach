@@ -14,6 +14,7 @@ import { AICoach } from './components/AICoach';
 import { CoachTools } from './components/CoachTools';
 import { MatchLiveScout } from './components/MatchLiveScout';
 import { WarmupLibrary } from './components/WarmupLibrary';
+import { ChatDashboard } from './components/ChatDashboard';
 import { auth, isFirebaseConfigured, googleProvider } from './services/firebase';
 import { dataService } from './services/dataService';
 // @ts-ignore
@@ -367,7 +368,7 @@ const App: React.FC = () => {
           </header>
         )}
 
-        <div className={`flex-1 overflow-y-auto ${!loggedInPlayer ? 'p-4 md:p-10' : ''} custom-scrollbar w-full`}>
+        <div className={`flex-1 overflow-y-auto ${!loggedInPlayer ? (currentView === View.CHAT ? 'p-0 md:p-10' : 'p-4 md:p-10') : ''} custom-scrollbar w-full`}>
             {loggedInPlayer ? (
                 <PlayerPortal player={loggedInPlayer} coachId={currentCoachId || undefined} onLogout={handleLogout} isPreview={!user || !user.isAnonymous} />
             ) : (
@@ -389,6 +390,7 @@ const App: React.FC = () => {
                       case View.AI_COACH: return <CoachTools initialTool="ai" onNavigate={setCurrentView} />;
                       case View.TOOLS: return <CoachTools onNavigate={setCurrentView} />;
                       case View.ACCOUNT: return <Account user={user} />;
+                      case View.CHAT: return <ChatDashboard coachId={user?.uid || 'guest'} />;
                       default: return <Dashboard onNavigateToHistory={() => setCurrentView(View.TRAINING)} />;
                     }
                 })()

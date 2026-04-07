@@ -13,7 +13,8 @@ export enum View {
   ACCOUNT = 'ACCOUNT',
   PLAYER_PORTAL = 'PLAYER_PORTAL',
   LIVE_SCOUT = 'LIVE_SCOUT',
-  WARMUP_LIBRARY = 'WARMUP_LIBRARY'
+  WARMUP_LIBRARY = 'WARMUP_LIBRARY',
+  CHAT = 'CHAT'
 }
 
 export interface LiveMatchData {
@@ -113,6 +114,31 @@ export interface Player {
   aiFeedback?: string;
   suggestedDrills?: string[];
   created_at?: string;
+}
+
+/**
+ * Represents a single chat message in the system.
+ */
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'coach' | 'player';
+  recipientId: string; // Can be a playerId, coachId, or 'TEAM'
+  text: string;
+  timestamp: string;
+  readBy: string[]; // List of user IDs who have read the message
+}
+
+/**
+ * Represents a chat room or conversation summary.
+ */
+export interface ChatConversation {
+  id: string;
+  participantIds: string[];
+  lastMessage?: ChatMessage;
+  unreadCount: number;
+  type: 'direct' | 'team';
 }
 
 export interface Badge {

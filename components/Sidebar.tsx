@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  Flame
+  Flame,
+  MessageSquare
 } from 'lucide-react';
 // Fix: Added @ts-ignore to bypass environment-specific resolution issues with Firebase exports
 // @ts-ignore
@@ -32,12 +33,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
   const menuItems = [
     { id: View.DASHBOARD, label: 'Hem', icon: LayoutDashboard },
     { id: View.ROSTER, label: 'Laget', icon: Users },
+    { id: View.CHAT, label: 'Chat', icon: MessageSquare, isNew: true },
     { id: View.PLAN, label: 'Planering', icon: CalendarDays },
     { id: View.TRAINING, label: 'Träna', icon: ClipboardCheck },
     { id: View.WARMUP_LIBRARY, label: 'Uppvärmning', icon: Flame },
     { id: View.MATCH_EVAL, label: 'Match', icon: Trophy },
-    { id: View.VIDEO_ANALYSIS, label: 'Video', icon: MonitorPlay },
-    { id: View.AI_COACH, label: 'AI Assistent', icon: Bot, isNew: true },
     { id: View.TOOLS, label: 'Verktyg', icon: Wrench },
   ];
 
@@ -132,7 +132,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, user }
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-white/10 h-16 rounded-2xl flex items-center z-50 shadow-2xl px-1 overflow-hidden">
         <div className="flex items-center justify-between w-full h-full px-2">
-          {menuItems.filter(item => item.id !== View.WARMUP_LIBRARY).slice(0, 5).map((item) => (
+          {menuItems.filter(item => 
+            item.id !== View.PLAN && 
+            item.id !== View.WARMUP_LIBRARY && 
+            item.id !== View.TOOLS
+          ).map((item) => (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}

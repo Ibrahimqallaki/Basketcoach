@@ -51,6 +51,8 @@ import {
 } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
 import { SupportModal } from "./SupportModal";
+import { PlayerChat } from "./PlayerChat";
+import { chatService } from "../services/chatService";
 
 interface PlayerPortalProps {
   player: Player;
@@ -196,8 +198,9 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({
   isPreview = false,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    "career" | "training" | "fuel" | "matches" | "ai"
+    "career" | "training" | "fuel" | "matches" | "ai" | "chat"
   >("career");
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [matches, setMatches] = useState<MatchRecord[]>([]);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
@@ -240,7 +243,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({
   const handleAnalyzePerformance = async () => {
     setIsAnalyzingPerformance(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const prompt = `Du är en professionell basketcoach. Analysera följande spelares prestationer och ge personlig feedback. Föreslå även 3 specifika övningar från listan för att förbättra spelarens svagheter.
           Spelare: ${myPlayer.name}
           Skills: ${JSON.stringify(myPlayer.skillAssessment)}
@@ -291,6 +294,18 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({
       setIsAnalyzingPerformance(false);
     }
   };
+
+  useEffect(() => {
+    if (!coachId) return;
+    const unsubscribe = chatService.subscribeToAllMessages(coachId, (messages) => {
+      const unread = messages.filter(msg => {
+        const isRelevant = msg.recipientId === 'TEAM' || msg.recipientId === player.id;
+        return isRelevant && msg.senderRole === 'coach' && !msg.readBy.includes(player.id);
+      }).length;
+      setUnreadChatCount(unread);
+    });
+    return () => unsubscribe();
+  }, [coachId, player.id]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -390,7 +405,7 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({
     setChatInput("");
     setIsAiLoading(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Du är en peppande basketcoach. Spelaren frågar om övningen "${selectedExercise.title}". Fråga: "${chatInput}". Svara kort, pedagogiskt och uppmuntrande på svenska.`,
@@ -486,14 +501,14 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({
         </button>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 -mt-6 relative z-20 space-y-6">
-        <nav className="flex p-1 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl sticky top-4 z-40">
-          {(["career", "training", "fuel", "matches", "ai"] as const).map(
+      <main className={`max-w-lg mx-auto ${activeTab === 'chat' ? 'px-0 md:px-4' : 'px-4'} -mt-6 relative z-20 ${activeTab === 'chat' ? 'space-y-0' : 'space-y-6'}`}>
+        <nav className={`flex p-1 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl sticky top-4 z-40 ${activeTab === 'chat' ? 'mx-4 mb-4' : ''}`}>
+          {(["career", "training", "fuel", "matches", "ai", "chat"] as const).map(
             (tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? "bg-slate-800 text-white shadow-lg" : "text-slate-500"}`}
+                className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all relative ${activeTab === tab ? "bg-slate-800 text-white shadow-lg" : "text-slate-500"}`}
               >
                 {tab === "career"
                   ? "Profil"
@@ -503,11 +518,20 @@ export const PlayerPortal: React.FC<PlayerPortalProps> = ({
                       ? "Match"
                       : tab === "ai"
                         ? "AI"
-                        : "Träning"}
+                        : tab === "chat"
+                          ? "Chat"
+                          : "Träning"}
+                {tab === "chat" && unreadChatCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-slate-900 animate-bounce"></span>
+                )}
               </button>
             ),
           )}
         </nav>
+
+        {activeTab === "chat" && coachId && (
+          <PlayerChat player={myPlayer} coachId={coachId} />
+        )}
 
         {activeTab === "training" && (
           <div className="space-y-10 animate-in slide-in-from-right duration-300 pb-20">

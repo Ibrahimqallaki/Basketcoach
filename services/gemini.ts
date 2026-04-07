@@ -2,7 +2,7 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 
 export const generateAppConcept = async (prompt: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -26,7 +26,7 @@ export const generateAppConcept = async (prompt: string): Promise<string> => {
 };
 
 export const parseMatchText = async (rawText: string): Promise<any> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
   try {
     const optimizedText = rawText.length > 5000 ? rawText.substring(0, 5000) : rawText;
 
@@ -69,7 +69,7 @@ export const parseMatchText = async (rawText: string): Promise<any> => {
 };
 
 export const parseMatchScreenshot = async (base64Image: string): Promise<any> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
   try {
     const cleanBase64 = base64Image.split(',')[1] || base64Image;
     const response = await ai.models.generateContent({
@@ -121,7 +121,7 @@ export const parseMatchScreenshot = async (base64Image: string): Promise<any> =>
 };
 
 export const generateImage = async (prompt: string): Promise<string | null> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -160,7 +160,7 @@ export const generateImage = async (prompt: string): Promise<string | null> => {
 };
 
 export const generateVideo = async (prompt: string, progressCallback: (msg: string) => void): Promise<string | null> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
   try {
     progressCallback("Initiating video generation...");
     let operation = await ai.models.generateVideos({
@@ -181,7 +181,7 @@ export const generateVideo = async (prompt: string, progressCallback: (msg: stri
 
     const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
     if (downloadLink) {
-      const videoResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+      const videoResponse = await fetch(`${downloadLink}&key=${process.env.GEMINI_API_KEY}`);
       if (videoResponse.status === 429) throw new Error("QUOTA_EXHAUSTED");
       const blob = await videoResponse.blob();
       return URL.createObjectURL(blob);
@@ -199,7 +199,7 @@ export const generateVideo = async (prompt: string, progressCallback: (msg: stri
 };
 
 export const analyzeGameFrame = async (base64Images: string | string[], userInstruction?: string, playerFocus?: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
   try {
     const images = Array.isArray(base64Images) ? base64Images : [base64Images];
     const isSequence = images.length > 1;

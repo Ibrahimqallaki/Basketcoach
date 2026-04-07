@@ -478,6 +478,24 @@ export const dataService = {
     }
   },
 
+  deleteHomework: async (playerId: string, homeworkId: string): Promise<void> => {
+    const players = await dataService.getPlayers();
+    const player = players.find(p => p.id === playerId);
+    if (player && player.homework) {
+        const updated = player.homework.filter(h => h.id !== homeworkId);
+        await dataService.updatePlayer(playerId, { homework: updated });
+    }
+  },
+
+  updateHomework: async (playerId: string, homeworkId: string, updates: Partial<Homework>): Promise<void> => {
+    const players = await dataService.getPlayers();
+    const player = players.find(p => p.id === playerId);
+    if (player && player.homework) {
+        const updated = player.homework.map(h => h.id === homeworkId ? { ...h, ...updates } : h);
+        await dataService.updatePlayer(playerId, { homework: updated });
+    }
+  },
+
   exportTeamData: async () => {
     const data = { players: await dataService.getPlayers(), sessions: await dataService.getSessions(), matches: await dataService.getMatches() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
