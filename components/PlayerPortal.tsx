@@ -79,14 +79,17 @@ const SKILL_THEMES: Record<string, string> = {
 
 const getVideoId = (url: string) => {
   if (!url) return null;
-  const regExp =
-    /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  
+  // Handle various YouTube URL formats
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
   const match = url.match(regExp);
-  if (match && match[2].length === 11) return match[2];
-  if (url.includes("youtu.be/")) {
-    const id = url.split("youtu.be/")[1]?.split(/[?#]/)[0];
-    if (id && id.length === 11) return id;
+  
+  if (match && match[2]) {
+    // Extract exactly 11 characters (standard YouTube ID length)
+    const id = match[2].trim();
+    return id.length >= 11 ? id.substring(0, 11) : null;
   }
+  
   return null;
 };
 

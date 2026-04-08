@@ -100,7 +100,7 @@ export const PlayerChat: React.FC<PlayerChatProps> = ({ player, coachId }) => {
   };
 
   return (
-    <div className="flex flex-col h-full pb-24 md:pb-0 md:h-[600px] bg-[#0a0f1d] rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom duration-500">
+    <div className="flex flex-col h-full pb-32 md:pb-0 md:h-[600px] bg-[#0a0f1d] rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom duration-500">
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
         <div className="flex items-center gap-3">

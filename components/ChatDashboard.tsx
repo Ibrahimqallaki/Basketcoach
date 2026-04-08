@@ -139,7 +139,7 @@ export const ChatDashboard: React.FC<ChatDashboardProps> = ({ coachId }) => {
   const selectedPlayer = players.find(p => p.id === selectedRecipientId);
 
   return (
-    <div className="flex h-full pb-24 md:pb-0 md:h-[calc(100vh-12rem)] bg-slate-950 rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-2xl relative">
+    <div className="flex h-full pb-32 md:pb-0 md:h-[calc(100vh-12rem)] bg-slate-950 rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-2xl relative">
       
       {/* Sidebar - Player List */}
       <div className={`${isMobileListOpen ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-80 border-r border-slate-800 bg-slate-900/50 backdrop-blur-xl z-20`}>
