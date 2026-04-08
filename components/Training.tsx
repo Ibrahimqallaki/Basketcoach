@@ -98,7 +98,9 @@ export const Training: React.FC = () => {
 
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [newExerciseTime, setNewExerciseTime] = useState(10);
-  const [newExerciseSelection, setNewExerciseSelection] = useState<Exercise | null>(null);
+  const [newExerciseSelection, setNewExerciseSelection] = useState<Exercise | WarmupExercise | null>(null);
+  const [addExerciseSearch, setAddExerciseSearch] = useState("");
+  const [addExerciseTab, setAddExerciseTab] = useState<'basket' | 'fys' | 'warmup'>('basket');
 
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [activePlaylistItemIndex, setActivePlaylistItemIndex] = useState(0);
@@ -574,6 +576,8 @@ export const Training: React.FC = () => {
                                               onClick={() => {
                                                   setNewExerciseSelection(null);
                                                   setNewExerciseTime(10);
+                                                  setAddExerciseSearch("");
+                                                  setAddExerciseTab(viewMode === 'basket' ? 'basket' : 'fys');
                                                   setShowAddExerciseModal(true);
                                               }}
                                               className="px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all shrink-0 bg-slate-950 text-slate-500 hover:bg-slate-900 hover:text-white flex items-center gap-1 border border-dashed border-slate-700 snap-start"
@@ -647,10 +651,10 @@ export const Training: React.FC = () => {
                                   </div>
                                   <p className="text-sm text-slate-300 leading-relaxed font-medium">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).description}</p>
                                   
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <div className="space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in zoom-in-95 duration-300">
+                                      <div className="space-y-3">
                                           {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl && (
-                                              <div className="w-full aspect-video rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl relative group mb-4">
+                                              <div className="w-full aspect-video rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl relative group">
                                                   {getVideoId((playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl!) ? (
                                                       <iframe 
                                                           src={`https://www.youtube-nocookie.com/embed/${getVideoId((playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl!)}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1`}
@@ -663,12 +667,6 @@ export const Training: React.FC = () => {
                                                       <div className="w-full h-full flex flex-col items-center justify-center space-y-4">
                                                           <Youtube size={48} className="text-slate-800" />
                                                           <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Ogiltig videolänk</p>
-                                                          <button 
-                                                              onClick={() => window.open((playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl, '_blank')}
-                                                              className="px-4 py-2 bg-slate-800 rounded-xl text-[10px] font-black text-white uppercase tracking-widest hover:bg-slate-700 transition-all"
-                                                          >
-                                                              Öppna i ny flik
-                                                          </button>
                                                       </div>
                                                   )}
                                               </div>
@@ -677,58 +675,64 @@ export const Training: React.FC = () => {
                                           {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl && (
                                               <button 
                                                   onClick={() => window.open((playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl, '_blank')}
-                                                  className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 rounded-xl transition-all border border-red-500/20 mb-4"
+                                                  className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 rounded-xl transition-all border border-red-500/20"
                                               >
                                                   <Youtube size={14} /> Se på YouTube
                                               </button>
                                           )}
 
-                                          {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).setup && (
-                                              <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
-                                                  <div className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                      <Target size={12} /> Organisation
-                                                  </div>
-                                                  <p className="text-[10px] font-bold text-slate-300 uppercase">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).setup}</p>
+                                          <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 space-y-3">
+                                              <div className="flex items-center gap-2 text-orange-500">
+                                                  <Flame size={16} />
+                                                  <h4 className="text-[10px] font-black uppercase tracking-widest">SBBF Fokus</h4>
                                               </div>
-                                          )}
+                                              <p className="text-xs font-black text-white uppercase italic leading-relaxed">
+                                                  {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).sbbfFocus}
+                                              </p>
+                                          </div>
+                                      </div>
 
-                                          <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
-                                              <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                  <CheckCircle2 size={12} className="text-emerald-500" /> Coaching Points
+                                      <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 space-y-6 overflow-y-auto max-h-[500px] custom-scrollbar">
+                                          <div className="space-y-4">
+                                              <div className="flex items-center gap-2 text-blue-400">
+                                                  <Target size={16} />
+                                                  <h4 className="text-[10px] font-black uppercase tracking-widest">Organisation</h4>
                                               </div>
-                                              <ul className="space-y-1">
+                                              <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                                  {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).setup || "Ingen specifik setup angiven."}
+                                              </p>
+                                          </div>
+
+                                          <div className="space-y-4 pt-4 border-t border-slate-900">
+                                              <div className="flex items-center gap-2 text-emerald-400">
+                                                  <CheckCircle2 size={16} />
+                                                  <h4 className="text-[10px] font-black uppercase tracking-widest">Coaching Points</h4>
+                                              </div>
+                                              <ul className="space-y-2">
                                                   {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).coachingPoints.map((cp, i) => (
-                                                      <li key={i} className="text-[10px] text-slate-300 flex items-start gap-2">
+                                                      <li key={i} className="text-xs text-slate-300 flex items-start gap-2">
                                                           <span className="text-orange-500 mt-1">•</span> {cp}
                                                       </li>
                                                   ))}
                                               </ul>
                                           </div>
-                                      </div>
 
-                                      <div className="space-y-4">
                                           {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).visualSteps && (playlist[activePlaylistItemIndex].exercise as WarmupExercise).visualSteps!.length > 0 && (
-                                              <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
-                                                  <div className="text-[8px] font-black text-purple-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                      <Activity size={12} /> Steg-för-steg
+                                              <div className="space-y-4 pt-4 border-t border-slate-900">
+                                                  <div className="flex items-center gap-2 text-purple-400">
+                                                      <Activity size={16} />
+                                                      <h4 className="text-[10px] font-black uppercase tracking-widest">Steg-för-steg</h4>
                                                   </div>
                                                   <div className="space-y-2">
                                                       {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).visualSteps!.map((step, i) => (
-                                                          <div key={i} className="flex items-center gap-2">
-                                                              <div className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[8px] font-black text-purple-500 shrink-0 border border-purple-500/20">{i + 1}</div>
+                                                          <div key={i} className="flex items-center gap-3 p-2 bg-slate-900/30 rounded-xl border border-slate-800/50">
+                                                              <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-black text-purple-500 shrink-0 border border-purple-500/20">{i + 1}</div>
                                                               <span className="text-[10px] font-bold text-slate-300 uppercase">{step}</span>
                                                           </div>
                                                       ))}
                                                   </div>
                                               </div>
                                           )}
-
-                                          <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
-                                              <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                  <Flame size={12} className="text-orange-500" /> SBBF Fokus
-                                              </div>
-                                              <div className="text-[10px] font-black text-white uppercase italic">{(playlist[activePlaylistItemIndex].exercise as WarmupExercise).sbbfFocus}</div>
-                                          </div>
                                       </div>
                                   </div>
                               </div>
@@ -941,61 +945,120 @@ export const Training: React.FC = () => {
                   </div>
                   <div className="p-6 md:p-8 space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
                       {/* Exercise Selection */}
-                      <div className="space-y-3">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">1. Välj Övning</label>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {selectedPhase?.exercises.filter(ex => {
-                                  const isFys = ex.category === 'Fysik' || ex.category === 'Kondition';
-                                  return viewMode === 'fys' ? isFys : !isFys;
-                              }).map(ex => (
+                      <div className="space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
+                              <div className="flex gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800">
                                   <button 
-                                      key={ex.id} 
-                                      onClick={() => setNewExerciseSelection(ex)} 
-                                      className={`p-4 rounded-xl text-left border text-[10px] font-black uppercase transition-all ${newExerciseSelection?.id === ex.id ? 'border-orange-500 bg-orange-500/10 text-orange-400 shadow-inner' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                                      onClick={() => setAddExerciseTab('basket')}
+                                      className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${addExerciseTab === 'basket' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                                   >
-                                      {ex.title}
+                                      Basket
                                   </button>
-                              ))}
+                                  <button 
+                                      onClick={() => setAddExerciseTab('fys')}
+                                      className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${addExerciseTab === 'fys' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                  >
+                                      Fys
+                                  </button>
+                                  <button 
+                                      onClick={() => setAddExerciseTab('warmup')}
+                                      className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${addExerciseTab === 'warmup' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                  >
+                                      Uppvärmning
+                                  </button>
+                              </div>
+                              <div className="relative w-full sm:w-64">
+                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                                  <input 
+                                      type="text"
+                                      placeholder="Sök i hela biblioteket..."
+                                      value={addExerciseSearch}
+                                      onChange={(e) => setAddExerciseSearch(e.target.value)}
+                                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-[10px] font-black uppercase text-white outline-none focus:border-orange-500 transition-all"
+                                  />
+                              </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto custom-scrollbar pr-2">
+                              {addExerciseTab === 'warmup' ? (
+                                  mockWarmupExercises.filter(ex => 
+                                      ex.title.toLowerCase().includes(addExerciseSearch.toLowerCase()) || 
+                                      ex.description.toLowerCase().includes(addExerciseSearch.toLowerCase())
+                                  ).map(ex => (
+                                      <button 
+                                          key={ex.id} 
+                                          onClick={() => setNewExerciseSelection(ex)} 
+                                          className={`p-4 rounded-xl text-left border text-[10px] font-black uppercase transition-all ${newExerciseSelection?.id === ex.id ? 'border-purple-500 bg-purple-500/10 text-purple-400 shadow-inner' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                                      >
+                                          <div className="flex justify-between items-start gap-2">
+                                              <span className="flex-1">{ex.title}</span>
+                                              <span className="text-[7px] opacity-50 shrink-0">Uppvärmning</span>
+                                          </div>
+                                      </button>
+                                  ))
+                              ) : (
+                                  phases.flatMap(p => p.exercises).filter(ex => {
+                                      const isFys = ex.category === 'Fysik' || ex.category === 'Kondition';
+                                      const matchesTab = addExerciseTab === 'fys' ? isFys : !isFys;
+                                      const matchesSearch = ex.title.toLowerCase().includes(addExerciseSearch.toLowerCase()) || 
+                                                           ex.category.toLowerCase().includes(addExerciseSearch.toLowerCase());
+                                      return matchesTab && matchesSearch;
+                                  }).map(ex => (
+                                      <button 
+                                          key={ex.id} 
+                                          onClick={() => setNewExerciseSelection(ex)} 
+                                          className={`p-4 rounded-xl text-left border text-[10px] font-black uppercase transition-all ${newExerciseSelection?.id === ex.id ? (addExerciseTab === 'basket' ? 'border-orange-500 bg-orange-500/10 text-orange-400' : 'border-blue-500 bg-blue-500/10 text-blue-400') + ' shadow-inner' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                                      >
+                                          <div className="flex justify-between items-start gap-2">
+                                              <span className="flex-1">{ex.title}</span>
+                                              <span className="text-[7px] opacity-50 shrink-0">{ex.category}</span>
+                                          </div>
+                                      </button>
+                                  ))
+                              )}
                           </div>
                       </div>
 
                       {/* Time Selection */}
-                      <div className="space-y-3">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">2. Sätt Tid (Minuter)</label>
-                          <div className="flex gap-2">
-                              {[5, 10, 15, 20].map(t => (
-                                  <button 
-                                      key={t}
-                                      onClick={() => setNewExerciseTime(t)}
-                                      className={`flex-1 py-4 rounded-xl font-black text-sm border transition-all ${newExerciseTime === t ? 'bg-orange-600 border-orange-400 text-white shadow-lg scale-105' : 'bg-slate-950 border-slate-800 text-slate-600 hover:border-slate-600'}`}
-                                  >
-                                      {t} min
-                                  </button>
-                              ))}
+                      {addExerciseTab !== 'warmup' && (
+                          <div className="space-y-3">
+                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">2. Sätt Tid (Minuter)</label>
+                              <div className="flex gap-2">
+                                  {[5, 10, 15, 20].map(t => (
+                                      <button 
+                                          key={t}
+                                          onClick={() => setNewExerciseTime(t)}
+                                          className={`flex-1 py-4 rounded-xl font-black text-sm border transition-all ${newExerciseTime === t ? 'bg-orange-600 border-orange-400 text-white shadow-lg scale-105' : 'bg-slate-950 border-slate-800 text-slate-600 hover:border-slate-600'}`}
+                                      >
+                                          {t} min
+                                      </button>
+                                  ))}
+                              </div>
+                              <div className="flex items-center gap-4 mt-4 p-4 bg-slate-950 rounded-xl border border-slate-800">
+                                  <span className="text-xs font-black text-slate-500 uppercase">Annan tid:</span>
+                                  <input 
+                                      type="number" 
+                                      value={newExerciseTime} 
+                                      onChange={(e) => setNewExerciseTime(Number(e.target.value))}
+                                      className="w-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-black text-center outline-none focus:border-orange-500"
+                                      min="1"
+                                  />
+                                  <span className="text-xs font-black text-slate-500 uppercase">minuter</span>
+                              </div>
                           </div>
-                          <div className="flex items-center gap-4 mt-4 p-4 bg-slate-950 rounded-xl border border-slate-800">
-                              <span className="text-xs font-black text-slate-500 uppercase">Annan tid:</span>
-                              <input 
-                                  type="number" 
-                                  value={newExerciseTime} 
-                                  onChange={(e) => setNewExerciseTime(Number(e.target.value))}
-                                  className="w-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-black text-center outline-none focus:border-orange-500"
-                                  min="1"
-                              />
-                              <span className="text-xs font-black text-slate-500 uppercase">minuter</span>
-                          </div>
-                      </div>
+                      )}
                   </div>
                   <div className="p-6 md:p-8 bg-slate-950/60 border-t border-slate-800 shrink-0">
                       <button 
                           disabled={!newExerciseSelection}
                           onClick={() => {
                               if (newExerciseSelection) {
+                                  const isWarmup = addExerciseTab === 'warmup';
                                   const newItem: PlaylistItem = {
                                       id: newExerciseSelection.id,
                                       title: newExerciseSelection.title,
-                                      duration: newExerciseTime * 60,
-                                      type: 'main',
+                                      duration: isWarmup ? (parseInt((newExerciseSelection as WarmupExercise).duration) * 60 || 300) : (newExerciseTime * 60),
+                                      type: isWarmup ? 'warmup' : 'main',
                                       exercise: newExerciseSelection
                                   };
                                   setPlaylist(prev => [...prev, newItem]);
