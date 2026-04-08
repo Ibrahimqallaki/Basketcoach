@@ -5,7 +5,7 @@ import {
   Play, Pause, RotateCcw, X, ChevronRight, Save, Check, Trophy, Loader2, 
   Dumbbell, Layout, ChevronLeft, UserCheck, Activity, BrainCircuit, 
   Target, Zap, MessageSquare, Mic, Eye, Shield, Flame, Timer, Star, 
-  ArrowUpCircle, Scaling, Trash2, Info, CheckCircle2, Youtube, Search
+  ArrowUpCircle, Scaling, Trash2, Info, CheckCircle2, Youtube, Search, Video, Lightbulb
 } from 'lucide-react';
 
 // Super-robust YouTube ID extractor for all formats
@@ -735,13 +735,89 @@ export const Training: React.FC = () => {
                           )}
 
                           {playlist[activePlaylistItemIndex]?.type === 'main' && (
-                              <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                                  {activeCriteria.map((c, i) => (
-                                      <div key={i} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 shrink-0">
-                                          <c.icon size={12} className={viewMode === 'basket' ? 'text-orange-500' : 'text-blue-500'} />
-                                          <span className="text-[10px] font-black text-white uppercase">{c.label}</span>
+                              <div className="space-y-4">
+                                  <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                      {activeCriteria.map((c, i) => (
+                                          <div key={i} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 shrink-0">
+                                              <c.icon size={12} className={viewMode === 'basket' ? 'text-orange-500' : 'text-blue-500'} />
+                                              <span className="text-[10px] font-black text-white uppercase">{c.label}</span>
+                                          </div>
+                                      ))}
+                                  </div>
+
+                                  {(playlist[activePlaylistItemIndex].exercise as Exercise).videoUrl && (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in zoom-in-95 duration-300">
+                                          <div className="space-y-3">
+                                              <div className="w-full aspect-video rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl relative group">
+                                                  {getVideoId((playlist[activePlaylistItemIndex].exercise as Exercise).videoUrl!) ? (
+                                                      <iframe 
+                                                          src={`https://www.youtube-nocookie.com/embed/${getVideoId((playlist[activePlaylistItemIndex].exercise as Exercise).videoUrl!)}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1`}
+                                                          title={(playlist[activePlaylistItemIndex].exercise as Exercise).title}
+                                                          className="w-full h-full absolute inset-0" 
+                                                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                          allowFullScreen
+                                                      />
+                                                  ) : (
+                                                      <div className="w-full h-full flex flex-col items-center justify-center space-y-4">
+                                                          <Youtube size={48} className="text-slate-800" />
+                                                          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Ogiltig videolänk</p>
+                                                      </div>
+                                                  )}
+                                              </div>
+                                              <button 
+                                                  onClick={() => window.open((playlist[activePlaylistItemIndex].exercise as Exercise).videoUrl, '_blank')}
+                                                  className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 rounded-xl transition-all border border-red-500/20"
+                                              >
+                                                  <Youtube size={14} /> Se på YouTube
+                                              </button>
+                                          </div>
+                                          <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 space-y-6 overflow-y-auto max-h-[400px] custom-scrollbar">
+                                              <div className="space-y-4">
+                                                  <div className="flex items-center gap-2 text-blue-400">
+                                                      <Target size={16} />
+                                                      <h4 className="text-[10px] font-black uppercase tracking-widest">VAD (Teknik & Mål)</h4>
+                                                  </div>
+                                                  <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                                      {(playlist[activePlaylistItemIndex].exercise as Exercise).pedagogy?.what || (playlist[activePlaylistItemIndex].exercise as Exercise).overview.setup}
+                                                  </p>
+                                              </div>
+
+                                              <div className="space-y-4 pt-4 border-t border-slate-900">
+                                                  <div className="flex items-center gap-2 text-emerald-400">
+                                                      <Info size={16} />
+                                                      <h4 className="text-[10px] font-black uppercase tracking-widest">HUR (Utförande)</h4>
+                                                  </div>
+                                                  <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                                      {(playlist[activePlaylistItemIndex].exercise as Exercise).pedagogy?.how || (playlist[activePlaylistItemIndex].exercise as Exercise).overview.action}
+                                                  </p>
+                                              </div>
+
+                                              <div className="space-y-4 pt-4 border-t border-slate-900">
+                                                  <div className="flex items-center gap-2 text-purple-400">
+                                                      <Lightbulb size={16} />
+                                                      <h4 className="text-[10px] font-black uppercase tracking-widest">VARFÖR (Syfte)</h4>
+                                                  </div>
+                                                  <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                                      {(playlist[activePlaylistItemIndex].exercise as Exercise).pedagogy?.why || "För att utveckla spelförståelse och teknisk färdighet."}
+                                                  </p>
+                                              </div>
+
+                                              <div className="space-y-3 pt-4 border-t border-slate-900">
+                                                  <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Checklista för succé</h4>
+                                                  <div className="grid grid-cols-1 gap-1.5">
+                                                      {(playlist[activePlaylistItemIndex].exercise as Exercise).criteria.map((c, i) => (
+                                                          <div key={i} className="flex items-center gap-2 p-2 bg-slate-900/50 rounded-xl border border-slate-800">
+                                                              <div className="w-4 h-4 rounded-full bg-orange-600/20 border border-orange-500/30 flex items-center justify-center text-orange-500">
+                                                                  <Check size={10} />
+                                                              </div>
+                                                              <span className="text-[9px] font-bold text-slate-400 uppercase">{c}</span>
+                                                          </div>
+                                                      ))}
+                                                  </div>
+                                              </div>
+                                          </div>
                                       </div>
-                                  ))}
+                                  )}
                               </div>
                           )}
                       </div>
