@@ -14,8 +14,26 @@ import {
   Search,
   BookOpen,
   CheckCircle2,
-  Target
+  Target,
+  Youtube
 } from 'lucide-react';
+
+// Super-robust YouTube ID extractor for all formats
+const getVideoId = (url: string) => {
+  if (!url) return null;
+  
+  // Handle various YouTube URL formats
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  
+  if (match && match[2]) {
+    // Extract exactly 11 characters (standard YouTube ID length)
+    const id = match[2].trim();
+    return id.length >= 11 ? id.substring(0, 11) : null;
+  }
+  
+  return null;
+};
 
 interface WarmupLibraryProps {
   onSelect?: (exercise: WarmupExercise) => void;
@@ -195,6 +213,40 @@ export const WarmupLibrary: React.FC<WarmupLibraryProps> = ({ onSelect, selected
              </div>
              
              <div className="p-8 overflow-y-auto custom-scrollbar space-y-8">
+                {selectedDetailExercise.videoUrl && (
+                  <div className="w-full aspect-video rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl relative group">
+                    {getVideoId(selectedDetailExercise.videoUrl) ? (
+                      <iframe 
+                        src={`https://www.youtube-nocookie.com/embed/${getVideoId(selectedDetailExercise.videoUrl)}?rel=0&modestbranding=1&playsinline=1`}
+                        title={selectedDetailExercise.title}
+                        className="w-full h-full absolute inset-0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center space-y-4">
+                        <Youtube size={48} className="text-slate-800" />
+                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Ogiltig videolänk</p>
+                        <button 
+                          onClick={() => window.open(selectedDetailExercise.videoUrl, '_blank')}
+                          className="px-4 py-2 bg-slate-800 rounded-xl text-[10px] font-black text-white uppercase tracking-widest hover:bg-slate-700 transition-all"
+                        >
+                          Öppna i ny flik
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedDetailExercise.videoUrl && (
+                  <button 
+                    onClick={() => window.open(selectedDetailExercise.videoUrl, '_blank')}
+                    className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 rounded-xl transition-all border border-red-500/20"
+                  >
+                    <Youtube size={14} /> Se på YouTube
+                  </button>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-8">
                    <div className="space-y-6">
                       <div className="space-y-4">

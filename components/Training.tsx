@@ -5,8 +5,25 @@ import {
   Play, Pause, RotateCcw, X, ChevronRight, Save, Check, Trophy, Loader2, 
   Dumbbell, Layout, ChevronLeft, UserCheck, Activity, BrainCircuit, 
   Target, Zap, MessageSquare, Mic, Eye, Shield, Flame, Timer, Star, 
-  ArrowUpCircle, Scaling, Trash2, Info, CheckCircle2
+  ArrowUpCircle, Scaling, Trash2, Info, CheckCircle2, Youtube, Search
 } from 'lucide-react';
+
+// Super-robust YouTube ID extractor for all formats
+const getVideoId = (url: string) => {
+  if (!url) return null;
+  
+  // Handle various YouTube URL formats
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  
+  if (match && match[2]) {
+    // Extract exactly 11 characters (standard YouTube ID length)
+    const id = match[2].trim();
+    return id.length >= 11 ? id.substring(0, 11) : null;
+  }
+  
+  return null;
+};
 import { Exercise, Player, Evaluation, Phase, TrainingSession, WarmupExercise } from '../types';
 import { mockWarmupExercises } from '../services/mockData';
 import { WarmupLibrary } from './WarmupLibrary';
@@ -632,6 +649,40 @@ export const Training: React.FC = () => {
                                   
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <div className="space-y-4">
+                                          {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl && (
+                                              <div className="w-full aspect-video rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl relative group mb-4">
+                                                  {getVideoId((playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl!) ? (
+                                                      <iframe 
+                                                          src={`https://www.youtube-nocookie.com/embed/${getVideoId((playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl!)}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1`}
+                                                          title={(playlist[activePlaylistItemIndex].exercise as WarmupExercise).title}
+                                                          className="w-full h-full absolute inset-0" 
+                                                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                          allowFullScreen
+                                                      />
+                                                  ) : (
+                                                      <div className="w-full h-full flex flex-col items-center justify-center space-y-4">
+                                                          <Youtube size={48} className="text-slate-800" />
+                                                          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Ogiltig videolänk</p>
+                                                          <button 
+                                                              onClick={() => window.open((playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl, '_blank')}
+                                                              className="px-4 py-2 bg-slate-800 rounded-xl text-[10px] font-black text-white uppercase tracking-widest hover:bg-slate-700 transition-all"
+                                                          >
+                                                              Öppna i ny flik
+                                                          </button>
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          )}
+
+                                          {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl && (
+                                              <button 
+                                                  onClick={() => window.open((playlist[activePlaylistItemIndex].exercise as WarmupExercise).videoUrl, '_blank')}
+                                                  className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 rounded-xl transition-all border border-red-500/20 mb-4"
+                                              >
+                                                  <Youtube size={14} /> Se på YouTube
+                                              </button>
+                                          )}
+
                                           {(playlist[activePlaylistItemIndex].exercise as WarmupExercise).setup && (
                                               <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
                                                   <div className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-2">
